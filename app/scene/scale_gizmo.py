@@ -233,7 +233,7 @@ class ScaleGizmo:
         glEnd()
 
         # X Handle
-        glPointSize(10)
+        glPointSize(20)
 
         glBegin(GL_POINTS)
         glVertex3f(self.axis_length, 0, 0)
@@ -249,7 +249,7 @@ class ScaleGizmo:
         glEnd()
 
         # Y Handle
-        glPointSize(10)
+        glPointSize(20)
 
         glBegin(GL_POINTS)
         glVertex3f(0, self.axis_length, 0)
@@ -266,7 +266,7 @@ class ScaleGizmo:
         glEnd()
 
         # Z Handle
-        glPointSize(10)
+        glPointSize(20)
 
         glBegin(GL_POINTS)
         glVertex3f(0, 0, self.axis_length)
@@ -283,6 +283,8 @@ class ScaleGizmo:
         glPopAttrib()
 
     def draw_uniform_handle(self):
+
+        self.uniform_size = 0.04
 
         s = self.uniform_size
 

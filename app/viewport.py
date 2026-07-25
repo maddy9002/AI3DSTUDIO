@@ -221,7 +221,7 @@ class Viewport(QOpenGLWidget):
         
         elif tool == ToolManager.SCALE:
 
-            pass
+            self.scale_gizmo.draw(self.camera)
 
         # -------------------------
         # Webcam Overlay
@@ -508,6 +508,8 @@ class Viewport(QOpenGLWidget):
 
     def draw_webcam_texture(self):
 
+        print("MODELVIEW STACK:", glGetIntegerv(GL_MODELVIEW_STACK_DEPTH))
+        print("PROJECTION STACK:", glGetIntegerv(GL_PROJECTION_STACK_DEPTH))
         if self.webcam_texture is None:
             return
 
@@ -914,6 +916,10 @@ class Viewport(QOpenGLWidget):
         elif event.key() == Qt.Key_R:
 
             print("SCALE")
+
+            self.tool_manager.set_tool(ToolManager.SCALE)
+
+            self.update()
 
             return
 
