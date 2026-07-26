@@ -15,7 +15,7 @@ from scene.rotate_gizmo import RotateGizmo
 from scene.scale_gizmo import ScaleGizmo
 from scene.tool_manager import ToolManager
 from app.scene.selection_manager import SelectionManager
-from rendering.primitive_renderer import PrimitiveRenderer
+from scene.mesh_renderer import MeshRenderer
 
 class Viewport(QOpenGLWidget):
 
@@ -171,20 +171,24 @@ class Viewport(QOpenGLWidget):
 
             glPushMatrix()
 
+            world_position = obj.get_world_position()
+            world_rotation = obj.get_world_rotation()
+            world_scale = obj.get_world_scale()
+
             glTranslatef(
-                obj.position[0],
-                obj.position[1],
-                obj.position[2]
+                world_position[0],
+                world_position[1],
+                world_position[2]
             )
 
-            glRotatef(obj.rotation[0], 1, 0, 0)
-            glRotatef(obj.rotation[1], 0, 1, 0)
-            glRotatef(obj.rotation[2], 0, 0, 1)
+            glRotatef(world_rotation[0],1,0,0)
+            glRotatef(world_rotation[1],0,1,0)
+            glRotatef(world_rotation[2],0,0,1)
 
             glScalef(
-                obj.scale[0],
-                obj.scale[1],
-                obj.scale[2]
+                world_scale[0],
+                world_scale[1],
+                world_scale[2]
             )
 
             if obj == self.selected_object:
@@ -194,38 +198,44 @@ class Viewport(QOpenGLWidget):
 
             if obj.object_type == "Cube":
 
-                PrimitiveRenderer.draw_cube()
+                if obj.mesh is not None:
+
+                    MeshRenderer.draw(obj.mesh)
+
+                else:
+
+                    self.draw_cube()
 
             elif obj.object_type == "Sphere":
 
-                PrimitiveRenderer.draw_sphere()
+                MeshRenderer.draw_sphere()
 
             elif obj.object_type == "Plane":
 
-                PrimitiveRenderer.draw_plane()
+                MeshRenderer.draw_plane()
 
             elif obj.object_type == "Cylinder":
 
-                PrimitiveRenderer.draw_cylinder()
+                MeshRenderer.draw_cylinder()
 
             elif obj.object_type == "Cone":
 
-                PrimitiveRenderer.draw_cone()
+                MeshRenderer.draw_cone()
 
             elif obj.object_type == "Torus":
 
-                PrimitiveRenderer.draw_torus()
+                MeshRenderer.draw_torus()
 
             else:
 
-                PrimitiveRenderer.draw_cube()
-                
+                self.draw_cube()
+
             glPopMatrix()
 
         # -------------------------
         # Cursor
         # -------------------------
-        #self.draw_cursor()
+        self.draw_cursor()
 
         # -------------------------
         # Gizmos
@@ -652,6 +662,10 @@ class Viewport(QOpenGLWidget):
 
                     self.move_gizmo.selected_axis = axis
 
+                    self.history_manager.save_state(
+                        self.selected_object
+                    )
+
                     self.last_mouse_x = event.x()
                     self.last_mouse_y = event.y()
 
@@ -670,6 +684,10 @@ class Viewport(QOpenGLWidget):
                     print("Rotate Axis:", rotate_axis)
 
                     self.rotate_gizmo.selected_axis = rotate_axis
+
+                    self.history_manager.save_state(
+                        self.selected_object
+                    )
 
                     self.rotate_gizmo.begin_rotation(
                         rotate_axis,
@@ -694,6 +712,10 @@ class Viewport(QOpenGLWidget):
                     print("Scale Axis:", scale_axis)
 
                     self.scale_gizmo.selected_axis = scale_axis
+
+                    self.history_manager.save_state(
+                        self.selected_object
+                    )
 
                     self.scale_gizmo.begin_scale(
                         scale_axis,
@@ -924,6 +946,41 @@ class Viewport(QOpenGLWidget):
 
         print("VIEWPORT KEY:", event.key())
 
+        # ---------------------------------
+        # CTRL + Z
+        # ---------------------------------
+        if (
+            event.modifiers() & Qt.ControlModifier
+            and event.key() == Qt.Key_Z
+        ):
+
+            print("UNDO")
+
+            self.history_manager.undo()
+
+            self.update()
+
+            return
+
+        # ---------------------------------
+        # CTRL + Y
+        # ---------------------------------
+        if (
+            event.modifiers() & Qt.ControlModifier
+            and event.key() == Qt.Key_Y
+        ):
+
+            print("REDO")
+
+            self.history_manager.redo()
+
+            self.update()
+
+            return
+
+        # ---------------------------------
+        # MOVE
+        # ---------------------------------
         if event.key() == Qt.Key_W:
 
             print("MOVE")
@@ -934,6 +991,9 @@ class Viewport(QOpenGLWidget):
 
             return
 
+        # ---------------------------------
+        # ROTATE
+        # ---------------------------------
         elif event.key() == Qt.Key_E:
 
             print("ROTATE")
@@ -944,6 +1004,9 @@ class Viewport(QOpenGLWidget):
 
             return
 
+        # ---------------------------------
+        # SCALE
+        # ---------------------------------
         elif event.key() == Qt.Key_R:
 
             print("SCALE")

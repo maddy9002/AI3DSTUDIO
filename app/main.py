@@ -55,7 +55,7 @@ print("Direction:", ray.direction)
 from scene.scene_manager import SceneManager
 from scene.tool_manager import ToolManager
 from managers.history_manager import HistoryManager
-
+from scene.mesh_generator import MeshGenerator
 class AI3DStudio(QMainWindow):
 
     def mousePressEvent(self, event):
@@ -366,6 +366,10 @@ class AI3DStudio(QMainWindow):
             primitive_type
 
         )
+
+        if primitive_type == "Cube":
+
+            obj.mesh = MeshGenerator.create_cube()
 
         obj.position = [
 
