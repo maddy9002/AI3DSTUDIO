@@ -15,6 +15,7 @@ from scene.rotate_gizmo import RotateGizmo
 from scene.scale_gizmo import ScaleGizmo
 from scene.tool_manager import ToolManager
 from app.scene.selection_manager import SelectionManager
+from rendering.primitive_renderer import PrimitiveRenderer
 
 class Viewport(QOpenGLWidget):
 
@@ -191,8 +192,34 @@ class Viewport(QOpenGLWidget):
             else:
                 glColor3f(0.0, 1.0, 0.0)
 
-            self.draw_cube()
+            if obj.object_type == "Cube":
 
+                PrimitiveRenderer.draw_cube()
+
+            elif obj.object_type == "Sphere":
+
+                PrimitiveRenderer.draw_sphere()
+
+            elif obj.object_type == "Plane":
+
+                PrimitiveRenderer.draw_plane()
+
+            elif obj.object_type == "Cylinder":
+
+                PrimitiveRenderer.draw_cylinder()
+
+            elif obj.object_type == "Cone":
+
+                PrimitiveRenderer.draw_cone()
+
+            elif obj.object_type == "Torus":
+
+                PrimitiveRenderer.draw_torus()
+
+            else:
+
+                PrimitiveRenderer.draw_cube()
+                
             glPopMatrix()
 
         # -------------------------
@@ -216,8 +243,6 @@ class Viewport(QOpenGLWidget):
         elif tool == ToolManager.ROTATE:
 
             self.rotate_gizmo.draw()
-            
-            return
         
         elif tool == ToolManager.SCALE:
 
@@ -749,6 +774,8 @@ class Viewport(QOpenGLWidget):
 
             self.scale_gizmo.end_scale()
 
+            self._move_saved = False
+
         elif event.button() == Qt.RightButton:
 
             self.right_mouse = False
@@ -814,6 +841,10 @@ class Viewport(QOpenGLWidget):
         print("Buttons:", event.buttons())
         print("Selected Axis:", self.move_gizmo.selected_axis)
         print("Selected Object:", self.selected_object)
+
+        if not hasattr(self, "_move_saved"):
+            self.history_manager.save_state(self.selected_object)
+            self._move_saved = True
 
         if (
             event.buttons() & Qt.LeftButton

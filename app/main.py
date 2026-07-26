@@ -54,6 +54,7 @@ print("Origin:", ray.origin)
 print("Direction:", ray.direction)
 from scene.scene_manager import SceneManager
 from scene.tool_manager import ToolManager
+from managers.history_manager import HistoryManager
 
 class AI3DStudio(QMainWindow):
 
@@ -237,7 +238,11 @@ class AI3DStudio(QMainWindow):
         # Viewport
         # ==========================
 
+        self.history_manager = HistoryManager()
+
         self.viewport = Viewport()
+
+        self.viewport.history_manager = self.history_manager
 
         self.viewport.setFocusPolicy(
             Qt.StrongFocus
@@ -342,21 +347,29 @@ class AI3DStudio(QMainWindow):
             "AI3D Studio Started"
         )
 
-    def create_cube(self):
+    def create_primitive(self, primitive_type):
 
-        self.cube_count += 1
+        primitive_type = primitive_type.capitalize()
 
-        cube = SceneObject(
+        if not hasattr(self, "primitive_counts"):
+            self.primitive_counts = {}
 
-            f"Cube {self.cube_count}",
+        if primitive_type not in self.primitive_counts:
+            self.primitive_counts[primitive_type] = 0
 
-            "Cube"
+        self.primitive_counts[primitive_type] += 1
+
+        obj = SceneObject(
+
+            f"{primitive_type} {self.primitive_counts[primitive_type]}",
+
+            primitive_type
 
         )
 
-        cube.position = [
+        obj.position = [
 
-            -2.0 + ((self.cube_count - 1) * 1.5),
+            -2.0 + ((len(self.scene_objects)) * 1.5),
 
             0.0,
 
@@ -364,54 +377,60 @@ class AI3DStudio(QMainWindow):
 
         ]
 
-        self.scene_objects.append(
+        self.scene_objects.append(obj)
 
-            cube
-
-        )
-
-        self.scene_hierarchy.addItem(
-
-            cube.name
-
-        )
+        self.scene_hierarchy.addItem(obj.name)
 
         self.scene_hierarchy.setCurrentRow(
-
             len(self.scene_objects) - 1
-
         )
 
-        self.viewport.set_selected_object(cube)
+        self.viewport.set_selected_object(obj)
 
-        self.viewport.update_scene(
-
-            self.scene_objects
-
-        )
+        self.viewport.update_scene(self.scene_objects)
 
         self.viewport.update()
 
         try:
 
             save_model(
-
-                cube.name,
-
-                "Cube"
-
+                obj.name,
+                primitive_type
             )
 
         except Exception:
-
             pass
 
         self.ai_console.append(
 
-            f"Created {cube.name}"
+            f"Created {obj.name}"
 
         )
 
+    def create_cube(self):
+
+        self.create_primitive("Cube")
+
+    def create_sphere(self):
+
+        self.create_primitive("Sphere")
+
+    def create_plane(self):
+
+        self.create_primitive("Plane")
+
+    def create_cylinder(self):
+
+        self.create_primitive("Cylinder")
+
+    def create_cone(self):
+
+        self.create_primitive("Cone")
+
+    def create_torus(self):
+
+        self.create_primitive("Torus")
+    
     def run_ai_command(self):
 
         text = self.command_bar.text().strip()
@@ -427,13 +446,21 @@ class AI3DStudio(QMainWindow):
 
             print("AI RESPONSE:", command)
 
-            self.command_executor.execute(command)
+            self.command_executor.execute(
+                command["command"],
+                command.get("argument")
+            )
 
-        except Exception as e:
+        except Exception:
 
-            self.ai_console.append(f"AI Error: {e}")
+            print("Using Local Command Parser")
 
-            print(e)
+            command, argument = self.command_parser.parse(text)
+
+            self.command_executor.execute(
+                command,
+                argument
+            )
 
         self.command_bar.clear()
 

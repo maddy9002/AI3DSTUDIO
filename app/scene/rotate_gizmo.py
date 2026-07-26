@@ -205,10 +205,10 @@ class RotateGizmo:
 
         delta = self.start_angle - angle
 
-        print("Start Angle:", self.start_angle)
+        '''print("Start Angle:", self.start_angle)
         print("Current Angle:", angle)
         print("Delta:", delta)
-        print("Rotation Before:", self.target.rotation)
+        print("Rotation Before:", self.target.rotation)'''
 
         if self.selected_axis == "X":
 
