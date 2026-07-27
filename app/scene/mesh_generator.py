@@ -36,3 +36,39 @@ class MeshGenerator:
         ]
 
         return mesh
+
+    @staticmethod
+    def create_plane():
+
+        vertices = [
+
+            (-0.5, 0.0, -0.5),
+            ( 0.5, 0.0, -0.5),
+            ( 0.5, 0.0,  0.5),
+            (-0.5, 0.0,  0.5)
+
+        ]
+
+        faces = [
+
+            (0, 1, 2, 3)
+
+        ]
+
+        return Mesh(vertices, faces)
+
+    @staticmethod
+    def create_sphere():
+        pass
+
+    @staticmethod
+    def create_cylinder():
+        pass
+
+    @staticmethod
+    def create_cone():
+        pass
+
+    @staticmethod
+    def create_torus():
+        pass

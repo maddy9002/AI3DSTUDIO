@@ -144,9 +144,99 @@ class Viewport(QOpenGLWidget):
             GL_MODELVIEW
         )
 
+    def draw_scene_object(self, obj):
+
+        obj.bounding_box.update(
+            obj.position,
+            obj.scale
+        )
+
+        glPushMatrix()
+
+        # -----------------------------
+        # Apply LOCAL transform
+        # -----------------------------
+
+        glTranslatef(
+            obj.position[0],
+            obj.position[1],
+            obj.position[2]
+        )
+
+        glRotatef(obj.rotation[0], 1, 0, 0)
+        glRotatef(obj.rotation[1], 0, 1, 0)
+        glRotatef(obj.rotation[2], 0, 0, 1)
+
+        glScalef(
+            obj.scale[0],
+            obj.scale[1],
+            obj.scale[2]
+        )
+
+        # -----------------------------
+        # Selected Color
+        # -----------------------------
+
+        if obj == self.selected_object:
+
+            glColor3f(1.0, 1.0, 0.0)
+
+        else:
+
+            glColor3f(0.0, 1.0, 0.0)
+
+        # -----------------------------
+        # Draw Primitive
+        # -----------------------------
+
+        if obj.object_type == "Cube":
+
+            if obj.mesh is not None:
+
+                MeshRenderer.draw(obj.mesh)
+
+            else:
+
+                self.draw_cube()
+
+        elif obj.object_type == "Sphere":
+
+            MeshRenderer.draw_sphere()
+
+        elif obj.object_type == "Plane":
+
+            if obj.mesh is not None:
+
+                MeshRenderer.draw(obj.mesh)
+
+        elif obj.object_type == "Cylinder":
+
+            MeshRenderer.draw_cylinder()
+
+        elif obj.object_type == "Cone":
+
+            MeshRenderer.draw_cone()
+
+        elif obj.object_type == "Torus":
+
+            MeshRenderer.draw_torus()
+
+        else:
+
+            self.draw_cube()
+
+        # -----------------------------
+        # Draw Children
+        # -----------------------------
+
+        for child in obj.children:
+
+            self.draw_scene_object(child)
+
+        glPopMatrix()
+
     def paintGL(self):
         
-
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
@@ -164,73 +254,15 @@ class Viewport(QOpenGLWidget):
         # -------------------------
         for obj in self.scene_objects:
 
-            obj.bounding_box.update(
-                obj.position,
-                obj.scale
-            )
+            if obj.parent is None:
 
-            glPushMatrix()
+                print(
+                    obj.name,
+                    " Parent = ",
+                    obj.parent.name if obj.parent else "None"
+                )
 
-            world_position = obj.get_world_position()
-            world_rotation = obj.get_world_rotation()
-            world_scale = obj.get_world_scale()
-
-            glTranslatef(
-                world_position[0],
-                world_position[1],
-                world_position[2]
-            )
-
-            glRotatef(world_rotation[0],1,0,0)
-            glRotatef(world_rotation[1],0,1,0)
-            glRotatef(world_rotation[2],0,0,1)
-
-            glScalef(
-                world_scale[0],
-                world_scale[1],
-                world_scale[2]
-            )
-
-            if obj == self.selected_object:
-                glColor3f(1.0, 1.0, 0.0)
-            else:
-                glColor3f(0.0, 1.0, 0.0)
-
-            if obj.object_type == "Cube":
-
-                if obj.mesh is not None:
-
-                    MeshRenderer.draw(obj.mesh)
-
-                else:
-
-                    self.draw_cube()
-
-            elif obj.object_type == "Sphere":
-
-                MeshRenderer.draw_sphere()
-
-            elif obj.object_type == "Plane":
-
-                MeshRenderer.draw_plane()
-
-            elif obj.object_type == "Cylinder":
-
-                MeshRenderer.draw_cylinder()
-
-            elif obj.object_type == "Cone":
-
-                MeshRenderer.draw_cone()
-
-            elif obj.object_type == "Torus":
-
-                MeshRenderer.draw_torus()
-
-            else:
-
-                self.draw_cube()
-
-            glPopMatrix()
+                self.draw_scene_object(obj)
 
         # -------------------------
         # Cursor
@@ -882,13 +914,16 @@ class Viewport(QOpenGLWidget):
             speed = 0.003
 
             if self.move_gizmo.selected_axis == "X":
-                self.selected_object.position[0] += dx * speed
+
+                self.selected_object.translate(dx * speed, 0.0, 0.0)
 
             elif self.move_gizmo.selected_axis == "Y":
-                self.selected_object.position[1] -= dy * speed
+
+                self.selected_object.translate(0.0, -dy * speed, 0.0)
 
             elif self.move_gizmo.selected_axis == "Z":
-                self.selected_object.position[2] += dx * speed
+
+                self.selected_object.translate(0.0, 0.0, dx * speed)
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()

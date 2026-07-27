@@ -75,6 +75,7 @@ class AI3DStudio(QMainWindow):
         self.scene_manager = SceneManager()
         self.scene_objects = self.scene_manager.scene_objects
         self.selected_object = None
+        self.pending_parent = None
         self.cube_count = 0
 
         self.command_parser = CommandParser()
@@ -371,6 +372,10 @@ class AI3DStudio(QMainWindow):
 
             obj.mesh = MeshGenerator.create_cube()
 
+        elif primitive_type == "Plane":
+
+            obj.mesh = MeshGenerator.create_plane()
+
         obj.position = [
 
             -2.0 + ((len(self.scene_objects)) * 1.5),
@@ -616,6 +621,61 @@ class AI3DStudio(QMainWindow):
         self.ai_console.append(
             f"Selected {selected.name}"
         )
+
+    def set_parent_candidate(self):
+
+        if self.selected_object is None:
+            return
+
+        self.pending_parent = self.selected_object
+
+        self.ai_console.append(
+            f"Parent candidate: {self.selected_object.name}"
+        )
+
+    def parent_selected_object(self):
+
+        if self.pending_parent is None:
+
+            self.ai_console.append(
+                "No parent selected."
+            )
+
+            return
+
+        if self.selected_object is None:
+
+            self.ai_console.append(
+                "No child selected."
+            )
+
+            return
+
+        if self.pending_parent == self.selected_object:
+
+            self.ai_console.append(
+                "Parent and child cannot be the same."
+            )
+
+            return
+
+        self.pending_parent.add_child(
+            self.selected_object
+        )
+
+        self.ai_console.append(
+            f"{self.selected_object.name} parented to {self.pending_parent.name}"
+        )
+
+        self.viewport.update()
+
+        print("----------- Scene Graph -----------")
+
+        for obj in self.scene_objects:
+
+            parent = obj.parent.name if obj.parent else "None"
+
+            print(f"{obj.name} -> Parent: {parent}")
         
     def keyPressEvent(self, event):
 
@@ -633,11 +693,34 @@ class AI3DStudio(QMainWindow):
             self.duplicate_selected_object()
             return
 
+
+        # ---------- Parent Candidate ----------
+
+        elif (
+            event.key() == Qt.Key_P
+            and event.modifiers() == Qt.ControlModifier
+        ):
+
+            self.set_parent_candidate()
+            return
+
+
+        # ---------- Parent Object ----------
+
+        elif (
+            event.key() == Qt.Key_P
+            and event.modifiers() == (Qt.ControlModifier | Qt.ShiftModifier)
+        ):
+
+            self.parent_selected_object()
+            return
+
+
         elif event.key() == Qt.Key_Delete:
 
             self.delete_selected_object()
             return
-
+        
         elif (
             event.key() == Qt.Key_R
             and event.modifiers() & Qt.ControlModifier

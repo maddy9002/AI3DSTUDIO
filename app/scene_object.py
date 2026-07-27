@@ -41,8 +41,10 @@ class SceneObject:
 
         child.parent = self
 
-        self.children.append(child)
+        if child not in self.children:
 
+            self.children.append(child)
+            
     def remove_child(self, child):
 
         if child in self.children:
@@ -50,6 +52,12 @@ class SceneObject:
             self.children.remove(child)
 
             child.parent = None
+
+    def translate(self, dx, dy, dz):
+
+        self.position[0] += dx
+        self.position[1] += dy
+        self.position[2] += dz
 
     # ----------------------------------
     # World Position
