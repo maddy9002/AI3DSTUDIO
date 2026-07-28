@@ -1,5 +1,7 @@
 import sys
 import os
+from scene.mesh_cache import MeshCache
+from scene.primitive_factory import PrimitiveFactory
 project_root = os.path.dirname(
     os.path.dirname(
         os.path.abspath(__file__)
@@ -359,7 +361,7 @@ class AI3DStudio(QMainWindow):
 
         self.primitive_counts[primitive_type] += 1
 
-        obj = SceneObject(
+        obj = PrimitiveFactory.create(
 
             f"{primitive_type} {self.primitive_counts[primitive_type]}",
 
@@ -369,19 +371,27 @@ class AI3DStudio(QMainWindow):
 
         if primitive_type == "Cube":
 
-            obj.mesh = MeshGenerator.create_cube()
+            obj.mesh = MeshCache.get_mesh(primitive_type)
 
         elif primitive_type == "Plane":
 
-            obj.mesh = MeshGenerator.create_plane()
+            obj.mesh = MeshCache.get_mesh(primitive_type)
 
         elif primitive_type == "Cylinder":
 
-            obj.mesh = MeshGenerator.create_cylinder()
+            obj.mesh = MeshCache.get_mesh(primitive_type)
 
         elif primitive_type == "Cone":
 
-            obj.mesh = MeshGenerator.create_cone()
+            obj.mesh = MeshCache.get_mesh(primitive_type)
+
+        elif primitive_type == "Sphere":
+
+            obj.mesh = MeshCache.get_mesh(primitive_type)
+
+        elif primitive_type == "Torus":
+
+            obj.mesh = MeshCache.get_mesh(primitive_type)
 
         obj.position = [
 

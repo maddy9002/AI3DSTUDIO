@@ -201,7 +201,9 @@ class Viewport(QOpenGLWidget):
 
         elif obj.object_type == "Sphere":
 
-            MeshRenderer.draw_sphere()
+             if obj.mesh is not None:
+
+                MeshRenderer.draw(obj.mesh)
 
         elif obj.object_type == "Plane":
 
@@ -223,7 +225,9 @@ class Viewport(QOpenGLWidget):
 
         elif obj.object_type == "Torus":
 
-            MeshRenderer.draw_torus()
+            if obj.mesh is not None:
+
+                MeshRenderer.draw(obj.mesh)
 
         else:
 

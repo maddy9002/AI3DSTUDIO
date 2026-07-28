@@ -10,28 +10,70 @@ class MeshRenderer:
         if mesh is None:
             return
 
+        # Save OpenGL state
+        glPushAttrib(GL_ALL_ATTRIB_BITS)
+
+        # -------------------------
+        # Solid Mesh
+        # -------------------------
+
+        glEnable(GL_POLYGON_OFFSET_FILL)
+        glPolygonOffset(1.0, 1.0)
+
         for face in mesh.faces:
 
             if len(face) == 3:
-
                 glBegin(GL_TRIANGLES)
 
             elif len(face) == 4:
-
                 glBegin(GL_QUADS)
 
             else:
-
                 glBegin(GL_POLYGON)
 
             for vertex_index in face:
 
                 x, y, z = mesh.vertices[vertex_index]
-
                 glVertex3f(x, y, z)
 
             glEnd()
-            
+
+        glDisable(GL_POLYGON_OFFSET_FILL)
+
+        # -------------------------
+        # Wireframe
+        # -------------------------
+
+        glDisable(GL_LIGHTING)
+        glDisable(GL_TEXTURE_2D)
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+
+        glColor3f(0.0, 0.0, 0.0)
+
+        glLineWidth(1)
+
+        for face in mesh.faces:
+
+            if len(face) == 3:
+                glBegin(GL_TRIANGLES)
+
+            elif len(face) == 4:
+                glBegin(GL_QUADS)
+
+            else:
+                glBegin(GL_POLYGON)
+
+            for vertex_index in face:
+
+                x, y, z = mesh.vertices[vertex_index]
+                glVertex3f(x, y, z)
+
+            glEnd()
+
+        # Restore OpenGL state
+        glPopAttrib()
+        
     @staticmethod
     def draw_sphere():
 
