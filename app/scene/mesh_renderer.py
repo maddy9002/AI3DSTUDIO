@@ -10,9 +10,19 @@ class MeshRenderer:
         if mesh is None:
             return
 
-        glBegin(GL_QUADS)
-
         for face in mesh.faces:
+
+            if len(face) == 3:
+
+                glBegin(GL_TRIANGLES)
+
+            elif len(face) == 4:
+
+                glBegin(GL_QUADS)
+
+            else:
+
+                glBegin(GL_POLYGON)
 
             for vertex_index in face:
 
@@ -20,8 +30,8 @@ class MeshRenderer:
 
                 glVertex3f(x, y, z)
 
-        glEnd()
-
+            glEnd()
+            
     @staticmethod
     def draw_sphere():
 

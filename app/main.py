@@ -1,6 +1,5 @@
 import sys
 import os
-from matplotlib.pylab import angle
 project_root = os.path.dirname(
     os.path.dirname(
         os.path.abspath(__file__)
@@ -375,6 +374,14 @@ class AI3DStudio(QMainWindow):
         elif primitive_type == "Plane":
 
             obj.mesh = MeshGenerator.create_plane()
+
+        elif primitive_type == "Cylinder":
+
+            obj.mesh = MeshGenerator.create_cylinder()
+
+        elif primitive_type == "Cone":
+
+            obj.mesh = MeshGenerator.create_cone()
 
         obj.position = [
 

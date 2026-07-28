@@ -211,11 +211,15 @@ class Viewport(QOpenGLWidget):
 
         elif obj.object_type == "Cylinder":
 
-            MeshRenderer.draw_cylinder()
+             if obj.mesh is not None:
+
+                MeshRenderer.draw(obj.mesh)
 
         elif obj.object_type == "Cone":
 
-            MeshRenderer.draw_cone()
+            if obj.mesh is not None:
+
+                MeshRenderer.draw(obj.mesh)
 
         elif obj.object_type == "Torus":
 
