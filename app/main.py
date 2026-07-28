@@ -2,6 +2,8 @@ import sys
 import os
 from scene.mesh_cache import MeshCache
 from scene.primitive_factory import PrimitiveFactory
+from mode_manager import ModeManager
+from PySide6.QtCore import QEvent
 project_root = os.path.dirname(
     os.path.dirname(
         os.path.abspath(__file__)
@@ -88,6 +90,8 @@ class AI3DStudio(QMainWindow):
         print("Executor:", self.command_executor)
 
         self.project_manager = ProjectManager()
+
+        self.mode_manager = ModeManager()
 
         self.tool_manager = ToolManager()
 
@@ -242,7 +246,9 @@ class AI3DStudio(QMainWindow):
 
         self.history_manager = HistoryManager()
 
-        self.viewport = Viewport()
+        self.viewport = Viewport(self)
+
+        self.viewport.setFocus()    
 
         self.viewport.history_manager = self.history_manager
 
@@ -710,6 +716,19 @@ class AI3DStudio(QMainWindow):
             self.duplicate_selected_object()
             return
 
+        # ----------------------------
+        # Mode Switching
+        # ----------------------------
+
+        if event.key() == Qt.Key_Tab:
+
+            self.mode_manager.toggle()
+
+            print("Mode:", self.mode_manager.get_mode())
+
+            self.viewport.update()
+
+            return
 
         # ---------- Parent Candidate ----------
 
@@ -744,6 +763,20 @@ class AI3DStudio(QMainWindow):
         ):
 
             self.rename_selected_object()
+            return
+
+        # ----------------------------
+        # Mode Switching
+        # ----------------------------
+
+        if event.key() == Qt.Key_Tab:
+
+            self.mode_manager.toggle()
+
+            print("MODE:", self.mode_manager.get_mode())
+
+            self.viewport.update()
+
             return
 
         # ----------------------------
@@ -1058,6 +1091,13 @@ class AI3DStudio(QMainWindow):
         cv2.destroyAllWindows()
 
         event.accept()
+
+    def event(self, event):
+
+        if event.type() == QEvent.KeyPress:
+            print("EVENT:", event.key())
+
+        return super().event(event)
 
 if __name__ == "__main__":
 

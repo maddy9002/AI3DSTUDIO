@@ -16,11 +16,13 @@ from scene.scale_gizmo import ScaleGizmo
 from scene.tool_manager import ToolManager
 from app.scene.selection_manager import SelectionManager
 from scene.mesh_renderer import MeshRenderer
-
+from PySide6.QtCore import QEvent
 class Viewport(QOpenGLWidget):
 
-    def __init__(self):
+    def __init__(self, main_window = None):
         super().__init__()
+
+        self.main_window = main_window
 
         self.webcam_frame = None
 
@@ -73,6 +75,8 @@ class Viewport(QOpenGLWidget):
 
         self.setFocusPolicy(Qt.StrongFocus)
         self.setFocus()
+
+        print("Viewport Focus:", self.hasFocus())
 
     def initializeGL(self):
 
@@ -195,6 +199,13 @@ class Viewport(QOpenGLWidget):
 
                 MeshRenderer.draw(obj.mesh)
 
+                if (
+                    obj == self.selected_object
+                    and self.main_window.mode_manager.get_mode() == "EDIT"
+                ):
+
+                    self.draw_vertices(obj.mesh)
+
             else:
 
                 self.draw_cube()
@@ -205,11 +216,25 @@ class Viewport(QOpenGLWidget):
 
                 MeshRenderer.draw(obj.mesh)
 
+                if (
+                    obj == self.selected_object
+                    and self.main_window.mode_manager.get_mode() == "EDIT"
+                ):
+
+                    self.draw_vertices(obj.mesh)
+
         elif obj.object_type == "Plane":
 
             if obj.mesh is not None:
 
                 MeshRenderer.draw(obj.mesh)
+
+                if (
+                    obj == self.selected_object
+                    and self.main_window.mode_manager.get_mode() == "EDIT"
+                ):
+
+                    self.draw_vertices(obj.mesh)
 
         elif obj.object_type == "Cylinder":
 
@@ -217,17 +242,38 @@ class Viewport(QOpenGLWidget):
 
                 MeshRenderer.draw(obj.mesh)
 
+                if (
+                    obj == self.selected_object
+                    and self.main_window.mode_manager.get_mode() == "EDIT"
+                ):
+
+                    self.draw_vertices(obj.mesh)
+
         elif obj.object_type == "Cone":
 
             if obj.mesh is not None:
 
                 MeshRenderer.draw(obj.mesh)
 
+                if (
+                    obj == self.selected_object
+                    and self.main_window.mode_manager.get_mode() == "EDIT"
+                ):
+
+                    self.draw_vertices(obj.mesh)
+
         elif obj.object_type == "Torus":
 
             if obj.mesh is not None:
 
                 MeshRenderer.draw(obj.mesh)
+
+                if (
+                    obj == self.selected_object
+                    and self.main_window.mode_manager.get_mode() == "EDIT"
+                ):
+
+                    self.draw_vertices(obj.mesh)
 
         else:
 
@@ -243,6 +289,28 @@ class Viewport(QOpenGLWidget):
 
         glPopMatrix()
 
+    def draw_vertices(self, mesh):
+
+        if mesh is None:
+            return
+
+        glPushAttrib(GL_ENABLE_BIT | GL_POINT_BIT | GL_CURRENT_BIT)
+
+        glDisable(GL_LIGHTING)
+
+        glPointSize(8)
+
+        glColor3f(1.0, 0.3, 0.0)
+
+        glBegin(GL_POINTS)
+
+        for vertex in mesh.vertices:
+            glVertex3f(vertex[0], vertex[1], vertex[2])
+
+        glEnd()
+
+        glPopAttrib()
+        
     def paintGL(self):
         
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -818,6 +886,10 @@ class Viewport(QOpenGLWidget):
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
+
+        self.setFocus()
+
+        print("Viewport Focus:", self.hasFocus())
             
     def mouseReleaseEvent(self, event):
 
@@ -1022,6 +1094,22 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
+        # OBJECT / EDIT MODE
+        # ---------------------------------
+        if event.key() == Qt.Key_Tab:
+
+            self.main_window.mode_manager.toggle()
+
+            print(
+                "MODE:",
+                self.main_window.mode_manager.get_mode()
+            )
+
+            self.update()
+
+            return
+
+        # ---------------------------------
         # MOVE
         # ---------------------------------
         if event.key() == Qt.Key_W:
@@ -1060,6 +1148,16 @@ class Viewport(QOpenGLWidget):
 
             return
 
+        elif event.key() == Qt.Key_F4:
+
+            self.main_window.mode_manager.toggle()
+
+            print(self.main_window.mode_manager.get_mode())
+
+            self.update()
+
+            return
+
         super().keyPressEvent(event)
         
     def pick_object(self):
@@ -1081,3 +1179,15 @@ class Viewport(QOpenGLWidget):
             ray,
             self.scene_objects
         )
+
+    def event(self, event):
+
+        if event.type() == QEvent.KeyPress:
+
+            if event.key() == Qt.Key_Tab:
+
+                print("TAB DETECTED")
+
+                return True
+
+        return super().event(event)
