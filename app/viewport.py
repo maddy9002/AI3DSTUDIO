@@ -52,6 +52,8 @@ class Viewport(QOpenGLWidget):
 
         self.selection_manager = SelectionManager(self)
 
+        self.selected_vertex = None
+
         self.raycaster = RayCaster()
 
         self.mouse_x = 0
@@ -72,6 +74,12 @@ class Viewport(QOpenGLWidget):
         self.scale_gizmo = ScaleGizmo()
 
         self.tool_manager = ToolManager()
+
+        self.vertex_dragging = False
+
+        self.vertex_drag_start = None
+
+        self.vertex_original = None
 
         self.setFocusPolicy(Qt.StrongFocus)
         self.setFocus()
@@ -204,6 +212,8 @@ class Viewport(QOpenGLWidget):
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
 
+                    MeshRenderer.draw_edges(obj.mesh)
+
                     self.draw_vertices(obj.mesh)
 
             else:
@@ -221,6 +231,8 @@ class Viewport(QOpenGLWidget):
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
 
+                    MeshRenderer.draw_edges(obj.mesh)
+
                     self.draw_vertices(obj.mesh)
 
         elif obj.object_type == "Plane":
@@ -233,6 +245,8 @@ class Viewport(QOpenGLWidget):
                     obj == self.selected_object
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
+
+                    MeshRenderer.draw_edges(obj.mesh)
 
                     self.draw_vertices(obj.mesh)
 
@@ -247,6 +261,8 @@ class Viewport(QOpenGLWidget):
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
 
+                    MeshRenderer.draw_edges(obj.mesh)
+
                     self.draw_vertices(obj.mesh)
 
         elif obj.object_type == "Cone":
@@ -260,6 +276,8 @@ class Viewport(QOpenGLWidget):
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
 
+                    MeshRenderer.draw_edges(obj.mesh)
+
                     self.draw_vertices(obj.mesh)
 
         elif obj.object_type == "Torus":
@@ -272,6 +290,8 @@ class Viewport(QOpenGLWidget):
                     obj == self.selected_object
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
+
+                    MeshRenderer.draw_edges(obj.mesh)
 
                     self.draw_vertices(obj.mesh)
 
@@ -297,6 +317,7 @@ class Viewport(QOpenGLWidget):
         glPushAttrib(GL_ENABLE_BIT | GL_POINT_BIT | GL_CURRENT_BIT)
 
         glDisable(GL_LIGHTING)
+        glDisable(GL_TEXTURE_2D)
 
         glPointSize(8)
 
@@ -304,13 +325,43 @@ class Viewport(QOpenGLWidget):
 
         glBegin(GL_POINTS)
 
-        for vertex in mesh.vertices:
-            glVertex3f(vertex[0], vertex[1], vertex[2])
+        for i, vertex in enumerate(mesh.vertices):
+
+            glVertex3f(
+                vertex[0],
+                vertex[1],
+                vertex[2]
+            )
 
         glEnd()
 
+        # Draw selected vertex separately so it can have a larger size
+        if (
+            hasattr(self, "selected_vertex")
+            and self.selected_vertex is not None
+            and 0 <= self.selected_vertex < len(mesh.vertices)
+        ):
+
+            vertex = mesh.vertices[self.selected_vertex]
+
+            glPointSize(12)
+
+            glColor3f(1.0, 1.0, 0.0)
+
+            glBegin(GL_POINTS)
+
+            glVertex3f(
+                vertex[0],
+                vertex[1],
+                vertex[2]
+            )
+
+            glEnd()
+
+        glEnable(GL_TEXTURE_2D)
+
         glPopAttrib()
-        
+
     def paintGL(self):
         
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -745,9 +796,6 @@ class Viewport(QOpenGLWidget):
 
         if event.button() == Qt.LeftButton:
 
-            obj = self.pick_object()
-            print("Picked Object:", obj)
-
             ray = RayBuilder.build_ray(
                 self.mouse_x,
                 self.mouse_y,
@@ -757,9 +805,55 @@ class Viewport(QOpenGLWidget):
 
             tool = self.tool_manager.get_tool()
 
-            # ---------------------------------
-            # MOVE TOOL
-            # ---------------------------------
+            # -------------------------------------------------
+            # EDIT MODE (Vertex Selection)
+            # -------------------------------------------------
+
+            if self.main_window.mode_manager.get_mode() == "EDIT":
+
+                obj = self.selected_object
+
+                if obj is not None:
+
+                    vertex = self.pick_vertex(
+                        obj,
+                        ray
+                    )
+
+                    self.selected_vertex = vertex
+
+                    print("Selected Vertex:", vertex)
+
+                    if vertex is not None:
+
+                        self.vertex_dragging = True
+
+                        self.last_mouse_x = event.x()
+                        self.last_mouse_y = event.y()
+
+                        self.vertex_original = np.array(
+                            obj.mesh.vertices[vertex],
+                            dtype=np.float32
+                        )
+
+                    else:
+
+                        self.vertex_dragging = False
+
+                    self.update()
+
+                    return
+
+            # -------------------------------------------------
+            # OBJECT MODE
+            # -------------------------------------------------
+
+            obj = self.pick_object()
+
+            print("Picked Object:", obj)
+
+            # ---------------- MOVE ----------------
+
             if tool == ToolManager.MOVE:
 
                 axis = self.move_gizmo.pick_axis(ray)
@@ -778,11 +872,11 @@ class Viewport(QOpenGLWidget):
                     self.last_mouse_y = event.y()
 
                     self.update()
+
                     return
 
-            # ---------------------------------
-            # ROTATE TOOL
-            # ---------------------------------
+            # ---------------- ROTATE ----------------
+
             elif tool == ToolManager.ROTATE:
 
                 rotate_axis = self.rotate_gizmo.pick_axis(ray)
@@ -806,11 +900,11 @@ class Viewport(QOpenGLWidget):
                     self.last_mouse_y = event.y()
 
                     self.update()
+
                     return
 
-            # ---------------------------------
-            # SCALE TOOL
-            # ---------------------------------
+            # ---------------- SCALE ----------------
+
             elif tool == ToolManager.SCALE:
 
                 scale_axis = self.scale_gizmo.pick_axis(ray)
@@ -834,11 +928,10 @@ class Viewport(QOpenGLWidget):
                     self.last_mouse_y = event.y()
 
                     self.update()
+
                     return
 
-            # ---------------------------------
-            # OBJECT SELECTION
-            # ---------------------------------
+            # ---------------- OBJECT PICK ----------------
 
             if obj is not None:
 
@@ -846,16 +939,11 @@ class Viewport(QOpenGLWidget):
 
                 self.dragging_object = True
 
-                ray = RayBuilder.build_ray(
-                    self.mouse_x,
-                    self.mouse_y,
-                    self,
-                    self.camera
-                )
-
                 if abs(ray.direction[1]) > 1e-6:
 
-                    t = (self.drag_plane_y - ray.origin[1]) / ray.direction[1]
+                    t = (
+                        self.drag_plane_y - ray.origin[1]
+                    ) / ray.direction[1]
 
                     hit = ray.origin + ray.direction * t
 
@@ -874,11 +962,12 @@ class Viewport(QOpenGLWidget):
                 self.selection_manager.deselect()
 
             self.update()
+
             return
 
-        # ---------------------------------
+        # -------------------------------------------------
         # RIGHT MOUSE
-        # ---------------------------------
+        # -------------------------------------------------
 
         if event.button() == Qt.RightButton:
 
@@ -890,22 +979,26 @@ class Viewport(QOpenGLWidget):
         self.setFocus()
 
         print("Viewport Focus:", self.hasFocus())
-            
+        
     def mouseReleaseEvent(self, event):
 
         if event.button() == Qt.LeftButton:
 
-            # Stop object dragging
+            # Vertex Drag
+            self.vertex_dragging = False
+
+            # Object Drag
             self.dragging_object = False
 
-            # Stop move gizmo
+            # Move Gizmo
             self.move_gizmo.selected_axis = None
 
-            # Stop rotate gizmo
+            # Rotate Gizmo
             self.rotate_gizmo.selected_axis = None
             self.rotate_gizmo.dragging = False
             self.rotate_gizmo.end_rotation()
 
+            # Scale Gizmo
             self.scale_gizmo.end_scale()
 
             self._move_saved = False
@@ -918,9 +1011,52 @@ class Viewport(QOpenGLWidget):
 
     def mouseMoveEvent(self, event):
 
-        # -----------------------------
-        # Scale Gizmo Drag
-        # -----------------------------
+        # ---------------------------------
+        # Vertex Drag (EDIT MODE)
+        # ---------------------------------
+
+        if (
+            self.vertex_dragging
+            and self.selected_vertex is not None
+            and self.selected_object is not None
+            and self.main_window.mode_manager.get_mode() == "EDIT"
+        ):
+
+            mesh = self.selected_object.mesh
+
+            if mesh is None:
+                return
+
+            if self.selected_vertex >= len(mesh.vertices):
+                return
+
+            dx = event.x() - self.last_mouse_x
+            dy = event.y() - self.last_mouse_y
+
+            sensitivity = 0.01
+
+            x, y, z = mesh.vertices[self.selected_vertex]
+
+            x += dx * sensitivity
+            y -= dy * sensitivity
+
+            mesh.vertices[self.selected_vertex] = [x, y, z]
+
+            self.selected_object.bounding_box.update(
+                self.selected_object.position,
+                self.selected_object.scale
+            )
+
+            self.last_mouse_x = event.x()
+            self.last_mouse_y = event.y()
+
+            self.update()
+
+            return
+
+        # ---------------------------------
+        # Scale Gizmo
+        # ---------------------------------
 
         if (
             event.buttons() & Qt.LeftButton
@@ -943,9 +1079,10 @@ class Viewport(QOpenGLWidget):
 
             return
 
-        # -----------------------------
-        # Rotate Gizmo Drag
-        # -----------------------------
+        # ---------------------------------
+        # Rotate Gizmo
+        # ---------------------------------
+
         if (
             event.buttons() & Qt.LeftButton
             and self.rotate_gizmo.dragging
@@ -955,7 +1092,7 @@ class Viewport(QOpenGLWidget):
 
             ray = RayBuilder.build_ray(
                 event.x(),
-                event.y(), 
+                event.y(),
                 self,
                 self.camera
             )
@@ -969,24 +1106,23 @@ class Viewport(QOpenGLWidget):
 
             return
 
-        # -----------------------------
-        # Gizmo Drag
-        # -----------------------------
-        print("Buttons:", event.buttons())
-        print("Selected Axis:", self.move_gizmo.selected_axis)
-        print("Selected Object:", self.selected_object)
-
-        if not hasattr(self, "_move_saved"):
-            self.history_manager.save_state(self.selected_object)
-            self._move_saved = True
+        # ---------------------------------
+        # Move Gizmo
+        # ---------------------------------
 
         if (
             event.buttons() & Qt.LeftButton
             and self.move_gizmo.selected_axis is not None
             and self.selected_object is not None
         ):
-            
-            print("Dragging:", self.move_gizmo.selected_axis)
+
+            if not hasattr(self, "_move_saved"):
+
+                self.history_manager.save_state(
+                    self.selected_object
+                )
+
+                self._move_saved = True
 
             dx = event.x() - self.last_mouse_x
             dy = event.y() - self.last_mouse_y
@@ -995,15 +1131,27 @@ class Viewport(QOpenGLWidget):
 
             if self.move_gizmo.selected_axis == "X":
 
-                self.selected_object.translate(dx * speed, 0.0, 0.0)
+                self.selected_object.translate(
+                    dx * speed,
+                    0.0,
+                    0.0
+                )
 
             elif self.move_gizmo.selected_axis == "Y":
 
-                self.selected_object.translate(0.0, -dy * speed, 0.0)
+                self.selected_object.translate(
+                    0.0,
+                    -dy * speed,
+                    0.0
+                )
 
             elif self.move_gizmo.selected_axis == "Z":
 
-                self.selected_object.translate(0.0, 0.0, dx * speed)
+                self.selected_object.translate(
+                    0.0,
+                    0.0,
+                    dx * speed
+                )
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
@@ -1011,7 +1159,11 @@ class Viewport(QOpenGLWidget):
             self.update()
 
             return
-        
+
+        # ---------------------------------
+        # Object Drag
+        # ---------------------------------
+
         if self.dragging_object and self.selected_object:
 
             ray = RayBuilder.build_ray(
@@ -1021,14 +1173,21 @@ class Viewport(QOpenGLWidget):
                 self.camera
             )
 
-            t = (self.drag_plane_y - ray.origin[1]) / ray.direction[1]
+            t = (
+                self.drag_plane_y - ray.origin[1]
+            ) / ray.direction[1]
 
             hit = ray.origin + ray.direction * t
 
             new_position = hit + self.drag_offset
 
-            self.selected_object.position[0] = float(new_position[0])
-            self.selected_object.position[2] = float(new_position[2])
+            self.selected_object.position[0] = float(
+                new_position[0]
+            )
+
+            self.selected_object.position[2] = float(
+                new_position[2]
+            )
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
@@ -1037,12 +1196,11 @@ class Viewport(QOpenGLWidget):
 
             return
 
-        # -----------------------------
+        # ---------------------------------
         # Camera Rotation
-        # -----------------------------
-        if event.buttons() & Qt.RightButton:
+        # ---------------------------------
 
-            print("Rotating Camera")
+        if event.buttons() & Qt.RightButton:
 
             dx = event.x() - self.last_mouse_x
             dy = event.y() - self.last_mouse_y
@@ -1050,13 +1208,16 @@ class Viewport(QOpenGLWidget):
             self.camera.yaw -= dx * 0.5
             self.camera.pitch += dy * 0.5
 
-            self.camera.pitch = max(-89, min(89, self.camera.pitch))
+            self.camera.pitch = max(
+                -89,
+                min(89, self.camera.pitch)
+            )
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
 
             self.update()
-
+        
     def keyPressEvent(self, event):
 
         print("VIEWPORT KEY:", event.key())
@@ -1191,3 +1352,49 @@ class Viewport(QOpenGLWidget):
                 return True
 
         return super().event(event)
+    
+    def pick_vertex(self, obj, ray):
+
+        if obj is None:
+            return None
+
+        if obj.mesh is None:
+            return None
+
+        nearest = None
+
+        nearest_distance = 0.12
+
+        origin = np.array(ray.origin)
+
+        direction = np.array(ray.direction)
+
+        for index, vertex in enumerate(obj.mesh.vertices):
+
+            world_vertex = np.array(vertex)
+
+            world_vertex *= np.array(obj.scale)
+
+            world_vertex += np.array(obj.position)
+
+            t = np.dot(
+                world_vertex - origin,
+                direction
+            )
+
+            if t < 0:
+                continue
+
+            closest = origin + direction * t
+
+            distance = np.linalg.norm(
+                world_vertex - closest
+            )
+
+            if distance < nearest_distance:
+
+                nearest_distance = distance
+
+                nearest = index
+
+        return nearest

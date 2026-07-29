@@ -1093,12 +1093,12 @@ class AI3DStudio(QMainWindow):
         event.accept()
 
     def event(self, event):
-
-        if event.type() == QEvent.KeyPress:
-            print("EVENT:", event.key())
-
-        return super().event(event)
-
+        try:
+            return super().event(event)
+        except Exception as e:
+            print("EVENT ERROR:", e)
+            raise
+        
 if __name__ == "__main__":
 
     app = QApplication([])

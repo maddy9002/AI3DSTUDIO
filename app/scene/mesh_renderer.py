@@ -73,6 +73,36 @@ class MeshRenderer:
 
         # Restore OpenGL state
         glPopAttrib()
+
+    @staticmethod
+    def draw_edges(mesh):
+
+        if mesh is None:
+            return
+
+        glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT | GL_LINE_BIT)
+
+        glDisable(GL_LIGHTING)
+
+        glColor3f(0.0, 0.0, 1.0)
+
+        glLineWidth(4)
+
+        glBegin(GL_LINES)
+
+        for edge in mesh.edges:
+
+            a = mesh.vertices[edge[0]]
+
+            b = mesh.vertices[edge[1]]
+
+            glVertex3f(a[0], a[1], a[2])
+
+            glVertex3f(b[0], b[1], b[2])
+
+        glEnd()
+
+        glPopAttrib()
         
     @staticmethod
     def draw_sphere():

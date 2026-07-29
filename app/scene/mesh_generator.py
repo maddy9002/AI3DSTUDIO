@@ -35,6 +35,12 @@ class MeshGenerator:
 
         ]
 
+        # ---------------------------------
+        # Build Edge List
+        # ---------------------------------
+
+        mesh.build_edges()
+
         return mesh
 
     @staticmethod
@@ -55,7 +61,11 @@ class MeshGenerator:
 
         ]
 
-        return Mesh(vertices, faces)
+        mesh = Mesh(vertices, faces)
+
+        mesh.build_edges()
+
+        return mesh
 
     @staticmethod
     def create_sphere():
@@ -120,7 +130,11 @@ class MeshGenerator:
                     k1 + j + 1
                 ))
 
-        return Mesh(vertices, faces)
+        mesh = Mesh(vertices, faces)
+
+        mesh.build_edges()
+
+        return mesh
 
     @staticmethod
     def create_cylinder():
@@ -189,7 +203,11 @@ class MeshGenerator:
 
             faces.append((top_center, a, b))
 
-        return Mesh(vertices, faces)
+        mesh = Mesh(vertices, faces)
+
+        mesh.build_edges()
+
+        return mesh
 
     @staticmethod
     def create_cone():
@@ -238,7 +256,11 @@ class MeshGenerator:
 
             faces.append((center, b, a))
 
-        return Mesh(vertices, faces)
+        mesh = Mesh(vertices, faces)
+
+        mesh.build_edges()
+
+        return mesh
     
     @staticmethod
     def create_torus():
@@ -283,4 +305,8 @@ class MeshGenerator:
 
                 faces.append((a, b, c, d))
 
-        return Mesh(vertices, faces)
+        mesh = Mesh(vertices, faces)
+
+        mesh.build_edges()
+
+        return mesh
