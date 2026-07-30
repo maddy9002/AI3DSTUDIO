@@ -1098,7 +1098,7 @@ class AI3DStudio(QMainWindow):
         except Exception as e:
             print("EVENT ERROR:", e)
             raise
-        
+            
 if __name__ == "__main__":
 
     app = QApplication([])

@@ -17,6 +17,8 @@ from scene.tool_manager import ToolManager
 from app.scene.selection_manager import SelectionManager
 from scene.mesh_renderer import MeshRenderer
 from PySide6.QtCore import QEvent
+from app.geometry_utils import GeometryUtils
+
 class Viewport(QOpenGLWidget):
 
     def __init__(self, main_window = None):
@@ -53,6 +55,10 @@ class Viewport(QOpenGLWidget):
         self.selection_manager = SelectionManager(self)
 
         self.selected_vertex = None
+
+        self.selected_edge = None
+
+        self.edge_dragging = False
 
         self.raycaster = RayCaster()
 
@@ -212,7 +218,10 @@ class Viewport(QOpenGLWidget):
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
 
-                    MeshRenderer.draw_edges(obj.mesh)
+                    MeshRenderer.draw_edges(
+                        obj.mesh,
+                        self.selected_edge
+                    )
 
                     self.draw_vertices(obj.mesh)
 
@@ -231,7 +240,10 @@ class Viewport(QOpenGLWidget):
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
 
-                    MeshRenderer.draw_edges(obj.mesh)
+                    MeshRenderer.draw_edges(
+                        obj.mesh,
+                        self.selected_edge
+                    )
 
                     self.draw_vertices(obj.mesh)
 
@@ -246,7 +258,10 @@ class Viewport(QOpenGLWidget):
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
 
-                    MeshRenderer.draw_edges(obj.mesh)
+                    MeshRenderer.draw_edges(
+                        obj.mesh,
+                        self.selected_edge
+                    )
 
                     self.draw_vertices(obj.mesh)
 
@@ -261,7 +276,10 @@ class Viewport(QOpenGLWidget):
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
 
-                    MeshRenderer.draw_edges(obj.mesh)
+                    MeshRenderer.draw_edges(
+                        obj.mesh,
+                        self.selected_edge
+                    )
 
                     self.draw_vertices(obj.mesh)
 
@@ -276,7 +294,10 @@ class Viewport(QOpenGLWidget):
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
 
-                    MeshRenderer.draw_edges(obj.mesh)
+                    MeshRenderer.draw_edges(
+                        obj.mesh,
+                        self.selected_edge
+                    )
 
                     self.draw_vertices(obj.mesh)
 
@@ -291,7 +312,10 @@ class Viewport(QOpenGLWidget):
                     and self.main_window.mode_manager.get_mode() == "EDIT"
                 ):
 
-                    MeshRenderer.draw_edges(obj.mesh)
+                    MeshRenderer.draw_edges(
+                        obj.mesh,
+                        self.selected_edge
+                    )
 
                     self.draw_vertices(obj.mesh)
 
@@ -839,6 +863,19 @@ class Viewport(QOpenGLWidget):
                     else:
 
                         self.vertex_dragging = False
+
+                        # -----------------------------
+                        # TEMPORARY EDGE TEST
+                        # -----------------------------
+
+                        edge = self.pick_edge(
+                            obj,
+                            ray
+                        )
+
+                        print("Edge Result:", edge)
+
+                        self.selected_edge = edge
 
                     self.update()
 
@@ -1398,3 +1435,68 @@ class Viewport(QOpenGLWidget):
                 nearest = index
 
         return nearest
+
+    def pick_edge(
+        self,
+        obj,
+        ray
+    ):
+
+        if obj is None:
+            return None
+
+        if obj.mesh is None:
+            return None
+
+        if not hasattr(obj.mesh, "edges"):
+            return None
+
+        threshold = 0.10
+
+        closest_edge = None
+        closest_distance = 999999.0
+
+        for i, edge in enumerate(obj.mesh.edges):
+
+            a = np.array(
+                obj.mesh.vertices[edge[0]],
+                dtype=np.float32
+            )
+
+            b = np.array(
+                obj.mesh.vertices[edge[1]],
+                dtype=np.float32
+            )
+
+            # -------------------------
+            # Local → World
+            # -------------------------
+
+            a *= np.array(obj.scale)
+
+            b *= np.array(obj.scale)
+
+            a += np.array(obj.position)
+
+            b += np.array(obj.position)
+
+            print("Edge", i)
+            print("A:", a)
+            print("B:", b)
+            print("Ray Origin:", ray.origin)
+            print("Ray Dir:", ray.direction)
+
+            distance = GeometryUtils.distance_ray_to_segment(
+                ray,
+                a,
+                b
+            )
+
+            if distance < threshold:
+
+                if distance < closest_distance:
+
+                    closest_distance = distance
+                    closest_edge = i
+
+        return closest_edge

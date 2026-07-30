@@ -75,7 +75,7 @@ class MeshRenderer:
         glPopAttrib()
 
     @staticmethod
-    def draw_edges(mesh):
+    def draw_edges(mesh, selected_edge=None):
 
         if mesh is None:
             return
@@ -83,27 +83,32 @@ class MeshRenderer:
         glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT | GL_LINE_BIT)
 
         glDisable(GL_LIGHTING)
+        glDisable(GL_TEXTURE_2D)
 
-        glColor3f(0.0, 0.0, 1.0)
+        for i, edge in enumerate(mesh.edges):
 
-        glLineWidth(4)
+            if i == selected_edge:
 
-        glBegin(GL_LINES)
+                glColor3f(1.0, 1.0, 0.0)
+                glLineWidth(6)
 
-        for edge in mesh.edges:
+            else:
 
-            a = mesh.vertices[edge[0]]
+                glColor3f(0.0, 0.4, 1.0)
+                glLineWidth(3)
 
-            b = mesh.vertices[edge[1]]
+            glBegin(GL_LINES)
 
-            glVertex3f(a[0], a[1], a[2])
+            v1 = mesh.vertices[edge[0]]
+            v2 = mesh.vertices[edge[1]]
 
-            glVertex3f(b[0], b[1], b[2])
+            glVertex3f(*v1)
+            glVertex3f(*v2)
 
-        glEnd()
+            glEnd()
 
         glPopAttrib()
-        
+
     @staticmethod
     def draw_sphere():
 
