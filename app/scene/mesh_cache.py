@@ -1,4 +1,4 @@
-from scene.mesh_generator import MeshGenerator
+from app.scene.mesh_generator import MeshGenerator
 
 
 class MeshCache:

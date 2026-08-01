@@ -1,8 +1,6 @@
 import numpy as np
 
-
 class GeometryUtils:
-
 
     @staticmethod
     def closest_point_on_segment(
@@ -30,7 +28,6 @@ class GeometryUtils:
         )
 
         return a + ab * t
-
 
     @staticmethod
     def distance_ray_to_segment(

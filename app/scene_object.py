@@ -1,4 +1,4 @@
-from scene.bounding_box import BoundingBox
+from app.scene.bounding_box import BoundingBox
 
 
 class SceneObject:

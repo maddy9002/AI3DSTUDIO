@@ -1,6 +1,5 @@
-from scene.mesh import Mesh
 import math
-
+from scene.mesh import Mesh
 class MeshGenerator:
 
     @staticmethod
@@ -10,15 +9,15 @@ class MeshGenerator:
 
         mesh.vertices = [
 
-            (-0.5,-0.5,-0.5),
-            ( 0.5,-0.5,-0.5),
-            ( 0.5, 0.5,-0.5),
-            (-0.5, 0.5,-0.5),
+            [-0.5, -0.5, -0.5],
+            [ 0.5, -0.5, -0.5],
+            [ 0.5,  0.5, -0.5],
+            [-0.5,  0.5, -0.5],
 
-            (-0.5,-0.5, 0.5),
-            ( 0.5,-0.5, 0.5),
-            ( 0.5, 0.5, 0.5),
-            (-0.5, 0.5, 0.5)
+            [-0.5, -0.5,  0.5],
+            [ 0.5, -0.5,  0.5],
+            [ 0.5,  0.5,  0.5],
+            [-0.5,  0.5,  0.5]
 
         ]
 
@@ -69,9 +68,6 @@ class MeshGenerator:
 
     @staticmethod
     def create_sphere():
-
-        import math
-        from scene.mesh import Mesh
 
         radius = 0.5
         stacks = 16

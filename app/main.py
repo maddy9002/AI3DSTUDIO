@@ -1,15 +1,9 @@
 import sys
 import os
-from scene.mesh_cache import MeshCache
-from scene.primitive_factory import PrimitiveFactory
-from mode_manager import ModeManager
-from PySide6.QtCore import QEvent
-project_root = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(__file__)
-    )
-)
-sys.path.append(project_root)
+import inspect
+import cv2
+
+from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -17,48 +11,64 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QListWidget,
     QTextEdit,
-    QLineEdit, 
-    QLabel, 
-    QToolBar, 
-    QInputDialog, 
+    QLineEdit,
+    QLabel,
+    QToolBar,
+    QInputDialog,
     QPushButton,
     QVBoxLayout
 )
-from PySide6.QtCore import Qt, QTimer
+
+project_root = os.path.dirname(
+    os.path.dirname(
+        os.path.abspath(__file__)
+    )
+)
+
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+from app.scene.mesh_cache import MeshCache
+from app.scene.primitive_factory import PrimitiveFactory
+from app.scene.mesh_generator import MeshGenerator
+from app.scene.scene_manager import SceneManager
+from app.scene.tool_manager import ToolManager
+from app.scene.ray import Ray
+from app.scene.raycast import RayCaster
+
+from app.mode_manager import ModeManager
+from app.scene_object import SceneObject
+from app.viewport import Viewport
+
 from app.ai.command_parser import CommandParser
 from app.ai.command_executor import CommandExecutor
-import cv2
 from app.ai.ai_engine import AIEngine
-from scene_object import SceneObject
-from database.database import save_model
-from app.viewport import Viewport
+
+from app.database.database import save_model
+from app.project.project_manager import ProjectManager
+from app.managers.history_manager import HistoryManager
+
 from webcam.hand_tracker_class import HandTracker
 import webcam.hand_tracker_class
-import inspect
 from webcam.gesture_controller import GestureController
+
 from interaction.interaction_manager import InteractionManager
-from app.project.project_manager import ProjectManager
-from app.tools.tool_manager import ToolManager
-from scene.ray import Ray
-from scene.raycast import RayCaster
+
 print("OK")
 print("HandTracker loaded from:")
 print(inspect.getfile(HandTracker))
 print("Methods:")
 print(dir(HandTracker))
-print(
-    webcam.hand_tracker_class.__file__
-)
+print(webcam.hand_tracker_class.__file__)
+
 ray = Ray(
     origin=[0, 0, 5],
     direction=[2, 0, -4]
 )
+
 print("Origin:", ray.origin)
 print("Direction:", ray.direction)
-from scene.scene_manager import SceneManager
-from scene.tool_manager import ToolManager
-from managers.history_manager import HistoryManager
-from scene.mesh_generator import MeshGenerator
+
 class AI3DStudio(QMainWindow):
 
     def mousePressEvent(self, event):
@@ -374,30 +384,6 @@ class AI3DStudio(QMainWindow):
             primitive_type
 
         )
-
-        if primitive_type == "Cube":
-
-            obj.mesh = MeshCache.get_mesh(primitive_type)
-
-        elif primitive_type == "Plane":
-
-            obj.mesh = MeshCache.get_mesh(primitive_type)
-
-        elif primitive_type == "Cylinder":
-
-            obj.mesh = MeshCache.get_mesh(primitive_type)
-
-        elif primitive_type == "Cone":
-
-            obj.mesh = MeshCache.get_mesh(primitive_type)
-
-        elif primitive_type == "Sphere":
-
-            obj.mesh = MeshCache.get_mesh(primitive_type)
-
-        elif primitive_type == "Torus":
-
-            obj.mesh = MeshCache.get_mesh(primitive_type)
 
         obj.position = [
 

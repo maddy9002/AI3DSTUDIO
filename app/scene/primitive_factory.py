@@ -1,5 +1,7 @@
-from scene_object import SceneObject
-from scene.mesh_cache import MeshCache
+from copy import deepcopy
+
+from app.scene_object import SceneObject
+from app.scene.mesh_cache import MeshCache
 
 
 class PrimitiveFactory:
@@ -9,6 +11,12 @@ class PrimitiveFactory:
 
         obj = SceneObject(name, primitive_type)
 
-        obj.mesh = MeshCache.get_mesh(primitive_type)
+        obj.mesh = deepcopy(
+            MeshCache.get_mesh(primitive_type)
+        )
+
+        print(f"{name}")
+        print("Mesh ID:", id(obj.mesh))
+        print("Vertices ID:", id(obj.mesh.vertices))
 
         return obj

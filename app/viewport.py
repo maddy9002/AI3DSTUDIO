@@ -87,6 +87,11 @@ class Viewport(QOpenGLWidget):
 
         self.vertex_original = None
 
+        self.edge_dragging = False
+
+        self.edge_vertex_a = None
+        self.edge_vertex_b = None
+
         self.setFocusPolicy(Qt.StrongFocus)
         self.setFocus()
 
@@ -850,6 +855,9 @@ class Viewport(QOpenGLWidget):
 
                     if vertex is not None:
 
+                        self.dragging_object = False
+                        self.edge_dragging = False
+
                         self.vertex_dragging = True
 
                         self.last_mouse_x = event.x()
@@ -873,9 +881,28 @@ class Viewport(QOpenGLWidget):
                             ray
                         )
 
+                        self.selected_edge = edge
+
                         print("Edge Result:", edge)
 
-                        self.selected_edge = edge
+                        if edge is not None:
+
+                            self.dragging_object = False
+                            self.vertex_dragging = False
+
+                            self.edge_dragging = True
+
+                            edge_vertices = obj.mesh.edges[edge]
+
+                            self.edge_vertex_a = edge_vertices[0]
+                            self.edge_vertex_b = edge_vertices[1]
+
+                            self.last_mouse_x = event.x()
+                            self.last_mouse_y = event.y()
+
+                        else:
+
+                            self.edge_dragging = False
 
                     self.update()
 
@@ -1024,9 +1051,14 @@ class Viewport(QOpenGLWidget):
             # Vertex Drag
             self.vertex_dragging = False
 
+            # Edge Drag
+            self.edge_dragging = False
+            self.edge_vertex_a = None
+            self.edge_vertex_b = None
+
             # Object Drag
             self.dragging_object = False
-
+            
             # Move Gizmo
             self.move_gizmo.selected_axis = None
 
@@ -1083,6 +1115,59 @@ class Viewport(QOpenGLWidget):
                 self.selected_object.position,
                 self.selected_object.scale
             )
+
+            self.last_mouse_x = event.x()
+            self.last_mouse_y = event.y()
+
+            self.update()
+
+            return
+
+        # ---------------------------------
+        # Edge Drag (EDIT MODE)
+        # ---------------------------------
+
+        if (
+            self.edge_dragging
+            and self.selected_edge is not None
+            and self.selected_object is not None
+            and self.main_window.mode_manager.get_mode() == "EDIT"
+        ):
+
+            dx = event.x() - self.last_mouse_x
+            dy = event.y() - self.last_mouse_y
+
+            sensitivity = 0.01
+
+            mesh = self.selected_object.mesh
+
+            print("\n=========================")
+            print("Dragging Object :", self.selected_object.name)
+            print("Mesh ID         :", id(mesh))
+            print("Vertices ID     :", id(mesh.vertices))
+            print("Edge            :", self.selected_edge)
+            print("Vertex A Index  :", self.edge_vertex_a)
+            print("Vertex B Index  :", self.edge_vertex_b)
+
+            for obj in self.scene_objects:
+
+                print(
+                    obj.name,
+                    "Mesh =", id(obj.mesh),
+                    "Vertices =", id(obj.mesh.vertices)
+                )
+
+            print("Before A :", mesh.vertices[self.edge_vertex_a])
+            print("Before B :", mesh.vertices[self.edge_vertex_b])
+            
+            mesh.vertices[self.edge_vertex_a][0] += dx * sensitivity
+            mesh.vertices[self.edge_vertex_a][1] -= dy * sensitivity
+
+            mesh.vertices[self.edge_vertex_b][0] += dx * sensitivity
+            mesh.vertices[self.edge_vertex_b][1] -= dy * sensitivity
+
+            print("After A  :", mesh.vertices[self.edge_vertex_a])
+            print("After B  :", mesh.vertices[self.edge_vertex_b])
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
