@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 from app.scene_object import SceneObject
 from app.scene.mesh_cache import MeshCache
 
@@ -11,9 +9,9 @@ class PrimitiveFactory:
 
         obj = SceneObject(name, primitive_type)
 
-        obj.mesh = deepcopy(
-            MeshCache.get_mesh(primitive_type)
-        )
+        # MeshCache already returns a unique mesh instance.
+        # Never deepcopy here.
+        obj.mesh = MeshCache.get_mesh(primitive_type)
 
         print(f"{name}")
         print("Mesh ID:", id(obj.mesh))

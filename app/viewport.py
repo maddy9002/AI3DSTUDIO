@@ -1134,40 +1134,50 @@ class Viewport(QOpenGLWidget):
             and self.main_window.mode_manager.get_mode() == "EDIT"
         ):
 
+            mesh = self.selected_object.mesh
+
+            if mesh is None:
+                return
+
+            if self.edge_vertex_a is None:
+                return
+
+            if self.edge_vertex_b is None:
+                return
+
+            if self.edge_vertex_a >= len(mesh.vertices):
+                return
+
+            if self.edge_vertex_b >= len(mesh.vertices):
+                return
+
             dx = event.x() - self.last_mouse_x
             dy = event.y() - self.last_mouse_y
 
             sensitivity = 0.01
 
-            mesh = self.selected_object.mesh
-
             print("\n=========================")
             print("Dragging Object :", self.selected_object.name)
             print("Mesh ID         :", id(mesh))
-            print("Vertices ID     :", id(mesh.vertices))
             print("Edge            :", self.selected_edge)
-            print("Vertex A Index  :", self.edge_vertex_a)
-            print("Vertex B Index  :", self.edge_vertex_b)
 
-            for obj in self.scene_objects:
+            va = mesh.vertices[self.edge_vertex_a]
+            vb = mesh.vertices[self.edge_vertex_b]
 
-                print(
-                    obj.name,
-                    "Mesh =", id(obj.mesh),
-                    "Vertices =", id(obj.mesh.vertices)
-                )
+            print("Before A :", va)
+            print("Before B :", vb)
 
-            print("Before A :", mesh.vertices[self.edge_vertex_a])
-            print("Before B :", mesh.vertices[self.edge_vertex_b])
-            
-            mesh.vertices[self.edge_vertex_a][0] += dx * sensitivity
-            mesh.vertices[self.edge_vertex_a][1] -= dy * sensitivity
+            va[0] += dx * sensitivity
+            va[1] -= dy * sensitivity
 
-            mesh.vertices[self.edge_vertex_b][0] += dx * sensitivity
-            mesh.vertices[self.edge_vertex_b][1] -= dy * sensitivity
+            vb[0] += dx * sensitivity
+            vb[1] -= dy * sensitivity
 
-            print("After A  :", mesh.vertices[self.edge_vertex_a])
-            print("After B  :", mesh.vertices[self.edge_vertex_b])
+            mesh.vertices[self.edge_vertex_a] = va
+            mesh.vertices[self.edge_vertex_b] = vb
+
+            print("After A :", mesh.vertices[self.edge_vertex_a])
+            print("After B :", mesh.vertices[self.edge_vertex_b])
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
@@ -1585,3 +1595,4 @@ class Viewport(QOpenGLWidget):
                     closest_edge = i
 
         return closest_edge
+

@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from app.scene.mesh_generator import MeshGenerator
 
 
@@ -8,38 +10,40 @@ class MeshCache:
     @classmethod
     def get_mesh(cls, primitive_type):
 
-        if primitive_type in cls._cache:
+        if primitive_type not in cls._cache:
 
-            return cls._cache[primitive_type]
+            if primitive_type == "Cube":
 
-        if primitive_type == "Cube":
+                cls._cache[primitive_type] = MeshGenerator.create_cube()
 
-            mesh = MeshGenerator.create_cube()
+            elif primitive_type == "Plane":
 
-        elif primitive_type == "Plane":
+                cls._cache[primitive_type] = MeshGenerator.create_plane()
 
-            mesh = MeshGenerator.create_plane()
+            elif primitive_type == "Cylinder":
 
-        elif primitive_type == "Cylinder":
+                cls._cache[primitive_type] = MeshGenerator.create_cylinder()
 
-            mesh = MeshGenerator.create_cylinder()
+            elif primitive_type == "Cone":
 
-        elif primitive_type == "Cone":
+                cls._cache[primitive_type] = MeshGenerator.create_cone()
 
-            mesh = MeshGenerator.create_cone()
+            elif primitive_type == "Sphere":
 
-        elif primitive_type == "Sphere":
+                cls._cache[primitive_type] = MeshGenerator.create_sphere()
 
-            mesh = MeshGenerator.create_sphere()
+            elif primitive_type == "Torus":
 
-        elif primitive_type == "Torus":
+                cls._cache[primitive_type] = MeshGenerator.create_torus()
 
-            mesh = MeshGenerator.create_torus()
+            else:
 
-        else:
+                return None
 
-            mesh = None
+        # Always return a deep copy so every object owns its own mesh
+        return deepcopy(cls._cache[primitive_type])
 
-        cls._cache[primitive_type] = mesh
+    @classmethod
+    def clear(cls):
 
-        return mesh
+        cls._cache.clear()
