@@ -55,8 +55,31 @@ class ScaleGizmo:
         if obj is None:
             return
 
-        self.update_boxes()
+        # ---------------------------------
+        # Calculate object size
+        # ---------------------------------
 
+        if obj.mesh is not None:
+
+            xs = [v[0] for v in obj.mesh.vertices]
+            ys = [v[1] for v in obj.mesh.vertices]
+            zs = [v[2] for v in obj.mesh.vertices]
+
+            size_x = (max(xs) - min(xs)) * obj.scale[0]
+            size_y = (max(ys) - min(ys)) * obj.scale[1]
+            size_z = (max(zs) - min(zs)) * obj.scale[2]
+
+            largest = max(size_x, size_y, size_z)
+
+            # Blender-style dynamic gizmo size
+            self.axis_length = max(0.8, largest * 0.75)
+
+        else:
+
+            self.axis_length = 1.0
+
+        self.update_boxes()
+        
     def update_boxes(self):
 
         if self.target is None:
