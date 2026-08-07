@@ -64,9 +64,19 @@ class Viewport(QOpenGLWidget):
         self.edge_mode = False
         self.face_mode = False
 
-        self.face_dragging = False
+        self.face_dragging = False        
 
         self.face_original_vertices = None
+
+        # ---------------------------------
+        # Extrude
+        # ---------------------------------
+
+        self.extrude_mode = False
+
+        self.extrude_face = None
+
+        self.extrude_original = None
 
         self.edge_dragging = False
 
@@ -400,6 +410,71 @@ class Viewport(QOpenGLWidget):
         glEnable(GL_TEXTURE_2D)
 
         glPopAttrib()
+
+    def extrude_selected_face(self):
+
+        if self.selected_object is None:
+            return
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            return
+
+        if self.extrude_face is None:
+            return
+
+        face = list(mesh.faces[self.extrude_face])
+
+        # ---------------------------------
+        # Duplicate vertices
+        # ---------------------------------
+
+        new_vertices = []
+
+        for vertex_index in face:
+
+            vertex = mesh.vertices[vertex_index]
+
+            new_vertex = [
+                vertex[0],
+                vertex[1],
+                vertex[2]
+            ]
+
+            mesh.vertices.append(new_vertex)
+
+            new_vertices.append(
+                len(mesh.vertices) - 1
+            )
+
+        # ---------------------------------
+        # Replace original face
+        # ---------------------------------
+
+        mesh.faces[self.extrude_face] = tuple(new_vertices)
+
+        # ---------------------------------
+        # Build side faces
+        # ---------------------------------
+
+        count = len(face)
+
+        for i in range(count):
+
+            a = face[i]
+            b = face[(i + 1) % count]
+
+            c = new_vertices[(i + 1) % count]
+            d = new_vertices[i]
+
+            mesh.faces.append(
+                (a, b, c, d)
+            )
+
+        mesh.build_edges()
+
+        print("Extrude Complete")
 
     def paintGL(self):
         
@@ -1144,7 +1219,7 @@ class Viewport(QOpenGLWidget):
             self.right_mouse = False
 
         self.update()
-        
+
     def mouseMoveEvent(self, event):
 
         # ---------------------------------
@@ -1556,7 +1631,7 @@ class Viewport(QOpenGLWidget):
         # ---------------------------------
         # MOVE
         # ---------------------------------
-        elif event.key() == Qt.Key_W:
+        elif event.key() == Qt.Key_G:
 
             print("MOVE")
 
@@ -1571,7 +1646,7 @@ class Viewport(QOpenGLWidget):
         # ---------------------------------
         # ROTATE
         # ---------------------------------
-        elif event.key() == Qt.Key_E:
+        elif event.key() == Qt.Key_R:
 
             print("ROTATE")
 
@@ -1586,7 +1661,7 @@ class Viewport(QOpenGLWidget):
         # ---------------------------------
         # SCALE
         # ---------------------------------
-        elif event.key() == Qt.Key_R:
+        elif event.key() == Qt.Key_S:
 
             print("SCALE")
 
@@ -1597,6 +1672,34 @@ class Viewport(QOpenGLWidget):
             self.update()
 
             return
+
+        # ---------------------------------
+        # EXTRUDE
+        # ---------------------------------
+
+        elif event.key() == Qt.Key_E:
+
+            if (
+                self.main_window.mode_manager.get_mode() == "EDIT"
+                and self.face_mode
+                and self.selected_face is not None
+            ):
+
+                print("EXTRUDE")
+
+                self.extrude_mode = True
+
+                self.extrude_face = self.selected_face
+
+                self.history_manager.save_state(
+                    self.selected_object
+                )
+
+                self.extrude_selected_face()
+
+                self.update()
+
+                return
 
         # ---------------------------------
         # F4 OBJECT / EDIT MODE
