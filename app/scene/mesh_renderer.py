@@ -5,12 +5,11 @@ import math
 class MeshRenderer:
 
     @staticmethod
-    def draw(mesh):
+    def draw(mesh, selected_face=None):
 
         if mesh is None:
             return
 
-        # Save OpenGL state
         glPushAttrib(GL_ALL_ATTRIB_BITS)
 
         # -------------------------
@@ -20,20 +19,48 @@ class MeshRenderer:
         glEnable(GL_POLYGON_OFFSET_FILL)
         glPolygonOffset(1.0, 1.0)
 
-        for face in mesh.faces:
+        selected_face = getattr(mesh, "selected_face", None)
+
+        print("Draw Face:", selected_face)
+
+        for face_index, face in enumerate(mesh.faces):
+
+            # -------------------------
+            # Face Highlight
+            # -------------------------
+
+            if face_index == selected_face:
+
+                glColor3f(
+                    1.0,
+                    0.55,
+                    0.0
+                )
+
+            else:
+
+                glColor3f(
+                    0.75,
+                    0.75,
+                    0.75
+                )
 
             if len(face) == 3:
+
                 glBegin(GL_TRIANGLES)
 
             elif len(face) == 4:
+
                 glBegin(GL_QUADS)
 
             else:
+
                 glBegin(GL_POLYGON)
 
             for vertex_index in face:
 
                 x, y, z = mesh.vertices[vertex_index]
+
                 glVertex3f(x, y, z)
 
             glEnd()
@@ -56,24 +83,27 @@ class MeshRenderer:
         for face in mesh.faces:
 
             if len(face) == 3:
+
                 glBegin(GL_TRIANGLES)
 
             elif len(face) == 4:
+
                 glBegin(GL_QUADS)
 
             else:
+
                 glBegin(GL_POLYGON)
 
             for vertex_index in face:
 
                 x, y, z = mesh.vertices[vertex_index]
+
                 glVertex3f(x, y, z)
 
             glEnd()
 
-        # Restore OpenGL state
         glPopAttrib()
-
+        
     @staticmethod
     def draw_edges(mesh, selected_edge=None):
 

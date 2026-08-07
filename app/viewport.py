@@ -58,6 +58,16 @@ class Viewport(QOpenGLWidget):
 
         self.selected_edge = None
 
+        self.selected_face = None
+
+        self.vertex_mode = True
+        self.edge_mode = False
+        self.face_mode = False
+
+        self.face_dragging = False
+
+        self.face_original_vertices = None
+
         self.edge_dragging = False
 
         self.raycaster = RayCaster()
@@ -216,7 +226,7 @@ class Viewport(QOpenGLWidget):
 
             if obj.mesh is not None:
 
-                MeshRenderer.draw(obj.mesh)
+                MeshRenderer.draw(obj.mesh, self.selected_face)
 
                 if (
                     obj == self.selected_object
@@ -238,7 +248,7 @@ class Viewport(QOpenGLWidget):
 
              if obj.mesh is not None:
 
-                MeshRenderer.draw(obj.mesh)
+                MeshRenderer.draw(obj.mesh, self.selected_face)
 
                 if (
                     obj == self.selected_object
@@ -256,7 +266,7 @@ class Viewport(QOpenGLWidget):
 
             if obj.mesh is not None:
 
-                MeshRenderer.draw(obj.mesh)
+                MeshRenderer.draw(obj.mesh, self.selected_face)
 
                 if (
                     obj == self.selected_object
@@ -274,7 +284,7 @@ class Viewport(QOpenGLWidget):
 
              if obj.mesh is not None:
 
-                MeshRenderer.draw(obj.mesh)
+                MeshRenderer.draw(obj.mesh, self.selected_face)
 
                 if (
                     obj == self.selected_object
@@ -292,7 +302,7 @@ class Viewport(QOpenGLWidget):
 
             if obj.mesh is not None:
 
-                MeshRenderer.draw(obj.mesh)
+                MeshRenderer.draw(obj.mesh, self.selected_face)
 
                 if (
                     obj == self.selected_object
@@ -310,7 +320,7 @@ class Viewport(QOpenGLWidget):
 
             if obj.mesh is not None:
 
-                MeshRenderer.draw(obj.mesh)
+                MeshRenderer.draw(obj.mesh, self.selected_face)
 
                 if (
                     obj == self.selected_object
@@ -835,7 +845,7 @@ class Viewport(QOpenGLWidget):
             tool = self.tool_manager.get_tool()
 
             # -------------------------------------------------
-            # EDIT MODE (Vertex Selection)
+            # EDIT MODE
             # -------------------------------------------------
 
             if self.main_window.mode_manager.get_mode() == "EDIT":
@@ -844,37 +854,49 @@ class Viewport(QOpenGLWidget):
 
                 if obj is not None:
 
-                    vertex = self.pick_vertex(
-                        obj,
-                        ray
-                    )
+                    # =================================================
+                    # VERTEX MODE
+                    # =================================================
 
-                    self.selected_vertex = vertex
+                    if self.vertex_mode:
 
-                    print("Selected Vertex:", vertex)
-
-                    if vertex is not None:
-
-                        self.dragging_object = False
-                        self.edge_dragging = False
-
-                        self.vertex_dragging = True
-
-                        self.last_mouse_x = event.x()
-                        self.last_mouse_y = event.y()
-
-                        self.vertex_original = np.array(
-                            obj.mesh.vertices[vertex],
-                            dtype=np.float32
+                        vertex = self.pick_vertex(
+                            obj,
+                            ray
                         )
 
-                    else:
+                        self.selected_vertex = vertex
 
-                        self.vertex_dragging = False
+                        print("Selected Vertex:", vertex)
 
-                        # -----------------------------
-                        # TEMPORARY EDGE TEST
-                        # -----------------------------
+                        if vertex is not None:
+
+                            self.dragging_object = False
+
+                            self.vertex_dragging = True
+                            self.edge_dragging = False
+                            self.face_dragging = False
+
+                            self.selected_edge = None
+                            self.selected_face = None
+
+                            self.last_mouse_x = event.x()
+                            self.last_mouse_y = event.y()
+
+                            self.vertex_original = np.array(
+                                obj.mesh.vertices[vertex],
+                                dtype=np.float32
+                            )
+
+                        else:
+
+                            self.vertex_dragging = False
+
+                    # =================================================
+                    # EDGE MODE
+                    # =================================================
+
+                    elif self.edge_mode:
 
                         edge = self.pick_edge(
                             obj,
@@ -883,14 +905,18 @@ class Viewport(QOpenGLWidget):
 
                         self.selected_edge = edge
 
-                        print("Edge Result:", edge)
+                        print("Selected Edge:", edge)
 
                         if edge is not None:
 
                             self.dragging_object = False
-                            self.vertex_dragging = False
 
                             self.edge_dragging = True
+                            self.vertex_dragging = False
+                            self.face_dragging = False
+
+                            self.selected_vertex = None
+                            self.selected_face = None
 
                             edge_vertices = obj.mesh.edges[edge]
 
@@ -903,6 +929,44 @@ class Viewport(QOpenGLWidget):
                         else:
 
                             self.edge_dragging = False
+
+                    # =================================================
+                    # FACE MODE
+                    # =================================================
+
+                    elif self.face_mode:
+
+                        face = self.pick_face(
+                            obj,
+                            ray
+                        )
+
+                        self.selected_face = face
+                        obj.mesh.selected_face = face
+
+                        print("Selected Face:", face)
+
+                        if face is not None:
+
+                            self.dragging_object = False
+
+                            self.face_dragging = True
+                            self.vertex_dragging = False
+                            self.edge_dragging = False
+
+                            self.selected_vertex = None
+                            self.selected_edge = None
+
+                            self.history_manager.save_state(
+                                self.selected_object
+                            )
+
+                            self.last_mouse_x = event.x()
+                            self.last_mouse_y = event.y()
+
+                        else:
+
+                            self.face_dragging = False
 
                     self.update()
 
@@ -1056,9 +1120,12 @@ class Viewport(QOpenGLWidget):
             self.edge_vertex_a = None
             self.edge_vertex_b = None
 
+            # Face Drag
+            self.face_dragging = False
+
             # Object Drag
             self.dragging_object = False
-            
+
             # Move Gizmo
             self.move_gizmo.selected_axis = None
 
@@ -1077,7 +1144,7 @@ class Viewport(QOpenGLWidget):
             self.right_mouse = False
 
         self.update()
-
+        
     def mouseMoveEvent(self, event):
 
         # ---------------------------------
@@ -1178,6 +1245,45 @@ class Viewport(QOpenGLWidget):
 
             print("After A :", mesh.vertices[self.edge_vertex_a])
             print("After B :", mesh.vertices[self.edge_vertex_b])
+
+            self.last_mouse_x = event.x()
+            self.last_mouse_y = event.y()
+
+            self.update()
+
+            return
+
+        # ---------------------------------
+        # Face Drag (EDIT MODE)
+        # ---------------------------------
+
+        if (
+            self.face_dragging
+            and self.selected_face is not None
+            and self.selected_object is not None
+            and self.main_window.mode_manager.get_mode() == "EDIT"
+        ):
+
+            mesh = self.selected_object.mesh
+
+            if mesh is None:
+                return
+
+            face = mesh.faces[self.selected_face]
+
+            dx = event.x() - self.last_mouse_x
+            dy = event.y() - self.last_mouse_y
+
+            sensitivity = 0.01
+
+            for vertex_index in face:
+
+                vertex = mesh.vertices[vertex_index]
+
+                vertex[0] += dx * sensitivity
+                vertex[1] -= dy * sensitivity
+
+                mesh.vertices[vertex_index] = vertex
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
@@ -1403,13 +1509,60 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
+        # VERTEX MODE
+        # ---------------------------------
+        if event.key() == Qt.Key_1:
+
+            self.vertex_mode = True
+            self.edge_mode = False
+            self.face_mode = False
+
+            print("VERTEX MODE")
+
+            self.update()
+
+            return
+
+        # ---------------------------------
+        # EDGE MODE
+        # ---------------------------------
+        elif event.key() == Qt.Key_2:
+
+            self.vertex_mode = False
+            self.edge_mode = True
+            self.face_mode = False
+
+            print("EDGE MODE")
+
+            self.update()
+
+            return
+
+        # ---------------------------------
+        # FACE MODE
+        # ---------------------------------
+        elif event.key() == Qt.Key_3:
+
+            self.vertex_mode = False
+            self.edge_mode = False
+            self.face_mode = True
+
+            print("FACE MODE")
+
+            self.update()
+
+            return
+
+        # ---------------------------------
         # MOVE
         # ---------------------------------
-        if event.key() == Qt.Key_W:
+        elif event.key() == Qt.Key_W:
 
             print("MOVE")
 
-            self.tool_manager.set_tool(ToolManager.MOVE)
+            self.tool_manager.set_tool(
+                ToolManager.MOVE
+            )
 
             self.update()
 
@@ -1422,7 +1575,9 @@ class Viewport(QOpenGLWidget):
 
             print("ROTATE")
 
-            self.tool_manager.set_tool(ToolManager.ROTATE)
+            self.tool_manager.set_tool(
+                ToolManager.ROTATE
+            )
 
             self.update()
 
@@ -1435,17 +1590,24 @@ class Viewport(QOpenGLWidget):
 
             print("SCALE")
 
-            self.tool_manager.set_tool(ToolManager.SCALE)
+            self.tool_manager.set_tool(
+                ToolManager.SCALE
+            )
 
             self.update()
 
             return
 
+        # ---------------------------------
+        # F4 OBJECT / EDIT MODE
+        # ---------------------------------
         elif event.key() == Qt.Key_F4:
 
             self.main_window.mode_manager.toggle()
 
-            print(self.main_window.mode_manager.get_mode())
+            print(
+                self.main_window.mode_manager.get_mode()
+            )
 
             self.update()
 
@@ -1596,3 +1758,135 @@ class Viewport(QOpenGLWidget):
 
         return closest_edge
 
+    def ray_triangle_intersect(
+        self,
+        ray,
+        v0,
+        v1,
+        v2
+    ):
+
+        epsilon = 1e-6
+
+        edge1 = v1 - v0
+        edge2 = v2 - v0
+
+        h = np.cross(ray.direction, edge2)
+        a = np.dot(edge1, h)
+
+        if -epsilon < a < epsilon:
+            return None
+
+        f = 1.0 / a
+
+        s = ray.origin - v0
+
+        u = f * np.dot(s, h)
+
+        if u < 0.0 or u > 1.0:
+            return None
+
+        q = np.cross(s, edge1)
+
+        v = f * np.dot(ray.direction, q)
+
+        if v < 0.0 or (u + v) > 1.0:
+            return None
+
+        t = f * np.dot(edge2, q)
+
+        if t > epsilon:
+            return t
+
+        return None
+
+    def pick_face(
+        self,
+        obj,
+        ray
+    ):
+
+        if obj is None:
+            return None
+
+        if obj.mesh is None:
+            return None
+
+        closest_distance = float("inf")
+        closest_face = None
+
+        for face_index, face in enumerate(obj.mesh.faces):
+
+            # -------------------------
+            # Triangle
+            # -------------------------
+
+            if len(face) == 3:
+
+                v0 = np.array(obj.mesh.vertices[face[0]], dtype=np.float32)
+                v1 = np.array(obj.mesh.vertices[face[1]], dtype=np.float32)
+                v2 = np.array(obj.mesh.vertices[face[2]], dtype=np.float32)
+
+                v0 += obj.position
+                v1 += obj.position
+                v2 += obj.position
+
+                distance = self.ray_triangle_intersect(
+                    ray,
+                    v0,
+                    v1,
+                    v2
+                )
+
+                if distance is not None:
+
+                    if distance < closest_distance:
+
+                        closest_distance = distance
+                        closest_face = face_index
+
+            # -------------------------
+            # Quad
+            # -------------------------
+
+            elif len(face) == 4:
+
+                v0 = np.array(obj.mesh.vertices[face[0]], dtype=np.float32)
+                v1 = np.array(obj.mesh.vertices[face[1]], dtype=np.float32)
+                v2 = np.array(obj.mesh.vertices[face[2]], dtype=np.float32)
+                v3 = np.array(obj.mesh.vertices[face[3]], dtype=np.float32)
+
+                v0 += obj.position
+                v1 += obj.position
+                v2 += obj.position
+                v3 += obj.position
+
+                d1 = self.ray_triangle_intersect(
+                    ray,
+                    v0,
+                    v1,
+                    v2
+                )
+
+                d2 = self.ray_triangle_intersect(
+                    ray,
+                    v0,
+                    v2,
+                    v3
+                )
+
+                if d1 is not None:
+
+                    if d1 < closest_distance:
+
+                        closest_distance = d1
+                        closest_face = face_index
+
+                if d2 is not None:
+
+                    if d2 < closest_distance:
+
+                        closest_distance = d2
+                        closest_face = face_index
+
+        return closest_face
