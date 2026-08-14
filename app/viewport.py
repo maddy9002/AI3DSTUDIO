@@ -18,54 +18,96 @@ from app.scene.selection_manager import SelectionManager
 from scene.mesh_renderer import MeshRenderer
 from PySide6.QtCore import QEvent
 from app.geometry_utils import GeometryUtils
+import math
 
 class Viewport(QOpenGLWidget):
 
-    def __init__(self, main_window = None):
+    def __init__(self, main_window=None):
         super().__init__()
 
         self.main_window = main_window
 
-        self.webcam_frame = None
+        # ---------------------------------
+        # Webcam
+        # ---------------------------------
 
+        self.webcam_frame = None
         self.webcam_texture = None
+
+        # ---------------------------------
+        # Camera
+        # ---------------------------------
 
         self.camera = Camera()
 
+        # ---------------------------------
+        # Scene
+        # ---------------------------------
+
         self.scene_objects = []
+
+        # ---------------------------------
+        # Cursor
+        # ---------------------------------
 
         self.cursor_x = 0.0
         self.cursor_y = 0.0
 
-        self.setFocusPolicy(
-            Qt.StrongFocus
-        )
+        # ---------------------------------
+        # Viewport Focus
+        # ---------------------------------
+
+        self.setFocusPolicy(Qt.StrongFocus)
 
         self.last_mouse_x = 0
-
         self.last_mouse_y = 0
+
+        self.mouse_x = 0
+        self.mouse_y = 0
 
         self.right_mouse = False
-
-        self.last_mouse_x = 0
-        self.last_mouse_y = 0
-
         self.mouse_pressed = False
+
+        # ---------------------------------
+        # Selection
+        # ---------------------------------
 
         self.selection_manager = SelectionManager(self)
 
         self.selected_vertex = None
-
         self.selected_edge = None
-
         self.selected_face = None
+
+        # ---------------------------------
+        # Edit Mode Selection Modes
+        # ---------------------------------
 
         self.vertex_mode = True
         self.edge_mode = False
         self.face_mode = False
 
-        self.face_dragging = False        
+        # ---------------------------------
+        # Vertex Dragging
+        # ---------------------------------
 
+        self.vertex_dragging = False
+        self.vertex_drag_start = None
+        self.vertex_original = None
+
+        # ---------------------------------
+        # Edge Dragging
+        # ---------------------------------
+
+        self.edge_dragging = False
+
+        self.edge_vertex_a = None
+        self.edge_vertex_b = None
+
+        # ---------------------------------
+        # Face Dragging
+        # ---------------------------------
+
+        self.face_dragging = False
         self.face_original_vertices = None
 
         # ---------------------------------
@@ -73,50 +115,79 @@ class Viewport(QOpenGLWidget):
         # ---------------------------------
 
         self.extrude_mode = False
+        self.extrude_dragging = False
 
         self.extrude_face = None
 
         self.extrude_original = None
 
-        self.edge_dragging = False
+        self.extrude_original_vertices = []
+
+        self.extrude_vertex_indices = []
+
+        self.extrude_normal = None
+
+        self.extrude_distance = 0.5
+
+        self.extrude_start_distance = 0.5
+
+        self.extrude_start_mouse_x = 0
+        self.extrude_start_mouse_y = 0
+
+        # ---------------------------------
+        # Ray Casting
+        # ---------------------------------
 
         self.raycaster = RayCaster()
 
-        self.mouse_x = 0
-        self.mouse_y = 0
+        # ---------------------------------
+        # Object Dragging
+        # ---------------------------------
 
         self.dragging_object = False
 
         self.drag_start_x = 0
         self.drag_start_y = 0
 
-        self.move_gizmo = MoveGizmo()
-
         self.drag_plane_y = 0.0
         self.drag_offset = None
 
+        # ---------------------------------
+        # Move Gizmo
+        # ---------------------------------
+
+        self.move_gizmo = MoveGizmo()
+
+        # ---------------------------------
+        # Rotate Gizmo
+        # ---------------------------------
+
         self.rotate_gizmo = RotateGizmo()
+
+        # ---------------------------------
+        # Scale Gizmo
+        # ---------------------------------
 
         self.scale_gizmo = ScaleGizmo()
 
+        # ---------------------------------
+        # Tool Manager
+        # ---------------------------------
+
         self.tool_manager = ToolManager()
 
-        self.vertex_dragging = False
-
-        self.vertex_drag_start = None
-
-        self.vertex_original = None
-
-        self.edge_dragging = False
-
-        self.edge_vertex_a = None
-        self.edge_vertex_b = None
+        # ---------------------------------
+        # Final Focus
+        # ---------------------------------
 
         self.setFocusPolicy(Qt.StrongFocus)
         self.setFocus()
 
-        print("Viewport Focus:", self.hasFocus())
-
+        print(
+            "Viewport Focus:",
+            self.hasFocus()
+        )
+                    
     def initializeGL(self):
 
         print("OpenGL Initialized")
@@ -424,57 +495,246 @@ class Viewport(QOpenGLWidget):
         if self.extrude_face is None:
             return
 
-        face = list(mesh.faces[self.extrude_face])
+        if self.extrude_face < 0:
+            return
+
+        if self.extrude_face >= len(mesh.faces):
+            return
 
         # ---------------------------------
-        # Duplicate vertices
+        # Get Original Face
+        # ---------------------------------
+
+        original_face = list(
+            mesh.faces[self.extrude_face]
+        )
+
+        if len(original_face) < 3:
+            return
+
+        # ---------------------------------
+        # Calculate Face Normal
+        # ---------------------------------
+
+        normal = self.get_face_normal(
+            mesh,
+            self.extrude_face
+        )
+
+        normal = np.array(
+            normal,
+            dtype=np.float32
+        )
+
+        normal_length = np.linalg.norm(
+            normal
+        )
+
+        if normal_length < 1e-6:
+            return
+
+        normal /= normal_length
+
+        print(
+            "Extrude Normal:",
+            normal
+        )
+
+        # ---------------------------------
+        # Extrusion Distance
+        # ---------------------------------
+
+        distance = 0.5
+
+        # ---------------------------------
+        # Duplicate Vertices
+        #
+        # IMPORTANT:
+        # The face normal is reversed here
+        # because the current viewport
+        # extrusion convention uses the
+        # opposite direction.
         # ---------------------------------
 
         new_vertices = []
 
-        for vertex_index in face:
+        for vertex_index in original_face:
 
-            vertex = mesh.vertices[vertex_index]
+            if vertex_index < 0:
+                return
 
-            new_vertex = [
-                vertex[0],
-                vertex[1],
-                vertex[2]
-            ]
+            if vertex_index >= len(
+                mesh.vertices
+            ):
+                return
 
-            mesh.vertices.append(new_vertex)
+            vertex = np.array(
+                mesh.vertices[vertex_index],
+                dtype=np.float32
+            )
+
+            new_vertex = (
+                vertex
+                - normal * distance
+            )
+
+            mesh.vertices.append([
+                float(new_vertex[0]),
+                float(new_vertex[1]),
+                float(new_vertex[2])
+            ])
 
             new_vertices.append(
                 len(mesh.vertices) - 1
             )
 
         # ---------------------------------
-        # Replace original face
+        # Replace Original Face
         # ---------------------------------
 
-        mesh.faces[self.extrude_face] = tuple(new_vertices)
+        mesh.faces[
+            self.extrude_face
+        ] = tuple(
+            new_vertices
+        )
 
         # ---------------------------------
-        # Build side faces
+        # Create Side Faces
         # ---------------------------------
 
-        count = len(face)
+        count = len(
+            original_face
+        )
 
         for i in range(count):
 
-            a = face[i]
-            b = face[(i + 1) % count]
+            a = original_face[i]
 
-            c = new_vertices[(i + 1) % count]
+            b = original_face[
+                (i + 1) % count
+            ]
+
+            c = new_vertices[
+                (i + 1) % count
+            ]
+
             d = new_vertices[i]
 
             mesh.faces.append(
                 (a, b, c, d)
             )
 
+        # ---------------------------------
+        # Rebuild Topology
+        # ---------------------------------
+
         mesh.build_edges()
 
-        print("Extrude Complete")
+        # ---------------------------------
+        # Keep Extruded Face Selected
+        # ---------------------------------
+
+        self.selected_face = (
+            self.extrude_face
+        )
+
+        mesh.selected_face = (
+            self.extrude_face
+        )
+
+        # ---------------------------------
+        # Store Extrusion Normal
+        # ---------------------------------
+
+        self.extrude_normal = (
+            -normal
+        )
+
+        # ---------------------------------
+        # Debug
+        # ---------------------------------
+
+        print(
+            "Extrude Complete"
+        )
+
+        print(
+            "Vertices :",
+            len(mesh.vertices)
+        )
+
+        print(
+            "Faces    :",
+            len(mesh.faces)
+        )
+
+        print(
+            "Edges    :",
+            len(mesh.edges)
+        )
+
+    def get_face_normal(self, mesh, face_index):
+
+        if mesh is None:
+            return np.array(
+                [0.0, 0.0, 1.0],
+                dtype=np.float32
+            )
+
+        if face_index is None:
+            return np.array(
+                [0.0, 0.0, 1.0],
+                dtype=np.float32
+            )
+
+        if face_index >= len(mesh.faces):
+            return np.array(
+                [0.0, 0.0, 1.0],
+                dtype=np.float32
+            )
+
+        face = mesh.faces[face_index]
+
+        if len(face) < 3:
+            return np.array(
+                [0.0, 0.0, 1.0],
+                dtype=np.float32
+            )
+
+        v0 = np.array(
+            mesh.vertices[face[0]],
+            dtype=np.float32
+        )
+
+        v1 = np.array(
+            mesh.vertices[face[1]],
+            dtype=np.float32
+        )
+
+        v2 = np.array(
+            mesh.vertices[face[2]],
+            dtype=np.float32
+        )
+
+        edge1 = v1 - v0
+        edge2 = v2 - v0
+
+        normal = np.cross(
+            edge1,
+            edge2
+        )
+
+        length = np.linalg.norm(normal)
+
+        if length < 1e-6:
+            return np.array(
+                [0.0, 0.0, 1.0],
+                dtype=np.float32
+            )
+
+        normal /= length
+
+        return normal
 
     def paintGL(self):
         
@@ -1185,45 +1445,297 @@ class Viewport(QOpenGLWidget):
         
     def mouseReleaseEvent(self, event):
 
+        # ---------------------------------
+        # LEFT MOUSE RELEASE
+        # ---------------------------------
+
         if event.button() == Qt.LeftButton:
 
+            # ---------------------------------
             # Vertex Drag
+            # ---------------------------------
+
             self.vertex_dragging = False
 
+            # ---------------------------------
             # Edge Drag
+            # ---------------------------------
+
             self.edge_dragging = False
+
             self.edge_vertex_a = None
             self.edge_vertex_b = None
 
+            # ---------------------------------
             # Face Drag
+            # ---------------------------------
+
             self.face_dragging = False
 
+            # ---------------------------------
+            # Extrude
+            # ---------------------------------
+
+            self.extrude_dragging = False
+            self.extrude_mode = False
+
+            self.extrude_vertex_indices = []
+
+            self.extrude_original_vertices = []
+
+            self.extrude_normal = None
+
+            self.extrude_face = None
+
+            self.extrude_distance = 0.0
+
+            # ---------------------------------
             # Object Drag
+            # ---------------------------------
+
             self.dragging_object = False
 
+            # ---------------------------------
             # Move Gizmo
+            # ---------------------------------
+
             self.move_gizmo.selected_axis = None
 
+            # ---------------------------------
             # Rotate Gizmo
+            # ---------------------------------
+
             self.rotate_gizmo.selected_axis = None
             self.rotate_gizmo.dragging = False
+
             self.rotate_gizmo.end_rotation()
 
+            # ---------------------------------
             # Scale Gizmo
+            # ---------------------------------
+
+            self.scale_gizmo.selected_axis = None
+
             self.scale_gizmo.end_scale()
 
+            # ---------------------------------
+            # History
+            # ---------------------------------
+
             self._move_saved = False
+
+        # ---------------------------------
+        # RIGHT MOUSE RELEASE
+        # ---------------------------------
 
         elif event.button() == Qt.RightButton:
 
             self.right_mouse = False
 
-        self.update()
+        # ---------------------------------
+        # Update Viewport
+        # ---------------------------------
 
+        self.update()
+        
     def mouseMoveEvent(self, event):
 
         # ---------------------------------
-        # Vertex Drag (EDIT MODE)
+        # INTERACTIVE EXTRUDE
+        # ---------------------------------
+
+        if (
+            self.extrude_mode
+            and self.extrude_dragging
+            and self.selected_object is not None
+            and self.main_window.mode_manager.get_mode() == "EDIT"
+        ):
+
+            mesh = self.selected_object.mesh
+
+            if mesh is None:
+                return
+
+            if self.extrude_normal is None:
+                return
+
+            if not self.extrude_vertex_indices:
+                return
+
+            if not self.extrude_original_vertices:
+                return
+
+            # ---------------------------------
+            # Face Normal
+            # ---------------------------------
+
+            normal = np.array(
+                self.extrude_normal,
+                dtype=np.float64
+            )
+
+            normal_length = np.linalg.norm(normal)
+
+            if normal_length < 1e-8:
+                return
+
+            normal /= normal_length
+
+            # ---------------------------------
+            # Mouse Movement
+            # ---------------------------------
+
+            current_mouse_x = event.x()
+            current_mouse_y = event.y()
+
+            mouse_delta_y = (
+                self.extrude_start_mouse_y
+                - current_mouse_y
+            )
+
+            mouse_delta_x = (
+                current_mouse_x
+                - self.extrude_start_mouse_x
+            )
+
+            # ---------------------------------
+            # Choose Mouse Axis
+            # ---------------------------------
+
+            # Y-axis faces:
+            # Top / Bottom
+            #
+            # Z-axis faces:
+            # Front / Back
+            #
+            # X-axis faces:
+            # Right / Left
+
+            if abs(normal[0]) > 0.5:
+
+                # ---------------------------------
+                # X AXIS FACES
+                # ---------------------------------
+                #
+                # Right face:
+                # mouse right  -> increase
+                # mouse left   -> decrease
+                #
+                # Left face:
+                # mouse left   -> increase
+                # mouse right  -> decrease
+
+                mouse_delta = mouse_delta_x
+
+                if normal[0] < 0.0:
+
+                    mouse_delta = -mouse_delta
+
+            else:
+
+                # ---------------------------------
+                # Y / Z AXIS FACES
+                # ---------------------------------
+
+                mouse_delta = mouse_delta_y
+
+                # ---------------------------------
+                # Bottom Face Correction
+                # ---------------------------------
+
+                if normal[1] < -0.5:
+
+                    mouse_delta = -mouse_delta
+
+            # ---------------------------------
+            # Extrusion Distance
+            # ---------------------------------
+
+            sensitivity = 0.01
+
+            self.extrude_distance = (
+                self.extrude_start_distance
+                + mouse_delta * sensitivity
+            )
+
+            # ---------------------------------
+            # Extrusion Offset
+            # ---------------------------------
+
+            extrusion_offset = (
+                normal
+                * self.extrude_distance
+            )
+
+            # ---------------------------------
+            # Move Extruded Vertices
+            # ---------------------------------
+
+            for i, vertex_index in enumerate(
+                self.extrude_vertex_indices
+            ):
+
+                if vertex_index < 0:
+                    continue
+
+                if vertex_index >= len(
+                    mesh.vertices
+                ):
+                    continue
+
+                if i >= len(
+                    self.extrude_original_vertices
+                ):
+                    continue
+
+                original_vertex = np.array(
+                    self.extrude_original_vertices[i],
+                    dtype=np.float64
+                )
+
+                new_vertex = (
+                    original_vertex
+                    + extrusion_offset
+                )
+
+                mesh.vertices[
+                    vertex_index
+                ] = [
+                    float(new_vertex[0]),
+                    float(new_vertex[1]),
+                    float(new_vertex[2])
+                ]
+
+            # ---------------------------------
+            # Rebuild Topology
+            # ---------------------------------
+
+            mesh.build_edges()
+
+            # ---------------------------------
+            # Update Bounding Box
+            # ---------------------------------
+
+            if hasattr(
+                self.selected_object,
+                "bounding_box"
+            ):
+
+                self.selected_object.bounding_box.update(
+                    self.selected_object.position,
+                    self.selected_object.scale
+                )
+
+            # ---------------------------------
+            # Redraw
+            # ---------------------------------
+
+            self.update()
+
+            return
+
+        # ---------------------------------
+        # VERTEX DRAG
         # ---------------------------------
 
         if (
@@ -1238,25 +1750,41 @@ class Viewport(QOpenGLWidget):
             if mesh is None:
                 return
 
-            if self.selected_vertex >= len(mesh.vertices):
+            if self.selected_vertex < 0:
                 return
 
-            dx = event.x() - self.last_mouse_x
-            dy = event.y() - self.last_mouse_y
+            if self.selected_vertex >= len(
+                mesh.vertices
+            ):
+                return
+
+            dx = (
+                event.x()
+                - self.last_mouse_x
+            )
+
+            dy = (
+                event.y()
+                - self.last_mouse_y
+            )
 
             sensitivity = 0.01
 
-            x, y, z = mesh.vertices[self.selected_vertex]
+            vertex = mesh.vertices[
+                self.selected_vertex
+            ]
 
-            x += dx * sensitivity
-            y -= dy * sensitivity
-
-            mesh.vertices[self.selected_vertex] = [x, y, z]
-
-            self.selected_object.bounding_box.update(
-                self.selected_object.position,
-                self.selected_object.scale
+            vertex[0] += (
+                dx * sensitivity
             )
+
+            vertex[1] -= (
+                dy * sensitivity
+            )
+
+            mesh.vertices[
+                self.selected_vertex
+            ] = vertex
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
@@ -1266,7 +1794,7 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
-        # Edge Drag (EDIT MODE)
+        # EDGE DRAG
         # ---------------------------------
 
         if (
@@ -1287,39 +1815,65 @@ class Viewport(QOpenGLWidget):
             if self.edge_vertex_b is None:
                 return
 
-            if self.edge_vertex_a >= len(mesh.vertices):
+            if self.edge_vertex_a < 0:
                 return
 
-            if self.edge_vertex_b >= len(mesh.vertices):
+            if self.edge_vertex_b < 0:
                 return
 
-            dx = event.x() - self.last_mouse_x
-            dy = event.y() - self.last_mouse_y
+            if self.edge_vertex_a >= len(
+                mesh.vertices
+            ):
+                return
+
+            if self.edge_vertex_b >= len(
+                mesh.vertices
+            ):
+                return
+
+            dx = (
+                event.x()
+                - self.last_mouse_x
+            )
+
+            dy = (
+                event.y()
+                - self.last_mouse_y
+            )
 
             sensitivity = 0.01
 
-            print("\n=========================")
-            print("Dragging Object :", self.selected_object.name)
-            print("Mesh ID         :", id(mesh))
-            print("Edge            :", self.selected_edge)
+            va = mesh.vertices[
+                self.edge_vertex_a
+            ]
 
-            va = mesh.vertices[self.edge_vertex_a]
-            vb = mesh.vertices[self.edge_vertex_b]
+            vb = mesh.vertices[
+                self.edge_vertex_b
+            ]
 
-            print("Before A :", va)
-            print("Before B :", vb)
+            va[0] += (
+                dx * sensitivity
+            )
 
-            va[0] += dx * sensitivity
-            va[1] -= dy * sensitivity
+            va[1] -= (
+                dy * sensitivity
+            )
 
-            vb[0] += dx * sensitivity
-            vb[1] -= dy * sensitivity
+            vb[0] += (
+                dx * sensitivity
+            )
 
-            mesh.vertices[self.edge_vertex_a] = va
-            mesh.vertices[self.edge_vertex_b] = vb
+            vb[1] -= (
+                dy * sensitivity
+            )
 
-            print("After A :", mesh.vertices[self.edge_vertex_a])
-            print("After B :", mesh.vertices[self.edge_vertex_b])
+            mesh.vertices[
+                self.edge_vertex_a
+            ] = va
+
+            mesh.vertices[
+                self.edge_vertex_b
+            ] = vb
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
@@ -1329,7 +1883,7 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
-        # Face Drag (EDIT MODE)
+        # FACE DRAG
         # ---------------------------------
 
         if (
@@ -1344,21 +1898,55 @@ class Viewport(QOpenGLWidget):
             if mesh is None:
                 return
 
-            face = mesh.faces[self.selected_face]
+            if self.selected_face < 0:
+                return
 
-            dx = event.x() - self.last_mouse_x
-            dy = event.y() - self.last_mouse_y
+            if self.selected_face >= len(
+                mesh.faces
+            ):
+                return
+
+            face = mesh.faces[
+                self.selected_face
+            ]
+
+            dx = (
+                event.x()
+                - self.last_mouse_x
+            )
+
+            dy = (
+                event.y()
+                - self.last_mouse_y
+            )
 
             sensitivity = 0.01
 
             for vertex_index in face:
 
-                vertex = mesh.vertices[vertex_index]
+                if vertex_index < 0:
+                    continue
 
-                vertex[0] += dx * sensitivity
-                vertex[1] -= dy * sensitivity
+                if vertex_index >= len(
+                    mesh.vertices
+                ):
+                    continue
 
-                mesh.vertices[vertex_index] = vertex
+                vertex = mesh.vertices[
+                    vertex_index
+                ]
+
+                vertex[0] += (
+                    dx * sensitivity
+                )
+
+                vertex[1] -= (
+                    dy * sensitivity
+                )
+
+                mesh.vertices[
+                    vertex_index
+                ] = vertex
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
@@ -1368,7 +1956,7 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
-        # Scale Gizmo
+        # SCALE GIZMO
         # ---------------------------------
 
         if (
@@ -1393,7 +1981,7 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
-        # Rotate Gizmo
+        # ROTATE GIZMO
         # ---------------------------------
 
         if (
@@ -1410,7 +1998,9 @@ class Viewport(QOpenGLWidget):
                 self.camera
             )
 
-            self.rotate_gizmo.rotate(ray)
+            self.rotate_gizmo.rotate(
+                ray
+            )
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
@@ -1420,7 +2010,7 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
-        # Move Gizmo
+        # MOVE GIZMO
         # ---------------------------------
 
         if (
@@ -1429,7 +2019,10 @@ class Viewport(QOpenGLWidget):
             and self.selected_object is not None
         ):
 
-            if not hasattr(self, "_move_saved"):
+            if not hasattr(
+                self,
+                "_move_saved"
+            ):
 
                 self.history_manager.save_state(
                     self.selected_object
@@ -1437,12 +2030,22 @@ class Viewport(QOpenGLWidget):
 
                 self._move_saved = True
 
-            dx = event.x() - self.last_mouse_x
-            dy = event.y() - self.last_mouse_y
+            dx = (
+                event.x()
+                - self.last_mouse_x
+            )
+
+            dy = (
+                event.y()
+                - self.last_mouse_y
+            )
 
             speed = 0.003
 
-            if self.move_gizmo.selected_axis == "X":
+            if (
+                self.move_gizmo.selected_axis
+                == "X"
+            ):
 
                 self.selected_object.translate(
                     dx * speed,
@@ -1450,7 +2053,10 @@ class Viewport(QOpenGLWidget):
                     0.0
                 )
 
-            elif self.move_gizmo.selected_axis == "Y":
+            elif (
+                self.move_gizmo.selected_axis
+                == "Y"
+            ):
 
                 self.selected_object.translate(
                     0.0,
@@ -1458,7 +2064,10 @@ class Viewport(QOpenGLWidget):
                     0.0
                 )
 
-            elif self.move_gizmo.selected_axis == "Z":
+            elif (
+                self.move_gizmo.selected_axis
+                == "Z"
+            ):
 
                 self.selected_object.translate(
                     0.0,
@@ -1474,10 +2083,13 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
-        # Object Drag
+        # OBJECT DRAG
         # ---------------------------------
 
-        if self.dragging_object and self.selected_object:
+        if (
+            self.dragging_object
+            and self.selected_object
+        ):
 
             ray = RayBuilder.build_ray(
                 event.x(),
@@ -1486,13 +2098,26 @@ class Viewport(QOpenGLWidget):
                 self.camera
             )
 
+            if abs(
+                ray.direction[1]
+            ) < 1e-6:
+
+                return
+
             t = (
-                self.drag_plane_y - ray.origin[1]
+                self.drag_plane_y
+                - ray.origin[1]
             ) / ray.direction[1]
 
-            hit = ray.origin + ray.direction * t
+            hit = (
+                ray.origin
+                + ray.direction * t
+            )
 
-            new_position = hit + self.drag_offset
+            new_position = (
+                hit
+                + self.drag_offset
+            )
 
             self.selected_object.position[0] = float(
                 new_position[0]
@@ -1510,27 +2135,42 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
-        # Camera Rotation
+        # CAMERA ROTATION
         # ---------------------------------
 
         if event.buttons() & Qt.RightButton:
 
-            dx = event.x() - self.last_mouse_x
-            dy = event.y() - self.last_mouse_y
+            dx = (
+                event.x()
+                - self.last_mouse_x
+            )
 
-            self.camera.yaw -= dx * 0.5
-            self.camera.pitch += dy * 0.5
+            dy = (
+                event.y()
+                - self.last_mouse_y
+            )
+
+            self.camera.yaw -= (
+                dx * 0.5
+            )
+
+            self.camera.pitch += (
+                dy * 0.5
+            )
 
             self.camera.pitch = max(
                 -89,
-                min(89, self.camera.pitch)
+                min(
+                    89,
+                    self.camera.pitch
+                )
             )
 
             self.last_mouse_x = event.x()
             self.last_mouse_y = event.y()
 
             self.update()
-        
+            
     def keyPressEvent(self, event):
 
         print("VIEWPORT KEY:", event.key())
@@ -1679,27 +2319,327 @@ class Viewport(QOpenGLWidget):
 
         elif event.key() == Qt.Key_E:
 
-            if (
-                self.main_window.mode_manager.get_mode() == "EDIT"
-                and self.face_mode
-                and self.selected_face is not None
-            ):
+            print("EXTRUDE")
 
-                print("EXTRUDE")
+            # ---------------------------------
+            # Edit Mode Check
+            # ---------------------------------
 
-                self.extrude_mode = True
+            if self.main_window.mode_manager.get_mode() != "EDIT":
 
-                self.extrude_face = self.selected_face
+                print("Extrude requires EDIT mode")
+                return
 
-                self.history_manager.save_state(
-                    self.selected_object
+            # ---------------------------------
+            # Face Mode Check
+            # ---------------------------------
+
+            if not self.face_mode:
+
+                print("Extrude requires FACE mode")
+                return
+
+            # ---------------------------------
+            # Selected Object Check
+            # ---------------------------------
+
+            if self.selected_object is None:
+
+                print("No selected object")
+                return
+
+            # ---------------------------------
+            # Selected Face Check
+            # ---------------------------------
+
+            if self.selected_face is None:
+
+                print("No selected face")
+                return
+
+            mesh = self.selected_object.mesh
+
+            if mesh is None:
+
+                print("Selected object has no mesh")
+                return
+
+            # ---------------------------------
+            # Validate Face
+            # ---------------------------------
+
+            if self.selected_face < 0:
+
+                print("Invalid selected face")
+                return
+
+            if self.selected_face >= len(mesh.faces):
+
+                print("Invalid selected face")
+                return
+
+            original_face = list(
+                mesh.faces[self.selected_face]
+            )
+
+            if len(original_face) < 3:
+
+                print("Invalid face")
+                return
+
+            # ---------------------------------
+            # Validate Vertices
+            # ---------------------------------
+
+            for vertex_index in original_face:
+
+                if vertex_index < 0:
+
+                    print(
+                        "Invalid vertex index:",
+                        vertex_index
+                    )
+
+                    return
+
+                if vertex_index >= len(mesh.vertices):
+
+                    print(
+                        "Invalid vertex index:",
+                        vertex_index
+                    )
+
+                    return
+
+            # ---------------------------------
+            # Save State For Undo
+            # ---------------------------------
+
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+            # ---------------------------------
+            # Store Original Vertex Positions
+            # ---------------------------------
+
+            self.extrude_original_vertices = []
+
+            for vertex_index in original_face:
+
+                vertex = mesh.vertices[
+                    vertex_index
+                ]
+
+                self.extrude_original_vertices.append(
+                    np.array(
+                        vertex,
+                        dtype=np.float32
+                    )
                 )
 
-                self.extrude_selected_face()
+            # ---------------------------------
+            # Calculate Face Normal
+            # ---------------------------------
 
-                self.update()
+            normal = self.get_face_normal(
+                mesh,
+                self.selected_face
+            )
+
+            print(
+                "================================="
+            )
+
+            print(
+                "Selected Face:",
+                self.selected_face
+            )
+
+            print(
+                "Face Vertices:",
+                original_face
+            )
+
+            print(
+                "Face Normal:",
+                normal
+            )
+
+            print(
+                "================================="
+            )
+
+            normal = np.array(
+                normal,
+                dtype=np.float32
+            )
+
+            normal_length = np.linalg.norm(
+                normal
+            )
+
+            if normal_length < 1e-6:
+
+                print("Invalid face normal")
+                return
+
+            normal /= normal_length
+
+            print(
+                "Extrude Normal:",
+                normal
+            )
+
+            # ---------------------------------
+            # Start Extrusion
+            # ---------------------------------
+
+            self.extrude_mode = True
+            self.extrude_dragging = True
+
+            self.extrude_face = (
+                self.selected_face
+            )
+
+            self.extrude_normal = normal
+
+            # ---------------------------------
+            # Initial Distance
+            # ---------------------------------
+
+            self.extrude_distance = 0.5
+
+            self.extrude_start_distance = (
+                self.extrude_distance
+            )
+
+            # ---------------------------------
+            # Clear Previous Extrusion Data
+            # ---------------------------------
+
+            self.extrude_vertex_indices = []
+
+            # ---------------------------------
+            # Create Extrusion Geometry
+            # ---------------------------------
+
+            old_vertex_count = len(
+                mesh.vertices
+            )
+
+            self.extrude_selected_face()
+
+            # ---------------------------------
+            # Find New Vertices
+            # ---------------------------------
+
+            new_vertex_count = len(
+                mesh.vertices
+            )
+
+            if new_vertex_count <= old_vertex_count:
+
+                print(
+                    "Extrusion failed: no new vertices"
+                )
+
+                self.extrude_mode = False
+                self.extrude_dragging = False
 
                 return
+
+            self.extrude_vertex_indices = list(
+                range(
+                    old_vertex_count,
+                    new_vertex_count
+                )
+            )
+
+            print(
+                "Extrude Vertices:",
+                self.extrude_vertex_indices
+            )
+
+            # ---------------------------------
+            # Store Mouse Position
+            # ---------------------------------
+
+            self.extrude_start_mouse_x = (
+                self.mouse_x
+            )
+
+            self.extrude_start_mouse_y = (
+                self.mouse_y
+            )
+
+            self.extrude_axis_origin = None
+            self.extrude_start_axis_parameter = 0.0
+
+            print(
+                "Extrude Start Mouse:",
+                self.extrude_start_mouse_x,
+                self.extrude_start_mouse_y
+            )
+
+            # ---------------------------------
+            # Disable Other Dragging
+            # ---------------------------------
+
+            self.face_dragging = False
+
+            self.vertex_dragging = False
+            self.edge_dragging = False
+            self.dragging_object = False
+
+            self.selected_vertex = None
+            self.selected_edge = None
+
+            # ---------------------------------
+            # Keep Extruded Face Selected
+            # ---------------------------------
+
+            self.selected_face = (
+                self.extrude_face
+            )
+
+            mesh.selected_face = (
+                self.extrude_face
+            )
+
+            # ---------------------------------
+            # Initialize Mouse Position
+            # ---------------------------------
+
+            self.last_mouse_x = (
+                self.mouse_x
+            )
+
+            self.last_mouse_y = (
+                self.mouse_y
+            )
+
+            # ---------------------------------
+            # Update Bounding Box
+            # ---------------------------------
+
+            if hasattr(
+                self.selected_object,
+                "bounding_box"
+            ):
+
+                self.selected_object.bounding_box.update(
+                    self.selected_object.position,
+                    self.selected_object.scale
+                )
+
+            # ---------------------------------
+            # Update Viewport
+            # ---------------------------------
+
+            self.update()
+
+            return
 
         # ---------------------------------
         # F4 OBJECT / EDIT MODE
