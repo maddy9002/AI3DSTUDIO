@@ -2,6 +2,7 @@ import sys
 import os
 import inspect
 import cv2
+import copy 
 
 from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtWidgets import (
@@ -54,12 +55,14 @@ from webcam.gesture_controller import GestureController
 
 from interaction.interaction_manager import InteractionManager
 
+
 print("OK")
 print("HandTracker loaded from:")
 print(inspect.getfile(HandTracker))
 print("Methods:")
 print(dir(HandTracker))
 print(webcam.hand_tracker_class.__file__)
+
 
 ray = Ray(
     origin=[0, 0, 5],
@@ -69,6 +72,7 @@ ray = Ray(
 print("Origin:", ray.origin)
 print("Direction:", ray.direction)
 
+
 class AI3DStudio(QMainWindow):
 
     def mousePressEvent(self, event):
@@ -76,7 +80,7 @@ class AI3DStudio(QMainWindow):
         self.viewport.setFocus()
 
         super().mousePressEvent(event)
-    
+
     def __init__(self):
         super().__init__()
 
@@ -86,9 +90,13 @@ class AI3DStudio(QMainWindow):
         self.resize(1400, 900)
 
         self.scene_manager = SceneManager()
+
         self.scene_objects = self.scene_manager.scene_objects
+
         self.selected_object = None
+
         self.pending_parent = None
+
         self.cube_count = 0
 
         self.command_parser = CommandParser()
@@ -119,6 +127,11 @@ class AI3DStudio(QMainWindow):
 
         self.gesture = GestureController()
 
+        # Tracks one continuous hand-gesture transform as a single
+        # undoable history operation.
+        self._hand_history_active = False
+        self._hand_history_object = None
+
         self.cap = cv2.VideoCapture(0)
 
         self.cap.set(
@@ -137,10 +150,169 @@ class AI3DStudio(QMainWindow):
         )
 
         self.timer = QTimer()
+
         self.timer.timeout.connect(
             self.update_hand_control
         )
+
         self.timer.start(8)
+
+        # ========================================================
+        # GLOBAL KEYBOARD EVENT FILTER
+        # ========================================================
+        #
+        # This allows Ctrl+Z / Ctrl+Y to work even when the
+        # Viewport has keyboard focus.
+        #
+        QApplication.instance().installEventFilter(self)
+
+    # ============================================================
+    # GLOBAL EVENT FILTER
+    # ============================================================
+
+    def eventFilter(self, watched, event):
+
+        if event.type() == QEvent.KeyPress:
+
+            # ----------------------------------------------------
+            # Do not intercept Ctrl+Z / Ctrl+Y while typing
+            # into the AI command bar.
+            # ----------------------------------------------------
+
+            if watched == self.command_bar:
+
+                return super().eventFilter(
+                    watched,
+                    event
+                )
+
+            # ----------------------------------------------------
+            # ESC - CANCEL ACTIVE HAND GESTURE
+            # ----------------------------------------------------
+
+            if event.key() == Qt.Key_Escape:
+
+                if self._hand_history_active:
+
+                    history_object = self._hand_history_object
+
+                    if history_object is not None:
+                        restored_object = (
+                            self.history_manager.cancel_action()
+                        )
+
+                        if restored_object is not None:
+                            self.selected_object = restored_object
+
+                            self.viewport.set_selected_object(
+                                restored_object
+                            )
+
+                    self._hand_history_active = False
+                    self._hand_history_object = None
+
+                    self.gesture.release()
+
+                    # Reset the grab state so the next pinch starts
+                    # a fresh history operation.
+                    self.interaction.is_holding = False
+
+                    self.viewport.update_scene(
+                        self.scene_objects
+                    )
+
+                    self.viewport.update()
+
+                    print("ESC - HAND GESTURE CANCELLED")
+
+                    return True
+
+                # No hand operation is active. Returning False allows
+                # the focused widget/viewport to process ESC normally.
+                return False
+
+            # ----------------------------------------------------
+            # UNDO
+            # ----------------------------------------------------
+
+            if (
+                event.key() == Qt.Key_Z
+                and event.modifiers() & Qt.ControlModifier
+                and not (
+                    event.modifiers()
+                    & Qt.ShiftModifier
+                )
+            ):
+
+                print("UNDO SHORTCUT")
+
+                restored_object = (
+                    self.history_manager.undo(
+                        self.scene_objects
+                    )
+                )
+
+                if restored_object is not None:
+
+                    self._refresh_scene_from_history(
+                        restored_object
+                    )
+
+                    self.ai_console.append(
+                        "Undo"
+                    )
+
+                else:
+
+                    print(
+                        "Nothing to undo."
+                    )
+
+                return True
+
+            # ----------------------------------------------------
+            # REDO
+            # ----------------------------------------------------
+
+            if (
+                event.key() == Qt.Key_Y
+                and event.modifiers() & Qt.ControlModifier
+            ):
+
+                print("REDO SHORTCUT")
+
+                restored_object = (
+                    self.history_manager.redo(
+                        self.scene_objects
+                    )
+                )
+
+                if restored_object is not None:
+
+                    self._refresh_scene_from_history(
+                        restored_object
+                    )
+
+                    self.ai_console.append(
+                        "Redo"
+                    )
+
+                else:
+
+                    print(
+                        "Nothing to redo."
+                    )
+
+                return True
+
+        return super().eventFilter(
+            watched,
+            event
+        )
+
+    # ============================================================
+    # UI
+    # ============================================================
 
     def setup_ui(self):
 
@@ -148,39 +320,91 @@ class AI3DStudio(QMainWindow):
         # Toolbar
         # ==========================
 
-        toolbar = QToolBar("Main Toolbar")
-        self.addToolBar(toolbar)
+        toolbar = QToolBar(
+            "Main Toolbar"
+        )
 
-        self.select_btn = QPushButton("Select")
-        self.move_btn = QPushButton("Move")
-        self.rotate_btn = QPushButton("Rotate")
-        self.scale_btn = QPushButton("Scale")
+        self.addToolBar(
+            toolbar
+        )
 
-        self.cube_btn = QPushButton("Cube")
-        self.sphere_btn = QPushButton("Sphere")
-        self.cylinder_btn = QPushButton("Cylinder")
+        self.select_btn = QPushButton(
+            "Select"
+        )
 
-        self.save_toolbar_btn = QPushButton("Save")
-        self.load_toolbar_btn = QPushButton("Load")
+        self.move_btn = QPushButton(
+            "Move"
+        )
 
-        toolbar.addWidget(self.select_btn)
+        self.rotate_btn = QPushButton(
+            "Rotate"
+        )
+
+        self.scale_btn = QPushButton(
+            "Scale"
+        )
+
+        self.cube_btn = QPushButton(
+            "Cube"
+        )
+
+        self.sphere_btn = QPushButton(
+            "Sphere"
+        )
+
+        self.cylinder_btn = QPushButton(
+            "Cylinder"
+        )
+
+        self.save_toolbar_btn = QPushButton(
+            "Save"
+        )
+
+        self.load_toolbar_btn = QPushButton(
+            "Load"
+        )
+
+        toolbar.addWidget(
+            self.select_btn
+        )
 
         toolbar.addSeparator()
 
-        toolbar.addWidget(self.move_btn)
-        toolbar.addWidget(self.rotate_btn)
-        toolbar.addWidget(self.scale_btn)
+        toolbar.addWidget(
+            self.move_btn
+        )
+
+        toolbar.addWidget(
+            self.rotate_btn
+        )
+
+        toolbar.addWidget(
+            self.scale_btn
+        )
 
         toolbar.addSeparator()
 
-        toolbar.addWidget(self.cube_btn)
-        toolbar.addWidget(self.sphere_btn)
-        toolbar.addWidget(self.cylinder_btn)
+        toolbar.addWidget(
+            self.cube_btn
+        )
+
+        toolbar.addWidget(
+            self.sphere_btn
+        )
+
+        toolbar.addWidget(
+            self.cylinder_btn
+        )
 
         toolbar.addSeparator()
 
-        toolbar.addWidget(self.save_toolbar_btn)
-        toolbar.addWidget(self.load_toolbar_btn)
+        toolbar.addWidget(
+            self.save_toolbar_btn
+        )
+
+        toolbar.addWidget(
+            self.load_toolbar_btn
+        )
 
         self.cube_btn.clicked.connect(
             self.create_cube
@@ -223,7 +447,10 @@ class AI3DStudio(QMainWindow):
         # ==========================
 
         central = QWidget()
-        self.setCentralWidget(central)
+
+        self.setCentralWidget(
+            central
+        )
 
         main_layout = QHBoxLayout()
 
@@ -248,7 +475,10 @@ class AI3DStudio(QMainWindow):
         )
 
         left_widget = QWidget()
-        left_widget.setLayout(left_layout)
+
+        left_widget.setLayout(
+            left_layout
+        )
 
         # ==========================
         # Viewport
@@ -256,11 +486,15 @@ class AI3DStudio(QMainWindow):
 
         self.history_manager = HistoryManager()
 
-        self.viewport = Viewport(self)
+        self.viewport = Viewport(
+            self
+        )
 
-        self.viewport.setFocus()    
+        self.viewport.setFocus()
 
-        self.viewport.history_manager = self.history_manager
+        self.viewport.history_manager = (
+            self.history_manager
+        )
 
         self.viewport.setFocusPolicy(
             Qt.StrongFocus
@@ -300,7 +534,9 @@ class AI3DStudio(QMainWindow):
 
         self.ai_console = QTextEdit()
 
-        self.ai_console.setReadOnly(True)
+        self.ai_console.setReadOnly(
+            True
+        )
 
         self.command_bar = QLineEdit()
 
@@ -365,21 +601,47 @@ class AI3DStudio(QMainWindow):
             "AI3D Studio Started"
         )
 
-    def create_primitive(self, primitive_type):
+    # ============================================================
+    # CREATE PRIMITIVE
+    # ============================================================
 
-        primitive_type = primitive_type.capitalize()
+    def create_primitive(
+        self,
+        primitive_type
+    ):
 
-        if not hasattr(self, "primitive_counts"):
+        primitive_type = (
+            primitive_type.capitalize()
+        )
+
+        if not hasattr(
+            self,
+            "primitive_counts"
+        ):
+
             self.primitive_counts = {}
 
-        if primitive_type not in self.primitive_counts:
-            self.primitive_counts[primitive_type] = 0
+        if primitive_type not in (
+            self.primitive_counts
+        ):
 
-        self.primitive_counts[primitive_type] += 1
+            self.primitive_counts[
+                primitive_type
+            ] = 0
+
+        self.primitive_counts[
+            primitive_type
+        ] += 1
+
+        self.history_manager.save_scene_state(
+            self.scene_objects,
+            self.selected_object
+        )
 
         obj = PrimitiveFactory.create(
 
-            f"{primitive_type} {self.primitive_counts[primitive_type]}",
+            f"{primitive_type} "
+            f"{self.primitive_counts[primitive_type]}",
 
             primitive_type
 
@@ -387,7 +649,11 @@ class AI3DStudio(QMainWindow):
 
         obj.position = [
 
-            -2.0 + ((len(self.scene_objects)) * 1.5),
+            -2.0
+            + (
+                len(self.scene_objects)
+                * 1.5
+            ),
 
             0.0,
 
@@ -395,17 +661,27 @@ class AI3DStudio(QMainWindow):
 
         ]
 
-        self.scene_objects.append(obj)
+        self.scene_objects.append(
+            obj
+        )
 
-        self.scene_hierarchy.addItem(obj.name)
+        self.scene_hierarchy.addItem(
+            obj.name
+        )
 
         self.scene_hierarchy.setCurrentRow(
             len(self.scene_objects) - 1
         )
 
-        self.viewport.set_selected_object(obj)
+        self.viewport.set_selected_object(
+            obj
+        )
 
-        self.viewport.update_scene(self.scene_objects)
+        self.selected_object = obj
+
+        self.viewport.update_scene(
+            self.scene_objects
+        )
 
         self.viewport.update()
 
@@ -420,35 +696,43 @@ class AI3DStudio(QMainWindow):
             pass
 
         self.ai_console.append(
-
             f"Created {obj.name}"
-
         )
 
     def create_cube(self):
-
-        self.create_primitive("Cube")
+        self.create_primitive(
+            "Cube"
+        )
 
     def create_sphere(self):
-
-        self.create_primitive("Sphere")
+        self.create_primitive(
+            "Sphere"
+        )
 
     def create_plane(self):
-
-        self.create_primitive("Plane")
+        self.create_primitive(
+            "Plane"
+        )
 
     def create_cylinder(self):
-
-        self.create_primitive("Cylinder")
+        self.create_primitive(
+            "Cylinder"
+        )
 
     def create_cone(self):
-
-        self.create_primitive("Cone")
+        self.create_primitive(
+            "Cone"
+        )
 
     def create_torus(self):
+        self.create_primitive(
+            "Torus"
+        )
 
-        self.create_primitive("Torus")
-    
+    # ============================================================
+    # AI COMMAND
+    # ============================================================
+
     def run_ai_command(self):
 
         text = self.command_bar.text().strip()
@@ -456,13 +740,20 @@ class AI3DStudio(QMainWindow):
         if not text:
             return
 
-        self.ai_console.append(f"> {text}")
+        self.ai_console.append(
+            f"> {text}"
+        )
 
         try:
 
-            command = self.ai.ask(text)
+            command = self.ai.ask(
+                text
+            )
 
-            print("AI RESPONSE:", command)
+            print(
+                "AI RESPONSE:",
+                command
+            )
 
             self.command_executor.execute(
                 command["command"],
@@ -471,9 +762,15 @@ class AI3DStudio(QMainWindow):
 
         except Exception:
 
-            print("Using Local Command Parser")
+            print(
+                "Using Local Command Parser"
+            )
 
-            command, argument = self.command_parser.parse(text)
+            command, argument = (
+                self.command_parser.parse(
+                    text
+                )
+            )
 
             self.command_executor.execute(
                 command,
@@ -482,23 +779,41 @@ class AI3DStudio(QMainWindow):
 
         self.command_bar.clear()
 
+    # ============================================================
+    # DELETE
+    # ============================================================
+
     def delete_selected_object(self):
 
         if self.selected_object is None:
-
             return
 
         obj = self.selected_object
 
         if obj in self.scene_objects:
 
-            index = self.scene_objects.index(obj)
+            self.history_manager.save_scene_state(
+                self.scene_objects,
+                self.selected_object
+            )
 
-            self.scene_objects.remove(obj)
+            index = (
+                self.scene_objects.index(
+                    obj
+                )
+            )
 
-            self.scene_hierarchy.takeItem(index)
+            self.scene_objects.remove(
+                obj
+            )
 
-            self.viewport.set_selected_object(None)
+            self.scene_hierarchy.takeItem(
+                index
+            )
+
+            self.viewport.set_selected_object(
+                None
+            )
 
             self.selected_object = None
 
@@ -506,14 +821,25 @@ class AI3DStudio(QMainWindow):
                 self.scene_objects
             )
 
+            self.viewport.update()
+
             self.ai_console.append(
                 f"Deleted {obj.name}"
             )
+
+    # ============================================================
+    # DUPLICATE
+    # ============================================================
 
     def duplicate_selected_object(self):
 
         if self.selected_object is None:
             return
+
+        self.history_manager.save_scene_state(
+            self.scene_objects,
+            self.selected_object
+        )
 
         self.cube_count += 1
 
@@ -527,17 +853,33 @@ class AI3DStudio(QMainWindow):
 
         )
 
-        new.position = old.position.copy()
-        new.rotation = old.rotation.copy()
-        new.scale = old.scale.copy()
+        new.position = (
+            old.position.copy()
+        )
 
-        # Offset slightly so it isn't exactly on top
+        new.rotation = (
+            old.rotation.copy()
+        )
+
+        new.scale = (
+            old.scale.copy()
+        )
+
+        if old.mesh is not None:
+            new.mesh = copy.deepcopy(
+                old.mesh
+            )
+
         new.position[0] += 0.5
         new.position[1] += 0.5
 
-        self.scene_objects.append(new)
+        self.scene_objects.append(
+            new
+        )
 
-        self.scene_hierarchy.addItem(new.name)
+        self.scene_hierarchy.addItem(
+            new.name
+        )
 
         self.scene_hierarchy.setCurrentRow(
             len(self.scene_objects) - 1
@@ -545,19 +887,29 @@ class AI3DStudio(QMainWindow):
 
         self.selected_object = new
 
-        self.viewport.set_selected_object(new)
+        self.viewport.set_selected_object(
+            new
+        )
 
         self.viewport.update_scene(
             self.scene_objects
         )
 
+        self.viewport.update()
+
         self.ai_console.append(
             f"Duplicated {old.name}"
         )
 
+    # ============================================================
+    # SAVE
+    # ============================================================
+
     def save_scene(self):
 
-        filename = "projects/scene.ai3d"
+        filename = (
+            "projects/scene.ai3d"
+        )
 
         self.project_manager.save_project(
 
@@ -568,19 +920,27 @@ class AI3DStudio(QMainWindow):
         )
 
         self.ai_console.append(
-
             "Scene Saved"
-
         )
+
+    # ============================================================
+    # LOAD
+    # ============================================================
 
     def load_scene(self):
 
-        filename = "projects/scene.ai3d"
+        filename = (
+            "projects/scene.ai3d"
+        )
 
-        self.scene_objects = self.project_manager.load_project(
+        self.scene_objects = (
+            self.project_manager.load_project(
+                filename
+            )
+        )
 
-            filename
-
+        self.scene_manager.scene_objects = (
+            self.scene_objects
         )
 
         self.scene_hierarchy.clear()
@@ -588,24 +948,52 @@ class AI3DStudio(QMainWindow):
         for obj in self.scene_objects:
 
             self.scene_hierarchy.addItem(
-
                 obj.name
-
             )
 
-        self.viewport.update_scene(
+        self.selected_object = None
 
-            self.scene_objects
-
+        self.viewport.set_selected_object(
+            None
         )
+
+        self.viewport.update_scene(
+            self.scene_objects
+        )
+
+        self.viewport.update()
 
         self.ai_console.append(
-
             "Scene Loaded"
-
         )
 
-    def select_object(self, item):
+    # ============================================================
+    # REFRESH SCENE AFTER HISTORY RESTORE
+    # ============================================================
+
+    def _refresh_scene_from_history(self, selected_object):
+        self.scene_manager.scene_objects = self.scene_objects
+        self.scene_hierarchy.clear()
+        selected_row = -1
+        for index, obj in enumerate(self.scene_objects):
+            self.scene_hierarchy.addItem(obj.name)
+            if obj is selected_object:
+                selected_row = index
+        self.selected_object = selected_object
+        self.viewport.set_selected_object(selected_object)
+        if selected_row >= 0:
+            self.scene_hierarchy.setCurrentRow(selected_row)
+        self.viewport.update_scene(self.scene_objects)
+        self.viewport.update()
+
+    # ============================================================
+    # SELECT
+    # ============================================================
+
+    def select_object(
+        self,
+        item
+    ):
 
         selected = None
 
@@ -614,12 +1002,15 @@ class AI3DStudio(QMainWindow):
             if obj.name == item.text():
 
                 selected = obj
+
                 break
 
         if selected is None:
             return
 
-        self.selected_object = selected
+        self.selected_object = (
+            selected
+        )
 
         self.viewport.set_selected_object(
             selected
@@ -631,15 +1022,22 @@ class AI3DStudio(QMainWindow):
             f"Selected {selected.name}"
         )
 
+    # ============================================================
+    # PARENT
+    # ============================================================
+
     def set_parent_candidate(self):
 
         if self.selected_object is None:
             return
 
-        self.pending_parent = self.selected_object
+        self.pending_parent = (
+            self.selected_object
+        )
 
         self.ai_console.append(
-            f"Parent candidate: {self.selected_object.name}"
+            "Parent candidate: "
+            f"{self.selected_object.name}"
         )
 
     def parent_selected_object(self):
@@ -660,10 +1058,14 @@ class AI3DStudio(QMainWindow):
 
             return
 
-        if self.pending_parent == self.selected_object:
+        if (
+            self.pending_parent
+            == self.selected_object
+        ):
 
             self.ai_console.append(
-                "Parent and child cannot be the same."
+                "Parent and child cannot "
+                "be the same."
             )
 
             return
@@ -673,178 +1075,221 @@ class AI3DStudio(QMainWindow):
         )
 
         self.ai_console.append(
-            f"{self.selected_object.name} parented to {self.pending_parent.name}"
+            f"{self.selected_object.name} "
+            "parented to "
+            f"{self.pending_parent.name}"
         )
 
         self.viewport.update()
 
-        print("----------- Scene Graph -----------")
+        print(
+            "----------- Scene Graph -----------"
+        )
 
         for obj in self.scene_objects:
 
-            parent = obj.parent.name if obj.parent else "None"
+            parent = (
+                obj.parent.name
+                if obj.parent
+                else "None"
+            )
 
-            print(f"{obj.name} -> Parent: {parent}")
-        
-    def keyPressEvent(self, event):
+            print(
+                f"{obj.name} -> "
+                f"Parent: {parent}"
+            )
 
-        print("MAIN KEY:", event.key())
+    # ============================================================
+    # KEY PRESS
+    # ============================================================
 
-        print("KEY:", event.key())
+    def keyPressEvent(
+        self,
+        event
+    ):
 
-        # ---------- Global Shortcuts ----------
+        print(
+            "MAIN KEY:",
+            event.key()
+        )
+
+        # --------------------------------------------------------
+        # Ctrl + D
+        # --------------------------------------------------------
 
         if (
             event.key() == Qt.Key_D
-            and event.modifiers() & Qt.ControlModifier
+            and event.modifiers()
+            & Qt.ControlModifier
         ):
 
             self.duplicate_selected_object()
+
             return
 
-        # ----------------------------
-        # Mode Switching
-        # ----------------------------
+        # --------------------------------------------------------
+        # TAB
+        # --------------------------------------------------------
 
         if event.key() == Qt.Key_Tab:
 
             self.mode_manager.toggle()
 
-            print("Mode:", self.mode_manager.get_mode())
+            print(
+                "Mode:",
+                self.mode_manager.get_mode()
+            )
 
             self.viewport.update()
 
             return
 
-        # ---------- Parent Candidate ----------
+        # --------------------------------------------------------
+        # Ctrl + P
+        # --------------------------------------------------------
 
-        elif (
+        if (
             event.key() == Qt.Key_P
-            and event.modifiers() == Qt.ControlModifier
+            and event.modifiers()
+            == Qt.ControlModifier
         ):
 
             self.set_parent_candidate()
+
             return
 
+        # --------------------------------------------------------
+        # Ctrl + Shift + P
+        # --------------------------------------------------------
 
-        # ---------- Parent Object ----------
-
-        elif (
+        if (
             event.key() == Qt.Key_P
-            and event.modifiers() == (Qt.ControlModifier | Qt.ShiftModifier)
+            and event.modifiers()
+            == (
+                Qt.ControlModifier
+                | Qt.ShiftModifier
+            )
         ):
 
             self.parent_selected_object()
+
             return
 
+        # --------------------------------------------------------
+        # Delete
+        # --------------------------------------------------------
 
-        elif event.key() == Qt.Key_Delete:
+        if event.key() == Qt.Key_Delete:
 
             self.delete_selected_object()
+
             return
-        
-        elif (
+
+        # --------------------------------------------------------
+        # Ctrl + R
+        # --------------------------------------------------------
+
+        if (
             event.key() == Qt.Key_R
-            and event.modifiers() & Qt.ControlModifier
+            and event.modifiers()
+            & Qt.ControlModifier
         ):
 
             self.rename_selected_object()
-            return
-
-        # ----------------------------
-        # Mode Switching
-        # ----------------------------
-
-        if event.key() == Qt.Key_Tab:
-
-            self.mode_manager.toggle()
-
-            print("MODE:", self.mode_manager.get_mode())
-
-            self.viewport.update()
 
             return
 
-        # ----------------------------
-        # Tool Switching
-        # ----------------------------
+        # --------------------------------------------------------
+        # F1
+        # --------------------------------------------------------
 
         if event.key() == Qt.Key_F1:
 
-            print("F1 BLOCK ENTERED")
-
-            print("Before:", self.viewport.tool_manager.get_tool())
+            print(
+                "F1 BLOCK ENTERED"
+            )
 
             self.viewport.tool_manager.set_tool(
                 ToolManager.MOVE
             )
 
-            print("After:", self.viewport.tool_manager.get_tool())
-
             self.viewport.update()
 
             return
 
+        # --------------------------------------------------------
+        # F2
+        # --------------------------------------------------------
 
-        elif event.key() == Qt.Key_F2:
+        if event.key() == Qt.Key_F2:
 
-            print("F2 BLOCK ENTERED")
-
-            print("Before:", self.viewport.tool_manager.get_tool())
+            print(
+                "F2 BLOCK ENTERED"
+            )
 
             self.viewport.tool_manager.set_tool(
                 ToolManager.ROTATE
             )
 
-            print("After:", self.viewport.tool_manager.get_tool())
-
             self.viewport.update()
 
             return
 
+        # --------------------------------------------------------
+        # F3
+        # --------------------------------------------------------
 
-        elif event.key() == Qt.Key_F3:
+        if event.key() == Qt.Key_F3:
 
-            print("F3 BLOCK ENTERED")
-
-            print("Before:", self.viewport.tool_manager.get_tool())
+            print(
+                "F3 BLOCK ENTERED"
+            )
 
             self.viewport.tool_manager.set_tool(
                 ToolManager.SCALE
             )
 
-            print("After:", self.viewport.tool_manager.get_tool())
-
             self.viewport.update()
 
             return
 
-        # ---------- Object Required ----------
+        # --------------------------------------------------------
+        # Selected object information
+        # --------------------------------------------------------
 
         if self.selected_object is None:
 
-            super().keyPressEvent(event)
+            super().keyPressEvent(
+                event
+            )
+
             return
-    
+
         print(
             "Position:",
             self.selected_object.position,
             "Rotation:",
             self.selected_object.rotation
         )
-        
+
         self.viewport.update()
+
+    # ============================================================
+    # RENAME
+    # ============================================================
 
     def rename_selected_object(self):
 
         if self.selected_object is None:
             return
 
-        new_name, ok = QInputDialog.getText(
-            self,
-            "Rename Object",
-            "New Name:",
-            text=self.selected_object.name
+        new_name, ok = (
+            QInputDialog.getText(
+                self,
+                "Rename Object",
+                "New Name:",
+                text=self.selected_object.name
+            )
         )
 
         if not ok:
@@ -853,34 +1298,60 @@ class AI3DStudio(QMainWindow):
         if not new_name.strip():
             return
 
-        self.selected_object.name = new_name.strip()
-
-        current_row = self.scene_hierarchy.currentRow()
-
-        self.scene_hierarchy.item(current_row).setText(
-            self.selected_object.name
+        self.selected_object.name = (
+            new_name.strip()
         )
+
+        current_row = (
+            self.scene_hierarchy.currentRow()
+        )
+
+        item = (
+            self.scene_hierarchy.item(
+                current_row
+            )
+        )
+
+        if item is not None:
+
+            item.setText(
+                self.selected_object.name
+            )
 
         self.ai_console.append(
-            f"Renamed to {self.selected_object.name}"
+            f"Renamed to "
+            f"{self.selected_object.name}"
         )
+
+    # ============================================================
+    # HAND CONTROL
+    # ============================================================
 
     def update_hand_control(self):
 
-        success, frame = self.cap.read()
+        success, frame = (
+            self.cap.read()
+        )
 
         if not success:
             return
 
-        frame = cv2.flip(frame, 1)
+        frame = cv2.flip(
+            frame,
+            1
+        )
 
         # -----------------------------------
-        # Detect hand FIRST
+        # Detect hand
         # -----------------------------------
 
-        self.tracker.get_hand_position(frame)
+        self.tracker.get_hand_position(
+            frame
+        )
 
-        palm = self.tracker.get_palm_position()
+        palm = (
+            self.tracker.get_palm_position()
+        )
 
         # -----------------------------------
         # Debug window
@@ -893,40 +1364,66 @@ class AI3DStudio(QMainWindow):
             and self.tracker.last_result.hand_landmarks
         ):
 
-            hand = self.tracker.last_result.hand_landmarks[0]
+            hand = (
+                self.tracker
+                .last_result
+                .hand_landmarks[0]
+            )
 
-            h, w, _ = debug_frame.shape
+            h, w, _ = (
+                debug_frame.shape
+            )
 
             for landmark in hand:
 
-                px = int(landmark.x * w)
-                py = int(landmark.y * h)
+                px = int(
+                    landmark.x * w
+                )
+
+                py = int(
+                    landmark.y * h
+                )
 
                 cv2.circle(
                     debug_frame,
                     (px, py),
                     5,
-                    (0,255,0),
+                    (0, 255, 0),
                     -1
                 )
 
             connections = [
 
-                (0,1),(1,2),(2,3),(3,4),
+                (0, 1),
+                (1, 2),
+                (2, 3),
+                (3, 4),
 
-                (0,5),(5,6),(6,7),(7,8),
+                (0, 5),
+                (5, 6),
+                (6, 7),
+                (7, 8),
 
-                (5,9),(9,10),(10,11),(11,12),
+                (5, 9),
+                (9, 10),
+                (10, 11),
+                (11, 12),
 
-                (9,13),(13,14),(14,15),(15,16),
+                (9, 13),
+                (13, 14),
+                (14, 15),
+                (15, 16),
 
-                (13,17),(17,18),(18,19),(19,20),
+                (13, 17),
+                (17, 18),
+                (18, 19),
+                (19, 20),
 
-                (0,17)
+                (0, 17)
 
             ]
 
-            for start,end in connections:
+            for start, end in connections:
 
                 p1 = hand[start]
                 p2 = hand[end]
@@ -936,16 +1433,16 @@ class AI3DStudio(QMainWindow):
                     debug_frame,
 
                     (
-                        int(p1.x*w),
-                        int(p1.y*h)
+                        int(p1.x * w),
+                        int(p1.y * h)
                     ),
 
                     (
-                        int(p2.x*w),
-                        int(p2.y*h)
+                        int(p2.x * w),
+                        int(p2.y * h)
                     ),
 
-                    (255,0,0),
+                    (255, 0, 0),
 
                     2
 
@@ -963,8 +1460,13 @@ class AI3DStudio(QMainWindow):
 
             x, y, z = palm
 
-            world_x = (x - 0.5) * 2
-            world_y = -(y - 0.5) * 2
+            world_x = (
+                x - 0.5
+            ) * 2
+
+            world_y = -(
+                y - 0.5
+            ) * 2
 
             self.viewport.update_cursor(
                 world_x,
@@ -975,15 +1477,41 @@ class AI3DStudio(QMainWindow):
         # Grabbed object
         # -----------------------------------
 
-        pinching = self.tracker.is_pinching()
+        pinching = (
+            self.tracker.is_pinching()
+        )
 
-        grab_event = self.interaction.update_grab(pinching)
+        grab_event = (
+            self.interaction.update_grab(
+                pinching
+            )
+        )
 
         if grab_event:
 
             if self.interaction.is_holding:
 
-                axes = self.tracker.get_palm_axes()
+                # -----------------------------------------------
+                # HAND GESTURE START
+                # -----------------------------------------------
+                # Capture the object state BEFORE the first hand
+                # movement. The entire continuous gesture becomes
+                # one undoable operation.
+                hand_object = self.viewport.selected_object
+
+                if hand_object is not None:
+
+                    self.history_manager.begin_action(
+                        hand_object
+                    )
+
+                    self._hand_history_active = True
+                    self._hand_history_object = hand_object
+
+                axes = (
+                    self.tracker
+                    .get_palm_axes()
+                )
 
                 if (
                     axes is not None
@@ -991,18 +1519,42 @@ class AI3DStudio(QMainWindow):
                 ):
 
                     self.gesture.grab(
+
                         self.viewport.selected_object,
+
                         axes
+
                     )
 
                     self.gesture.grab_pinch_distance = (
-                        self.tracker.get_pinch_distance()
+                        self.tracker
+                        .get_pinch_distance()
                     )
 
             else:
 
-                self.gesture.release()
+                # -----------------------------------------------
+                # HAND GESTURE END
+                # -----------------------------------------------
+                # Commit the state captured at gesture start.
+                # This puts the operation into undo history and
+                # clears the redo stack.
+                if self._hand_history_active:
 
+                    history_object = (
+                        self._hand_history_object
+                    )
+
+                    if history_object is not None:
+
+                        self.history_manager.commit_action(
+                            history_object
+                        )
+
+                    self._hand_history_active = False
+                    self._hand_history_object = None
+
+                self.gesture.release()
 
         if (
             self.interaction.is_holding
@@ -1012,79 +1564,163 @@ class AI3DStudio(QMainWindow):
 
             smooth = 0.20
 
-            obj = self.viewport.selected_object
+            obj = (
+                self.viewport.selected_object
+            )
 
             obj.position[0] += (
-                world_x - obj.position[0]
+
+                world_x
+                - obj.position[0]
+
             ) * smooth
 
             obj.position[1] += (
-                world_y - obj.position[1]
+
+                world_y
+                - obj.position[1]
+
             ) * smooth
 
-            axes = self.tracker.get_palm_axes()
+            axes = (
+                self.tracker
+                .get_palm_axes()
+            )
 
             if axes is not None:
 
                 right, up, forward = axes
 
-                obj.rotation[0] = up[1] * 180
-                obj.rotation[1] = right[0] * 180
-                obj.rotation[2] = forward[2] * 180
-                
-                current_distance = self.tracker.get_pinch_distance()
+                obj.rotation[0] = (
+                    up[1] * 180
+                )
+
+                obj.rotation[1] = (
+                    right[0] * 180
+                )
+
+                obj.rotation[2] = (
+                    forward[2] * 180
+                )
+
+                current_distance = (
+                    self.tracker
+                    .get_pinch_distance()
+                )
 
                 if (
                     current_distance is not None
-                    and self.gesture.grab_pinch_distance is not None
+                    and
+                    self.gesture
+                    .grab_pinch_distance
+                    is not None
                 ):
 
                     scale_factor = (
-                        current_distance /
-                        self.gesture.grab_pinch_distance
+
+                        current_distance
+                        /
+                        self.gesture
+                        .grab_pinch_distance
+
                     )
 
                     scale_factor = max(
                         0.3,
-                        min(scale_factor, 3.0)
+                        min(
+                            scale_factor,
+                            3.0
+                        )
                     )
 
                     obj.scale[0] = (
-                        self.gesture.grab_scale[0]
+
+                        self.gesture
+                        .grab_scale[0]
                         * scale_factor
+
                     )
 
                     obj.scale[1] = (
-                        self.gesture.grab_scale[1]
+
+                        self.gesture
+                        .grab_scale[1]
                         * scale_factor
+
                     )
 
                     obj.scale[2] = (
-                        self.gesture.grab_scale[2]
+
+                        self.gesture
+                        .grab_scale[2]
                         * scale_factor
+
                     )
 
             self.viewport.update()
 
-    def closeEvent(self, event):
+    # ============================================================
+    # CLOSE
+    # ============================================================
+
+    def closeEvent(
+        self,
+        event
+    ):
+
+        if self._hand_history_active:
+
+            history_object = self._hand_history_object
+
+            if history_object is not None:
+
+                self.history_manager.commit_action(
+                    history_object
+                )
+
+            self._hand_history_active = False
+            self._hand_history_object = None
 
         if hasattr(
             self,
             "cap"
         ):
+
             self.cap.release()
 
         cv2.destroyAllWindows()
 
+        app = QApplication.instance()
+        if app is not None:
+            app.removeEventFilter(self)
+
         event.accept()
 
-    def event(self, event):
+    # ============================================================
+    # EVENT
+    # ============================================================
+
+    def event(
+        self,
+        event
+    ):
+
         try:
-            return super().event(event)
+
+            return super().event(
+                event
+            )
+
         except Exception as e:
-            print("EVENT ERROR:", e)
+
+            print(
+                "EVENT ERROR:",
+                e
+            )
+
             raise
-            
+
+
 if __name__ == "__main__":
 
     app = QApplication([])

@@ -12,18 +12,49 @@ class MeshRenderer:
 
         glPushAttrib(GL_ALL_ATTRIB_BITS)
 
+        glDisable(GL_CULL_FACE)
+
         # -------------------------
         # Solid Mesh
         # -------------------------
 
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
+        print(
+            "POLYGON MODE BEFORE FILL",
+            glGetIntegerv(GL_POLYGON_MODE)
+        )
+
+        print(
+            "DEPTH TEST:",
+            glIsEnabled(GL_DEPTH_TEST)
+        )
+
+        print(
+            "BLEND:",
+            glIsEnabled(GL_BLEND)
+        )
+
+        print(
+            "COLOR:",
+            glGetFloatv(GL_CURRENT_COLOR)
+        )
+
+        glDisable(GL_LIGHTING)
+        glDisable(GL_TEXTURE_2D)
         glEnable(GL_POLYGON_OFFSET_FILL)
         glPolygonOffset(1.0, 1.0)
+        glDisable(GL_BLEND)
 
         selected_face = getattr(mesh, "selected_face", None)
 
         print("Draw Face:", selected_face)
 
+        
+
         for face_index, face in enumerate(mesh.faces):
+
+            print("RENDER FACE:", face_index, face)
 
             # -------------------------
             # Face Highlight
@@ -98,7 +129,7 @@ class MeshRenderer:
 
                 x, y, z = mesh.vertices[vertex_index]
 
-                glVertex3f(x, y, z)
+                glVertex3f(float(x), float(y), float(z))
 
             glEnd()
 

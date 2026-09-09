@@ -146,6 +146,14 @@ class Viewport(QOpenGLWidget):
 
         self.dragging_object = False
 
+        # Tracks whether the current Move Gizmo drag has
+        # already been recorded in history.
+        self._move_saved = False
+
+        # Tracks whether the current object drag has
+        # already been recorded in history.
+        self._object_drag_saved = False
+
         self.drag_start_x = 0
         self.drag_start_y = 0
 
@@ -589,16 +597,6 @@ class Viewport(QOpenGLWidget):
             )
 
         # ---------------------------------
-        # Replace Original Face
-        # ---------------------------------
-
-        mesh.faces[
-            self.extrude_face
-        ] = tuple(
-            new_vertices
-        )
-
-        # ---------------------------------
         # Create Side Faces
         # ---------------------------------
 
@@ -621,9 +619,17 @@ class Viewport(QOpenGLWidget):
             d = new_vertices[i]
 
             mesh.faces.append(
-                (a, b, c, d)
+                (a, d, c, b)
             )
 
+        # ---------------------------------
+        # CREATE EXTRUDED CAP
+        # ---------------------------------
+
+        mesh.faces.append(
+            tuple(new_vertices)
+        )        
+            
         # ---------------------------------
         # Rebuild Topology
         # ---------------------------------
@@ -634,13 +640,9 @@ class Viewport(QOpenGLWidget):
         # Keep Extruded Face Selected
         # ---------------------------------
 
-        self.selected_face = (
-            self.extrude_face
-        )
+        self.selected_face = len(mesh.faces) - 1
 
-        mesh.selected_face = (
-            self.extrude_face
-        )
+        mesh.selected_face = self.selected_face
 
         # ---------------------------------
         # Store Extrusion Normal
@@ -1202,7 +1204,10 @@ class Viewport(QOpenGLWidget):
 
                         self.selected_vertex = vertex
 
-                        print("Selected Vertex:", vertex)
+                        print(
+                            "Selected Vertex:",
+                            vertex
+                        )
 
                         if vertex is not None:
 
@@ -1240,7 +1245,10 @@ class Viewport(QOpenGLWidget):
 
                         self.selected_edge = edge
 
-                        print("Selected Edge:", edge)
+                        print(
+                            "Selected Edge:",
+                            edge
+                        )
 
                         if edge is not None:
 
@@ -1253,10 +1261,33 @@ class Viewport(QOpenGLWidget):
                             self.selected_vertex = None
                             self.selected_face = None
 
-                            edge_vertices = obj.mesh.edges[edge]
+                            edge_vertices = (
+                                obj.mesh.edges[edge]
+                            )
 
-                            self.edge_vertex_a = edge_vertices[0]
-                            self.edge_vertex_b = edge_vertices[1]
+                            self.edge_vertex_a = (
+                                edge_vertices[0]
+                            )
+
+                            self.edge_vertex_b = (
+                                edge_vertices[1]
+                            )
+
+                            # -----------------------------------------
+                            # Begin ESC cancellation snapshot
+                            # -----------------------------------------
+
+                            self._begin_cancel_snapshot()
+
+                            # -----------------------------------------
+                            # Save undo state
+                            # -----------------------------------------
+
+                            if self.history_manager is not None:
+
+                                self.history_manager.save_state(
+                                    self.selected_object
+                                )
 
                             self.last_mouse_x = event.x()
                             self.last_mouse_y = event.y()
@@ -1279,7 +1310,10 @@ class Viewport(QOpenGLWidget):
                         self.selected_face = face
                         obj.mesh.selected_face = face
 
-                        print("Selected Face:", face)
+                        print(
+                            "Selected Face:",
+                            face
+                        )
 
                         if face is not None:
 
@@ -1313,26 +1347,44 @@ class Viewport(QOpenGLWidget):
 
             obj = self.pick_object()
 
-            print("Picked Object:", obj)
+            print(
+                "Picked Object:",
+                obj
+            )
+
+            # The object must be selected BEFORE any history state
+            # is saved. Otherwise Undo may record None or a stale object.
+            if obj is not None:
+
+                self.set_selected_object(obj)
 
             # ---------------- MOVE ----------------
 
             if tool == ToolManager.MOVE:
 
-                axis = self.move_gizmo.pick_axis(ray)
+                axis = self.move_gizmo.pick_axis(
+                    ray
+                )
 
                 if axis is not None:
 
-                    print("Move Axis:", axis)
+                    print(
+                        "Move Axis:",
+                        axis
+                    )
 
                     self.move_gizmo.selected_axis = axis
 
-                    self.history_manager.save_state(
-                        self.selected_object
-                    )
+                    if self.selected_object is not None:
+
+                        self.history_manager.save_state(
+                            self.selected_object
+                        )
 
                     self.last_mouse_x = event.x()
                     self.last_mouse_y = event.y()
+
+                    self._move_saved = True
 
                     self.update()
 
@@ -1342,13 +1394,22 @@ class Viewport(QOpenGLWidget):
 
             elif tool == ToolManager.ROTATE:
 
-                rotate_axis = self.rotate_gizmo.pick_axis(ray)
+                rotate_axis = (
+                    self.rotate_gizmo.pick_axis(
+                        ray
+                    )
+                )
 
                 if rotate_axis is not None:
 
-                    print("Rotate Axis:", rotate_axis)
+                    print(
+                        "Rotate Axis:",
+                        rotate_axis
+                    )
 
-                    self.rotate_gizmo.selected_axis = rotate_axis
+                    self.rotate_gizmo.selected_axis = (
+                        rotate_axis
+                    )
 
                     self.history_manager.save_state(
                         self.selected_object
@@ -1370,13 +1431,22 @@ class Viewport(QOpenGLWidget):
 
             elif tool == ToolManager.SCALE:
 
-                scale_axis = self.scale_gizmo.pick_axis(ray)
+                scale_axis = (
+                    self.scale_gizmo.pick_axis(
+                        ray
+                    )
+                )
 
                 if scale_axis is not None:
 
-                    print("Scale Axis:", scale_axis)
+                    print(
+                        "Scale Axis:",
+                        scale_axis
+                    )
 
-                    self.scale_gizmo.selected_axis = scale_axis
+                    self.scale_gizmo.selected_axis = (
+                        scale_axis
+                    )
 
                     self.history_manager.save_state(
                         self.selected_object
@@ -1398,27 +1468,48 @@ class Viewport(QOpenGLWidget):
 
             if obj is not None:
 
-                self.set_selected_object(obj)
+                # obj was selected above before the transform
+                # tool branches. Record the state immediately
+                # before the normal object drag begins.
+                self.set_selected_object(
+                    obj
+                )
 
+                if self.history_manager is not None:
+
+                    self.history_manager.save_state(
+                        self.selected_object
+                    )
+
+                self._object_drag_saved = True
                 self.dragging_object = True
 
                 if abs(ray.direction[1]) > 1e-6:
 
                     t = (
-                        self.drag_plane_y - ray.origin[1]
+                        self.drag_plane_y
+                        - ray.origin[1]
                     ) / ray.direction[1]
 
-                    hit = ray.origin + ray.direction * t
+                    hit = (
+                        ray.origin
+                        + ray.direction * t
+                    )
 
                     self.drag_offset = (
-                        np.array(self.selected_object.position)
+                        np.array(
+                            self.selected_object.position
+                        )
                         - hit
                     )
 
                 self.drag_start_x = event.x()
                 self.drag_start_y = event.y()
 
-                print("Selected:", obj.name)
+                print(
+                    "Selected:",
+                    obj.name
+                )
 
             else:
 
@@ -1441,8 +1532,11 @@ class Viewport(QOpenGLWidget):
 
         self.setFocus()
 
-        print("Viewport Focus:", self.hasFocus())
-        
+        print(
+            "Viewport Focus:",
+            self.hasFocus()
+        )
+            
     def mouseReleaseEvent(self, event):
 
         # ---------------------------------
@@ -1478,6 +1572,8 @@ class Viewport(QOpenGLWidget):
 
             self.extrude_dragging = False
             self.extrude_mode = False
+
+            print("Extrude Released")
 
             self.extrude_vertex_indices = []
 
@@ -1523,6 +1619,7 @@ class Viewport(QOpenGLWidget):
             # ---------------------------------
 
             self._move_saved = False
+            self._object_drag_saved = False
 
         # ---------------------------------
         # RIGHT MOUSE RELEASE
@@ -1550,6 +1647,8 @@ class Viewport(QOpenGLWidget):
             and self.selected_object is not None
             and self.main_window.mode_manager.get_mode() == "EDIT"
         ):
+
+            print("EXTRUDE MOUSE MOVE")
 
             mesh = self.selected_object.mesh
 
@@ -1581,71 +1680,141 @@ class Viewport(QOpenGLWidget):
 
             normal /= normal_length
 
+            print(
+                "EXTRUDE DEBUG| Normal:",
+                normal
+            )
+
             # ---------------------------------
             # Mouse Movement
             # ---------------------------------
 
-            current_mouse_x = event.x()
-            current_mouse_y = event.y()
-
-            mouse_delta_y = (
-                self.extrude_start_mouse_y
-                - current_mouse_y
-            )
-
-            mouse_delta_x = (
-                current_mouse_x
+            dx = (
+                event.x()
                 - self.extrude_start_mouse_x
             )
 
+            dy = (
+                self.extrude_start_mouse_y
+                - event.y()
+            )
+
             # ---------------------------------
-            # Choose Mouse Axis
+            # Camera Screen Basis
             # ---------------------------------
 
-            # Y-axis faces:
-            # Top / Bottom
-            #
-            # Z-axis faces:
-            # Front / Back
-            #
-            # X-axis faces:
-            # Right / Left
+            camera_right = np.array(
+                self.camera.get_right(),
+                dtype=np.float64
+            )
 
-            if abs(normal[0]) > 0.5:
+            camera_up = np.array(
+                self.camera.get_up(),
+                dtype=np.float64
+            )
 
-                # ---------------------------------
-                # X AXIS FACES
-                # ---------------------------------
-                #
-                # Right face:
-                # mouse right  -> increase
-                # mouse left   -> decrease
-                #
-                # Left face:
-                # mouse left   -> increase
-                # mouse right  -> decrease
+            right_length = np.linalg.norm(
+                camera_right
+            )
 
-                mouse_delta = mouse_delta_x
+            up_length = np.linalg.norm(
+                camera_up
+            )
 
-                if normal[0] < 0.0:
+            if right_length < 1e-8:
+                return
 
-                    mouse_delta = -mouse_delta
+            if up_length < 1e-8:
+                return
+
+            camera_right /= right_length
+            camera_up /= up_length
+
+            print(
+                "CAMERA DEBUG | Right:",
+                camera_right,
+                "| Up:",
+                camera_up
+            )
+            # ---------------------------------
+            # Project Face Normal Onto Screen
+            # ---------------------------------
+
+            normal_screen_x = np.dot(
+                normal,
+                camera_right
+            )
+
+            normal_screen_y = np.dot(
+                normal,
+                camera_up
+            )
+
+            screen_length = math.sqrt(
+                normal_screen_x ** 2
+                + normal_screen_y ** 2
+            )
+
+            print(
+                "SCREEN NORMAL DEBUG | X:",
+                normal_screen_x,
+                " | Y:",
+                normal_screen_y,
+                " | Length:",
+                screen_length
+            )
+
+            # ---------------------------------
+            # Calculate Mouse Movement
+            # Along Projected Normal
+            # ---------------------------------
+
+            if screen_length > 1e-8:
+
+                screen_x = (
+                    normal_screen_x
+                    / screen_length
+                )
+
+                screen_y = (
+                    normal_screen_y
+                    / screen_length
+                )
+
+                mouse_delta = (
+                    dx * screen_x
+                    + dy * screen_y
+                )
 
             else:
 
-                # ---------------------------------
-                # Y / Z AXIS FACES
-                # ---------------------------------
+                # Face normal points almost directly
+                # toward/away from the camera.
+                #
+                # In this case there is almost no
+                # visible screen direction for the
+                # normal, so use vertical mouse movement
+                # as a fallback.
 
-                mouse_delta = mouse_delta_y
+                mouse_delta = dy
 
-                # ---------------------------------
-                # Bottom Face Correction
-                # ---------------------------------
+            # ---------------------------------
+            # Preserve Existing Face Directions
+            # ---------------------------------
 
-                if normal[1] < -0.5:
+            # Bottom face has the opposite normal
+            # relative to the top face.
 
-                    mouse_delta = -mouse_delta
+            if normal[1] < -0.5:
+
+                mouse_delta = -mouse_delta
+
+            # Left face has the opposite normal
+            # relative to the right face.
+
+            elif normal[0] < -0.5:
+
+                mouse_delta = -mouse_delta
 
             # ---------------------------------
             # Extrusion Distance
@@ -1706,11 +1875,21 @@ class Viewport(QOpenGLWidget):
                     float(new_vertex[2])
                 ]
 
+                print("EXTRUDE VERTEX:",
+                    vertex_index,
+                    mesh.vertices[vertex_index]
+
+                )
+
             # ---------------------------------
             # Rebuild Topology
             # ---------------------------------
 
-            mesh.build_edges()
+            try:
+                mesh.build_edges()
+            except Exception as e:
+                print("EXTRUDE EDGE BUILD ERROR:", e)
+                return
 
             # ---------------------------------
             # Update Bounding Box
@@ -2019,14 +2198,12 @@ class Viewport(QOpenGLWidget):
             and self.selected_object is not None
         ):
 
-            if not hasattr(
-                self,
-                "_move_saved"
-            ):
+            if not self._move_saved:
 
-                self.history_manager.save_state(
-                    self.selected_object
-                )
+                if self.history_manager is not None:
+                    self.history_manager.save_state(
+                        self.selected_object
+                    )
 
                 self._move_saved = True
 
@@ -2171,13 +2348,850 @@ class Viewport(QOpenGLWidget):
 
             self.update()
             
+    # ---------------------------------
+    # EDIT MODE DELETION
+    # ---------------------------------
+
+    def _cleanup_mesh_after_deletion(self, mesh):
+        """
+        Remove unused vertices, repair face indices, remove degenerate
+        faces, and rebuild the derived edge list.
+
+        Faces are the authoritative topology in this mesh implementation.
+        Edges are derived from faces by Mesh.build_edges().
+        """
+
+        if mesh is None:
+            return
+
+        valid_faces = []
+
+        for face in mesh.faces:
+
+            if face is None:
+                continue
+
+            face = tuple(
+                int(index)
+                for index in face
+            )
+
+            # A polygon must contain at least three vertices.
+            if len(face) < 3:
+                continue
+
+            # Remove repeated consecutive/final indices.
+            cleaned_face = []
+
+            for index in face:
+
+                if not cleaned_face or index != cleaned_face[-1]:
+                    cleaned_face.append(index)
+
+            if (
+                len(cleaned_face) > 1
+                and cleaned_face[0] == cleaned_face[-1]
+            ):
+                cleaned_face.pop()
+
+            if len(cleaned_face) < 3:
+                continue
+
+            # Reject invalid vertex references.
+            if any(
+                index < 0
+                or index >= len(mesh.vertices)
+                for index in cleaned_face
+            ):
+                continue
+
+            # A polygon with fewer than three unique vertices is invalid.
+            if len(set(cleaned_face)) < 3:
+                continue
+
+            valid_faces.append(
+                tuple(cleaned_face)
+            )
+
+        mesh.faces = valid_faces
+
+        # ---------------------------------
+        # Find vertices still used by faces
+        # ---------------------------------
+
+        used_vertices = set()
+
+        for face in mesh.faces:
+
+            for vertex_index in face:
+
+                used_vertices.add(
+                    vertex_index
+                )
+
+        # ---------------------------------
+        # Rebuild vertex array
+        # ---------------------------------
+
+        vertex_remap = {}
+        new_vertices = []
+
+        for old_index, vertex in enumerate(mesh.vertices):
+
+            if old_index not in used_vertices:
+                continue
+
+            vertex_remap[old_index] = (
+                len(new_vertices)
+            )
+
+            new_vertices.append(
+                [
+                    float(vertex[0]),
+                    float(vertex[1]),
+                    float(vertex[2])
+                ]
+            )
+
+        # ---------------------------------
+        # Remap face indices
+        # ---------------------------------
+
+        remapped_faces = []
+
+        for face in mesh.faces:
+
+            remapped_face = []
+
+            valid_face = True
+
+            for old_index in face:
+
+                if old_index not in vertex_remap:
+
+                    valid_face = False
+                    break
+
+                remapped_face.append(
+                    vertex_remap[old_index]
+                )
+
+            if not valid_face:
+                continue
+
+            if len(remapped_face) < 3:
+                continue
+
+            if len(set(remapped_face)) < 3:
+                continue
+
+            remapped_faces.append(
+                tuple(remapped_face)
+            )
+
+        mesh.vertices = new_vertices
+        mesh.faces = remapped_faces
+
+        # ---------------------------------
+        # Rebuild derived topology
+        # ---------------------------------
+
+        mesh.build_edges()
+
+        # ---------------------------------
+        # Clear element selections
+        # ---------------------------------
+
+        self.selected_vertex = None
+        self.selected_edge = None
+        self.selected_face = None
+
+        mesh.selected_vertex = None
+        mesh.selected_edge = None
+        mesh.selected_face = None
+
+    def _delete_selected_vertex(self):
+        """
+        Delete the selected vertex and every face connected to it.
+        """
+
+        if self.selected_object is None:
+            print("DELETE VERTEX: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("DELETE VERTEX: Object has no mesh")
+            return False
+
+        vertex_index = self.selected_vertex
+
+        if vertex_index is None:
+            print("DELETE VERTEX: No selected vertex")
+            return False
+
+        if (
+            vertex_index < 0
+            or vertex_index >= len(mesh.vertices)
+        ):
+            print("DELETE VERTEX: Invalid vertex")
+            self.selected_vertex = None
+            mesh.selected_vertex = None
+            return False
+
+        # ---------------------------------
+        # Save undo state
+        # ---------------------------------
+
+        if self.history_manager is not None:
+
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+        print(
+            "DELETE VERTEX:",
+            vertex_index
+        )
+
+        # ---------------------------------
+        # Remove the vertex
+        # ---------------------------------
+
+        mesh.vertices.pop(
+            vertex_index
+        )
+
+        # ---------------------------------
+        # Remove faces using the vertex.
+        #
+        # Remaining indices above the deleted
+        # vertex are shifted down by one.
+        # ---------------------------------
+
+        new_faces = []
+
+        for face in mesh.faces:
+
+            if vertex_index in face:
+                continue
+
+            remapped_face = tuple(
+                index - 1
+                if index > vertex_index
+                else index
+                for index in face
+            )
+
+            new_faces.append(
+                remapped_face
+            )
+
+        mesh.faces = new_faces
+
+        # ---------------------------------
+        # Repair topology and clear selection
+        # ---------------------------------
+
+        self._cleanup_mesh_after_deletion(
+            mesh
+        )
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+
+        self.edge_vertex_a = None
+        self.edge_vertex_b = None
+
+        self.vertex_original = None
+        self.face_original_vertices = None
+
+        print(
+            "DELETE VERTEX COMPLETE | "
+            "Vertices:",
+            len(mesh.vertices),
+            "| Faces:",
+            len(mesh.faces),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
+
+    def _delete_selected_edge(self):
+        """
+        Delete the faces connected to the selected edge.
+
+        The current mesh representation derives edges from polygon faces,
+        so removing an edge entry alone would be temporary and would be
+        recreated by Mesh.build_edges(). For this first destructive Edit
+        Mode implementation, deleting an edge removes every face incident
+        to that edge, then cleans unused vertices and rebuilds topology.
+        """
+
+        if self.selected_object is None:
+            print("DELETE EDGE: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("DELETE EDGE: Object has no mesh")
+            return False
+
+        edge_index = self.selected_edge
+
+        if edge_index is None:
+            print("DELETE EDGE: No selected edge")
+            return False
+
+        if (
+            edge_index < 0
+            or edge_index >= len(mesh.edges)
+        ):
+            print("DELETE EDGE: Invalid edge")
+            self.selected_edge = None
+            mesh.selected_edge = None
+            return False
+
+        edge = mesh.edges[
+            edge_index
+        ]
+
+        if len(edge) != 2:
+            print("DELETE EDGE: Invalid edge data")
+            return False
+
+        vertex_a = int(edge[0])
+        vertex_b = int(edge[1])
+
+        # ---------------------------------
+        # Save undo state
+        # ---------------------------------
+
+        if self.history_manager is not None:
+
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+        print(
+            "DELETE EDGE:",
+            edge_index,
+            "Vertices:",
+            vertex_a,
+            vertex_b
+        )
+
+        # ---------------------------------
+        # Remove all incident faces
+        # ---------------------------------
+
+        new_faces = []
+
+        removed_faces = 0
+
+        for face in mesh.faces:
+
+            if (
+                vertex_a in face
+                and vertex_b in face
+            ):
+
+                removed_faces += 1
+                continue
+
+            new_faces.append(
+                tuple(face)
+            )
+
+        mesh.faces = new_faces
+
+        # ---------------------------------
+        # Repair topology and clear selection
+        # ---------------------------------
+
+        self._cleanup_mesh_after_deletion(
+            mesh
+        )
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+
+        self.edge_vertex_a = None
+        self.edge_vertex_b = None
+
+        self.vertex_original = None
+        self.face_original_vertices = None
+
+        print(
+            "DELETE EDGE COMPLETE | "
+            "Removed Faces:",
+            removed_faces,
+            "| Vertices:",
+            len(mesh.vertices),
+            "| Faces:",
+            len(mesh.faces),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
+
+    def _delete_selected_face(self):
+        """
+        Delete the selected polygon face, then remove unused vertices and
+        rebuild the derived edge topology.
+        """
+
+        if self.selected_object is None:
+            print("DELETE FACE: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("DELETE FACE: Object has no mesh")
+            return False
+
+        face_index = self.selected_face
+
+        if face_index is None:
+            print("DELETE FACE: No selected face")
+            return False
+
+        if (
+            face_index < 0
+            or face_index >= len(mesh.faces)
+        ):
+            print("DELETE FACE: Invalid face")
+            self.selected_face = None
+            mesh.selected_face = None
+            return False
+
+        # ---------------------------------
+        # Save undo state
+        # ---------------------------------
+
+        if self.history_manager is not None:
+
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+        print(
+            "DELETE FACE:",
+            face_index
+        )
+
+        # ---------------------------------
+        # Remove selected face
+        # ---------------------------------
+
+        mesh.faces.pop(
+            face_index
+        )
+
+        # ---------------------------------
+        # Repair topology and clear selection
+        # ---------------------------------
+
+        self._cleanup_mesh_after_deletion(
+            mesh
+        )
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+
+        self.edge_vertex_a = None
+        self.edge_vertex_b = None
+
+        self.vertex_original = None
+        self.face_original_vertices = None
+
+        print(
+            "DELETE FACE COMPLETE | "
+            "Vertices:",
+            len(mesh.vertices),
+            "| Faces:",
+            len(mesh.faces),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
+
+    def delete_selected_edit_element(self):
+        """
+        Delete the currently selected Edit Mode element according to the
+        active vertex, edge, or face selection mode.
+        """
+
+        if self.main_window.mode_manager.get_mode() != "EDIT":
+
+            print(
+                "DELETE EDIT ELEMENT: Requires EDIT mode"
+            )
+
+            return False
+
+        deleted = False
+
+        if self.vertex_mode:
+
+            deleted = (
+                self._delete_selected_vertex()
+            )
+
+        elif self.edge_mode:
+
+            deleted = (
+                self._delete_selected_edge()
+            )
+
+        elif self.face_mode:
+
+            deleted = (
+                self._delete_selected_face()
+            )
+
+        else:
+
+            print(
+                "DELETE EDIT ELEMENT: "
+                "No active selection mode"
+            )
+
+            return False
+
+        if deleted:
+
+            # ---------------------------------
+            # Reset transient drag state
+            # ---------------------------------
+
+            self.extrude_mode = False
+            self.extrude_dragging = False
+            self.extrude_face = None
+
+            self.extrude_original = None
+            self.extrude_original_vertices = []
+            self.extrude_vertex_indices = []
+            self.extrude_normal = None
+
+            self.extrude_distance = 0.0
+            self.extrude_start_distance = 0.0
+
+            self.extrude_start_mouse_x = 0
+            self.extrude_start_mouse_y = 0
+
+            self.update()
+
+        return deleted
+
     def keyPressEvent(self, event):
 
         print("VIEWPORT KEY:", event.key())
 
+        #--------------------------------
+        # ESC - CANCEL CURRENT OPERATION
+        # -------------------------------
+
+        if event.key() == Qt.Key_Escape:
+
+            print("ESC - CANCEL CURRENT OPERATION")
+
+            # ---------------------------------
+            # CANCEL EXTRUDE
+            # ---------------------------------
+
+            if (
+                self.extrude_mode
+                or self.extrude_dragging
+            ):
+
+                print("CANCEL EXTRUDE")
+
+                # ---------------------------------
+                # Restore operation snapshot
+                # ---------------------------------
+
+                if (
+                    self.history_manager is not None
+                    and self.history_manager.has_operation()
+                ):
+
+                    self.history_manager.cancel_action()
+
+                # ---------------------------------
+                # Reset extrusion state
+                # ---------------------------------
+
+                self.extrude_mode = False
+                self.extrude_dragging = False
+
+                self.extrude_face = None
+                self.extrude_original = None
+
+                self.extrude_original_vertices = []
+                self.extrude_vertex_indices = []
+
+                self.extrude_normal = None
+
+                self.extrude_distance = 0.0
+                self.extrude_start_distance = 0.0
+
+                self.extrude_start_mouse_x = 0
+                self.extrude_start_mouse_y = 0
+
+                self.extrude_axis_origin = None
+                self.extrude_start_axis_parameter = 0.0
+
+                # ---------------------------------
+                # Stop other edit dragging
+                # ---------------------------------
+
+                self.vertex_dragging = False
+                self.edge_dragging = False
+                self.face_dragging = False
+                self.dragging_object = False
+
+                self.selected_vertex = None
+                self.selected_edge = None
+
+                # ---------------------------------
+                # Restore face selection
+                # ---------------------------------
+
+                if self.selected_object is not None:
+
+                    mesh = self.selected_object.mesh
+
+                    if mesh is not None:
+
+                        # The cancelled extrusion no longer exists.
+                        # Keep the original face selected if it is valid.
+
+                        if (
+                            self.selected_face is not None
+                            and 0 <= self.selected_face < len(mesh.faces)
+                        ):
+
+                            mesh.selected_face = self.selected_face
+
+                        else:
+
+                            mesh.selected_face = None
+
+                print(
+                    "Extrude Cancelled"
+                )
+
+                self.update()
+
+                return
+            #-------------------------------
+            # Cancel vertex drag
+            #-------------------------------
+
+            if self.vertex_dragging:
+
+                print("CANCEL VERTEX DRAG")
+
+                if (
+                    self.selected_object is not None
+                    and self.vertex_original is not None
+                    and self.selected_object is not None
+                ):
+
+                    mesh = self.selected_object.mesh
+
+                    if (
+                        mesh is not None
+                        and 0 <= self.selected_vertex < len(mesh.vertices)
+                    ):
+                        original = self.vertex_original
+
+                        mesh.vertices[
+                            self.selected_vertex
+                        ] = [
+                            float(original[0]),
+                            float(original[1]),
+                            float(original[2])
+                        ]
+
+                        mesh.build_edges()
+
+                self.vertex_dragging = False
+                self.vertex_drag_start = None
+                self.vertex_original = None
+
+                self.update()
+
+                return
+
+            #-------------------------------
+            # Cancel face drag
+            #-------------------------------
+
+            if self.face_dragging:
+
+                print("CANCEL FACE DRAG")
+
+                if(
+                    self.selected_object is not None
+                    and self.face_original_vertices is not None
+                    and self.selected_face is not None
+                ):
+
+                    mesh = self.selected_object.mesh
+
+                    if mesh is not None:
+
+                        face = mesh.faces[self.selected_face]
+
+                        for i, vertex_index in enumerate(face):
+
+                            if i >= len(
+                                self.face_original_vertices
+                            ):
+
+                                continue
+
+                            if (
+                                vertex_index >= 0
+                                and vertex_index < len(mesh.vertices)
+                            ):
+
+                                original = (
+                                    self.face_original_vertices[i]
+                                )
+
+                                mesh.vertices[
+                                    vertex_index
+                                ] = [
+                                    float(original[0]),
+                                    float(original[1]),
+                                    float(original[2])
+                                ]
+
+                        mesh.build_edges()
+
+                self.face_dragging = False
+                self.face_original_vertices = None
+
+                self.update()
+
+                return
+
+            #------------------------------
+            # Cancel edge drag
+            #------------------------------
+
+            if self.edge_dragging:
+
+                print("CANCEL EDGE DRAG")
+
+                self.edge_dragging = False
+
+                self.edge_vertex_a = None
+                self.edge_vertex_b = None
+
+                self.update()
+
+                return
+
+            #------------------------------
+            # Cancel object drag
+            #------------------------------
+
+            if self.dragging_object:
+
+                print("CANCEL OBJECT DRAG")
+
+                self.dragging_object = False
+
+                self.drag_start_x = 0
+                self.drag_start_y = 0
+
+                self.drag_offset = None
+
+                self.update()
+
+                return
+
+            #------------------------------
+            # Cancel move gizmo
+            #------------------------------
+
+            if (
+                self.move_gizmo.selected_axis is not None
+            ):
+
+                print("CANCEL MOVE GIZMO")
+
+                self.move_gizmo.selected_axis = None
+
+                self.update()
+
+                return
+
+            #------------------------------
+            # Cancel rotate gizmo
+            #------------------------------
+
+            if (
+                self.rotate_gizmo.selected_axis is not None
+                or self.rotate_gizmo.dragging
+            ):
+
+                print("CANCEL ROTATE GIZMO")
+
+                self.rotate_gizmo.selected_axis = None
+                self.rotate_gizmo.dragging = False
+
+                self.rotate_gizmo.end_rotation()
+
+                self.update()
+
+                return
+
+            #------------------------------
+            # Cancel Scale gizmo
+            #------------------------------
+
+            if (
+                self.scale_gizmo.selected_axis is not None
+            ):
+
+                print("CANCEL SCALE GIZMO")
+
+                self.scale_gizmo.selected_axis = None
+
+                self.scale_gizmo.end_scale()
+
+                self.update()
+
+                return
+
+            #------------------------------
+            # Nothing active
+            #------------------------------
+
+            print("ESC - NOTHING TO CANCEL")
+
+            self.update()
+
+            return
+            
         # ---------------------------------
         # CTRL + Z
         # ---------------------------------
+        
         if (
             event.modifiers() & Qt.ControlModifier
             and event.key() == Qt.Key_Z
@@ -2222,6 +3236,30 @@ class Viewport(QOpenGLWidget):
             self.update()
 
             return
+
+        # ---------------------------------
+        # DELETE EDIT ELEMENT
+        # ---------------------------------
+
+        if (
+            event.key() == Qt.Key_X
+            or event.key() == Qt.Key_Delete
+        ):
+
+            print(
+                "DELETE EDIT ELEMENT"
+            )
+
+            # Only consume Delete/X here in Edit Mode.
+            # Object Mode Delete continues to be handled by main.py.
+            if (
+                self.main_window.mode_manager.get_mode()
+                == "EDIT"
+            ):
+
+                self.delete_selected_edit_element()
+
+                return
 
         # ---------------------------------
         # VERTEX MODE
@@ -2510,9 +3548,7 @@ class Viewport(QOpenGLWidget):
 
             self.extrude_distance = 0.5
 
-            self.extrude_start_distance = (
-                self.extrude_distance
-            )
+            self.extrude_start_distance = 0.0
 
             # ---------------------------------
             # Clear Previous Extrusion Data
@@ -2529,6 +3565,23 @@ class Viewport(QOpenGLWidget):
             )
 
             self.extrude_selected_face()
+
+            print(
+                "AFTER EXTRUDE | VERTICES:",
+                mesh.vertices
+            )
+
+            print(
+                "AFTER EXRUDE | FACES:",
+                mesh.faces
+            )
+
+            print(
+                "AFTER EXTRUDE | EXTRUDE_VERTICES:",
+                self.extrude_vertex_indices
+            )
+
+            self.update()
 
             # ---------------------------------
             # Find New Vertices
@@ -2596,17 +3649,19 @@ class Viewport(QOpenGLWidget):
             self.selected_edge = None
 
             # ---------------------------------
-            # Keep Extruded Face Selected
+            # Keep NEW Extruded Face Selected
             # ---------------------------------
 
-            self.selected_face = (
-                self.extrude_face
-            )
+            # extrude_selected_face() has already 
+            # updated self.selected_face to the 
+            # newly-created cap face.
 
-            mesh.selected_face = (
-                self.extrude_face
-            )
+            mesh.selected_face = self.selected_face
 
+            print(
+                "Active extruded face:",
+                self.selected_face
+            )
             # ---------------------------------
             # Initialize Mouse Position
             # ---------------------------------
