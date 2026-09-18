@@ -2,6 +2,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import math
 
+
 class MeshRenderer:
 
     @staticmethod
@@ -46,11 +47,29 @@ class MeshRenderer:
         glPolygonOffset(1.0, 1.0)
         glDisable(GL_BLEND)
 
-        selected_face = getattr(mesh, "selected_face", None)
+        if isinstance(selected_face, set):
 
-        print("Draw Face:", selected_face)
+            selected_faces = selected_face
 
-        
+        elif selected_face is not None:
+
+            selected_faces = {
+                selected_face
+            }
+
+        else:
+
+            mesh_selected_face = getattr(
+                mesh,
+                "selected_face",
+                None
+            )
+
+            selected_faces = {
+                mesh_selected_face
+            } if mesh_selected_face is not None else set()
+
+        print("Draw Faces:", selected_faces)
 
         for face_index, face in enumerate(mesh.faces):
 
@@ -60,7 +79,7 @@ class MeshRenderer:
             # Face Highlight
             # -------------------------
 
-            if face_index == selected_face:
+            if face_index in selected_faces:
 
                 glColor3f(
                     1.0,
@@ -134,7 +153,7 @@ class MeshRenderer:
             glEnd()
 
         glPopAttrib()
-        
+
     @staticmethod
     def draw_edges(mesh, selected_edge=None):
 
@@ -148,7 +167,15 @@ class MeshRenderer:
 
         for i, edge in enumerate(mesh.edges):
 
-            if i == selected_edge:
+            if (
+                isinstance(selected_edge, set)
+                and i in selected_edge
+            ):
+
+                glColor3f(1.0, 1.0, 0.0)
+                glLineWidth(6)
+
+            elif i == selected_edge:
 
                 glColor3f(1.0, 1.0, 0.0)
                 glLineWidth(6)
@@ -191,7 +218,7 @@ class MeshRenderer:
 
         glPushMatrix()
 
-        glTranslatef(0,0,-0.5)
+        glTranslatef(0, 0, -0.5)
 
         # Side
         gluCylinder(
@@ -206,7 +233,7 @@ class MeshRenderer:
         # Bottom
         glPushMatrix()
 
-        glRotatef(180,1,0,0)
+        glRotatef(180, 1, 0, 0)
 
         gluDisk(
             quad,
@@ -221,7 +248,7 @@ class MeshRenderer:
         # Top
         glPushMatrix()
 
-        glTranslatef(0,0,1.0)
+        glTranslatef(0, 0, 1.0)
 
         gluDisk(
             quad,
@@ -236,7 +263,7 @@ class MeshRenderer:
         glPopMatrix()
 
         gluDeleteQuadric(quad)
-        
+
     @staticmethod
     def draw_cone():
 
@@ -244,7 +271,7 @@ class MeshRenderer:
 
         glPushMatrix()
 
-        glTranslatef(0,0,-0.5)
+        glTranslatef(0, 0, -0.5)
 
         gluCylinder(
             quad,
@@ -264,10 +291,10 @@ class MeshRenderer:
 
         glBegin(GL_QUADS)
 
-        glVertex3f(-0.5,0,-0.5)
-        glVertex3f(0.5,0,-0.5)
-        glVertex3f(0.5,0,0.5)
-        glVertex3f(-0.5,0,0.5)
+        glVertex3f(-0.5, 0, -0.5)
+        glVertex3f(0.5, 0, -0.5)
+        glVertex3f(0.5, 0, 0.5)
+        glVertex3f(-0.5, 0, 0.5)
 
         glEnd()
 
@@ -317,4 +344,3 @@ class MeshRenderer:
                 glVertex3f(x, y, z)
 
             glEnd()
-

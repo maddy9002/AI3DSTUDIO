@@ -12,15 +12,44 @@ class InteractionManager:
 
     def update_grab(self, pinching):
 
-        # Detect only a new pinch
-        if pinching and not self.previous_pinch:
+        # Detect only the transition from
+        # not pinching -> pinching.
 
-            self.is_holding = not self.is_holding
+        grab_started = (
+            pinching
+            and not self.previous_pinch
+        )
 
-            print("Holding:", self.is_holding)
+        grab_ended = (
+            not pinching
+            and self.previous_pinch
+        )
+
+        # Always update the previous state
+        # before returning.
+
+        self.previous_pinch = pinching
+
+        if grab_started:
+
+            self.is_holding = True
+
+            print(
+                "Holding:",
+                self.is_holding
+            )
 
             return True
 
-        self.previous_pinch = pinching
+        if grab_ended:
+
+            self.is_holding = False
+
+            print(
+                "Holding:",
+                self.is_holding
+            )
+
+            return True
 
         return False

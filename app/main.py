@@ -55,6 +55,7 @@ from webcam.gesture_controller import GestureController
 
 from interaction.interaction_manager import InteractionManager
 
+import time
 
 print("OK")
 print("HandTracker loaded from:")
@@ -127,10 +128,25 @@ class AI3DStudio(QMainWindow):
 
         self.gesture = GestureController()
 
+        self.first_start_time = None
+        self.edit_mode_activated = False
+
         # Tracks one continuous hand-gesture transform as a single
         # undoable history operation.
         self._hand_history_active = False
         self._hand_history_object = None
+
+        self.open_hand_holding = False
+        self.open_hand_object = None
+        self.open_hand_start_position = None
+
+        self.pinch_rotating = False
+        self.pinch_rotation_object = None
+        self.pinch_previous_palm = None
+
+        self.gesture_mode_start_time = None
+        self.gesture_mode_activated = False
+        self.last_gesture_mode = None
 
         self.cap = cv2.VideoCapture(0)
 
@@ -165,10 +181,6 @@ class AI3DStudio(QMainWindow):
         # Viewport has keyboard focus.
         #
         QApplication.instance().installEventFilter(self)
-
-    # ============================================================
-    # GLOBAL EVENT FILTER
-    # ============================================================
 
     def eventFilter(self, watched, event):
 
@@ -309,10 +321,6 @@ class AI3DStudio(QMainWindow):
             watched,
             event
         )
-
-    # ============================================================
-    # UI
-    # ============================================================
 
     def setup_ui(self):
 
@@ -601,10 +609,6 @@ class AI3DStudio(QMainWindow):
             "AI3D Studio Started"
         )
 
-    # ============================================================
-    # CREATE PRIMITIVE
-    # ============================================================
-
     def create_primitive(
         self,
         primitive_type
@@ -729,10 +733,6 @@ class AI3DStudio(QMainWindow):
             "Torus"
         )
 
-    # ============================================================
-    # AI COMMAND
-    # ============================================================
-
     def run_ai_command(self):
 
         text = self.command_bar.text().strip()
@@ -779,10 +779,6 @@ class AI3DStudio(QMainWindow):
 
         self.command_bar.clear()
 
-    # ============================================================
-    # DELETE
-    # ============================================================
-
     def delete_selected_object(self):
 
         if self.selected_object is None:
@@ -826,10 +822,6 @@ class AI3DStudio(QMainWindow):
             self.ai_console.append(
                 f"Deleted {obj.name}"
             )
-
-    # ============================================================
-    # DUPLICATE
-    # ============================================================
 
     def duplicate_selected_object(self):
 
@@ -901,10 +893,6 @@ class AI3DStudio(QMainWindow):
             f"Duplicated {old.name}"
         )
 
-    # ============================================================
-    # SAVE
-    # ============================================================
-
     def save_scene(self):
 
         filename = (
@@ -922,10 +910,6 @@ class AI3DStudio(QMainWindow):
         self.ai_console.append(
             "Scene Saved"
         )
-
-    # ============================================================
-    # LOAD
-    # ============================================================
 
     def load_scene(self):
 
@@ -967,28 +951,33 @@ class AI3DStudio(QMainWindow):
             "Scene Loaded"
         )
 
-    # ============================================================
-    # REFRESH SCENE AFTER HISTORY RESTORE
-    # ============================================================
-
     def _refresh_scene_from_history(self, selected_object):
-        self.scene_manager.scene_objects = self.scene_objects
-        self.scene_hierarchy.clear()
-        selected_row = -1
-        for index, obj in enumerate(self.scene_objects):
-            self.scene_hierarchy.addItem(obj.name)
-            if obj is selected_object:
-                selected_row = index
-        self.selected_object = selected_object
-        self.viewport.set_selected_object(selected_object)
-        if selected_row >= 0:
-            self.scene_hierarchy.setCurrentRow(selected_row)
-        self.viewport.update_scene(self.scene_objects)
-        self.viewport.update()
 
-    # ============================================================
-    # SELECT
-    # ============================================================
+        self.scene_manager.scene_objects = self.scene_objects
+
+        self.scene_hierarchy.clear()
+
+        selected_row = -1
+
+        for index, obj in enumerate(self.scene_objects):
+
+            self.scene_hierarchy.addItem(obj.name)
+
+            if obj is selected_object:
+
+                selected_row = index
+
+        self.selected_object = selected_object
+
+        self.viewport.set_selected_object(selected_object)
+
+        if selected_row >= 0:
+
+            self.scene_hierarchy.setCurrentRow(selected_row)
+
+        self.viewport.update_scene(self.scene_objects)
+
+        self.viewport.update()
 
     def select_object(
         self,
@@ -1021,10 +1010,6 @@ class AI3DStudio(QMainWindow):
         self.ai_console.append(
             f"Selected {selected.name}"
         )
-
-    # ============================================================
-    # PARENT
-    # ============================================================
 
     def set_parent_candidate(self):
 
@@ -1098,10 +1083,6 @@ class AI3DStudio(QMainWindow):
                 f"{obj.name} -> "
                 f"Parent: {parent}"
             )
-
-    # ============================================================
-    # KEY PRESS
-    # ============================================================
 
     def keyPressEvent(
         self,
@@ -1274,10 +1255,6 @@ class AI3DStudio(QMainWindow):
 
         self.viewport.update()
 
-    # ============================================================
-    # RENAME
-    # ============================================================
-
     def rename_selected_object(self):
 
         if self.selected_object is None:
@@ -1323,39 +1300,18 @@ class AI3DStudio(QMainWindow):
             f"{self.selected_object.name}"
         )
 
-    # ============================================================
-    # HAND CONTROL
-    # ============================================================
-
     def update_hand_control(self):
 
-        success, frame = (
-            self.cap.read()
-        )
+        success, frame = self.cap.read()
 
         if not success:
             return
 
-        frame = cv2.flip(
-            frame,
-            1
-        )
+        frame = cv2.flip(frame, 1)
 
-        # -----------------------------------
-        # Detect hand
-        # -----------------------------------
+        self.tracker.get_hand_position(frame)
 
-        self.tracker.get_hand_position(
-            frame
-        )
-
-        palm = (
-            self.tracker.get_palm_position()
-        )
-
-        # -----------------------------------
-        # Debug window
-        # -----------------------------------
+        palm = self.tracker.get_palm_position()
 
         debug_frame = frame.copy()
 
@@ -1364,97 +1320,72 @@ class AI3DStudio(QMainWindow):
             and self.tracker.last_result.hand_landmarks
         ):
 
-            hand = (
-                self.tracker
-                .last_result
-                .hand_landmarks[0]
-            )
+            for hand in self.tracker.last_result.hand_landmarks:
 
-            h, w, _ = (
-                debug_frame.shape
-            )
+                h, w, _ = debug_frame.shape
 
-            for landmark in hand:
+                for landmark in hand:
 
-                px = int(
-                    landmark.x * w
-                )
+                    px = int(landmark.x * w)
+                    py = int(landmark.y * h)
 
-                py = int(
-                    landmark.y * h
-                )
+                    cv2.circle(
+                        debug_frame,
+                        (px, py),
+                        5,
+                        (0, 255, 0),
+                        -1
+                    )
 
-                cv2.circle(
-                    debug_frame,
-                    (px, py),
-                    5,
-                    (0, 255, 0),
-                    -1
-                )
+                connections = [
+                    (0, 1),
+                    (1, 2),
+                    (2, 3),
+                    (3, 4),
+                    (0, 5),
+                    (5, 6),
+                    (6, 7),
+                    (7, 8),
+                    (5, 9),
+                    (9, 10),
+                    (10, 11),
+                    (11, 12),
+                    (9, 13),
+                    (13, 14),
+                    (14, 15),
+                    (15, 16),
+                    (13, 17),
+                    (17, 18),
+                    (18, 19),
+                    (19, 20),
+                    (0, 17)
+                ]
 
-            connections = [
+                for start, end in connections:
 
-                (0, 1),
-                (1, 2),
-                (2, 3),
-                (3, 4),
+                    p1 = hand[start]
+                    p2 = hand[end]
 
-                (0, 5),
-                (5, 6),
-                (6, 7),
-                (7, 8),
-
-                (5, 9),
-                (9, 10),
-                (10, 11),
-                (11, 12),
-
-                (9, 13),
-                (13, 14),
-                (14, 15),
-                (15, 16),
-
-                (13, 17),
-                (17, 18),
-                (18, 19),
-                (19, 20),
-
-                (0, 17)
-
-            ]
-
-            for start, end in connections:
-
-                p1 = hand[start]
-                p2 = hand[end]
-
-                cv2.line(
-
-                    debug_frame,
-
-                    (
-                        int(p1.x * w),
-                        int(p1.y * h)
-                    ),
-
-                    (
-                        int(p2.x * w),
-                        int(p2.y * h)
-                    ),
-
-                    (255, 0, 0),
-
-                    2
-
-                )
+                    cv2.line(
+                        debug_frame,
+                        (
+                            int(p1.x * w),
+                            int(p1.y * h)
+                        ),
+                        (
+                            int(p2.x * w),
+                            int(p2.y * h)
+                        ),
+                        (255, 0, 0),
+                        2
+                    )
 
         self.viewport.update_webcam_frame(
             debug_frame
         )
 
-        # -----------------------------------
-        # Cursor
-        # -----------------------------------
+        world_x = None
+        world_y = None
 
         if palm is not None:
 
@@ -1473,156 +1404,288 @@ class AI3DStudio(QMainWindow):
                 world_y
             )
 
-        # -----------------------------------
-        # Grabbed object
-        # -----------------------------------
+        gesture = self.tracker.get_gesture()
 
-        pinching = (
-            self.tracker.is_pinching()
+        print(
+            "HAND GESTURE:",
+            gesture
         )
 
-        grab_event = (
-            self.interaction.update_grab(
-                pinching
-            )
+        edit_mode = (
+            self.viewport.main_window
+            .mode_manager
+            .get_mode()
+            == "EDIT"
         )
 
-        if grab_event:
-
-            if self.interaction.is_holding:
-
-                # -----------------------------------------------
-                # HAND GESTURE START
-                # -----------------------------------------------
-                # Capture the object state BEFORE the first hand
-                # movement. The entire continuous gesture becomes
-                # one undoable operation.
-                hand_object = self.viewport.selected_object
-
-                if hand_object is not None:
-
-                    self.history_manager.begin_action(
-                        hand_object
-                    )
-
-                    self._hand_history_active = True
-                    self._hand_history_object = hand_object
-
-                axes = (
-                    self.tracker
-                    .get_palm_axes()
-                )
-
-                if (
-                    axes is not None
-                    and self.viewport.selected_object
-                ):
-
-                    self.gesture.grab(
-
-                        self.viewport.selected_object,
-
-                        axes
-
-                    )
-
-                    self.gesture.grab_pinch_distance = (
-                        self.tracker
-                        .get_pinch_distance()
-                    )
-
-            else:
-
-                # -----------------------------------------------
-                # HAND GESTURE END
-                # -----------------------------------------------
-                # Commit the state captured at gesture start.
-                # This puts the operation into undo history and
-                # clears the redo stack.
-                if self._hand_history_active:
-
-                    history_object = (
-                        self._hand_history_object
-                    )
-
-                    if history_object is not None:
-
-                        self.history_manager.commit_action(
-                            history_object
-                        )
-
-                    self._hand_history_active = False
-                    self._hand_history_object = None
-
-                self.gesture.release()
-
-        if (
-            self.interaction.is_holding
-            and self.viewport.selected_object
-            and palm is not None
+        if edit_mode and gesture in (
+            "ONE_FINGER",
+            "TWO_FINGERS",
+            "THREE_FINGERS"
         ):
 
-            smooth = 0.20
+            if self.last_gesture_mode != gesture:
 
-            obj = (
-                self.viewport.selected_object
+                self.gesture_mode_start_time = time.time()
+                self.gesture_mode_activated = False
+                self.last_gesture_mode = gesture
+
+            elif (
+                time.time()
+                - self.gesture_mode_start_time
+                >= 1.0
+                and not self.gesture_mode_activated
+            ):
+
+                if gesture == "ONE_FINGER":
+
+                    self.viewport.set_vertex_mode()
+
+                    self.ai_console.append(
+                        "HAND GESTURE: Vertex Mode"
+                    )
+
+                elif gesture == "TWO_FINGERS":
+
+                    self.viewport.set_edge_mode()
+
+                    self.ai_console.append(
+                        "HAND GESTURE: Edge Mode"
+                    )
+
+                elif gesture == "THREE_FINGERS":
+
+                    self.viewport.set_face_mode()
+
+                    self.ai_console.append(
+                        "HAND GESTURE: Face Mode"
+                    )
+
+                self.gesture_mode_activated = True
+
+        else:
+
+            self.gesture_mode_start_time = None
+            self.gesture_mode_activated = False
+            self.last_gesture_mode = None
+
+        if gesture == "FIST":
+
+            if self.fist_start_time is None:
+
+                self.fist_start_time = time.time()
+
+            elif (
+                time.time()
+                - self.fist_start_time
+                >= 1.0
+                and not self.edit_mode_activated
+            ):
+
+                self.viewport.main_window.mode_manager.toggle()
+
+                new_mode = (
+                    self.viewport.main_window
+                    .mode_manager
+                    .get_mode()
+                )
+
+                print(
+                    "MODE:",
+                    new_mode
+                )
+
+                if new_mode == "EDIT":
+
+                    self.ai_console.append(
+                        "HAND GESTURE: Edit Mode activated"
+                    )
+
+                else:
+
+                    self.ai_console.append(
+                        "HAND GESTURE: Object Mode activated"
+                    )
+
+                self.viewport.update()
+
+                self.edit_mode_activated = True
+
+        else:
+
+            self.fist_start_time = None
+            self.edit_mode_activated = False
+
+        if gesture == "TWO_HAND_PINCH":
+
+            obj = self.viewport.selected_object
+
+            if obj is None:
+                return
+
+            edit_mode = (
+                self.viewport.main_window
+                .mode_manager
+                .get_mode()
+                == "EDIT"
             )
 
-            obj.position[0] += (
-
-                world_x
-                - obj.position[0]
-
-            ) * smooth
-
-            obj.position[1] += (
-
-                world_y
-                - obj.position[1]
-
-            ) * smooth
-
-            axes = (
-                self.tracker
-                .get_palm_axes()
+            selected_vertices = set(
+                getattr(
+                    self.viewport,
+                    "selected_vertices",
+                    set()
+                )
             )
 
-            if axes is not None:
+            if edit_mode and selected_vertices:
 
-                right, up, forward = axes
-
-                obj.rotation[0] = (
-                    up[1] * 180
-                )
-
-                obj.rotation[1] = (
-                    right[0] * 180
-                )
-
-                obj.rotation[2] = (
-                    forward[2] * 180
-                )
-
-                current_distance = (
+                positions = (
                     self.tracker
-                    .get_pinch_distance()
+                    .get_two_hand_palm_positions()
                 )
 
-                if (
-                    current_distance is not None
-                    and
-                    self.gesture
-                    .grab_pinch_distance
-                    is not None
+                if len(positions) != 2:
+                    return
+
+                center_x = (
+                    positions[0][0]
+                    + positions[1][0]
+                ) / 2.0
+
+                center_y = (
+                    positions[0][1]
+                    + positions[1][1]
+                ) / 2.0
+
+                if not hasattr(
+                    self,
+                    "_two_hand_vertex_active"
                 ):
 
+                    self._two_hand_vertex_active = False
+
+                if not self._two_hand_vertex_active:
+
+                    self.history_manager.begin_action(
+                        obj
+                    )
+
+                    self._two_hand_vertex_active = True
+
+                    self._two_hand_vertex_object = obj
+
+                    self._two_hand_vertex_previous = (
+                        center_x,
+                        center_y
+                    )
+
+                previous_x, previous_y = (
+                    self._two_hand_vertex_previous
+                )
+
+                dx = center_x - previous_x
+                dy = center_y - previous_y
+
+                move_x = dx * 2.0
+                move_y = -dy * 2.0
+
+                mesh = obj.mesh
+
+                if mesh is None:
+                    return
+
+                for vertex_index in selected_vertices:
+
+                    if (
+                        vertex_index < 0
+                        or vertex_index >= len(mesh.vertices)
+                    ):
+                        continue
+
+                    mesh.vertices[
+                        vertex_index
+                    ][0] += move_x
+
+                    mesh.vertices[
+                        vertex_index
+                    ][1] += move_y
+
+                mesh.build_edges()
+
+                self._two_hand_vertex_previous = (
+                    center_x,
+                    center_y
+                )
+
+                self.viewport.update()
+
+                return
+
+            if hasattr(
+                self,
+                "_two_hand_vertex_active"
+            ):
+
+                if self._two_hand_vertex_active:
+
+                    vertex_object = getattr(
+                        self,
+                        "_two_hand_vertex_object",
+                        None
+                    )
+
+                    if vertex_object is not None:
+
+                        self.history_manager.commit_action(
+                            vertex_object
+                        )
+
+                    self._two_hand_vertex_active = False
+                    self._two_hand_vertex_object = None
+                    self._two_hand_vertex_previous = None
+
+            distance = (
+                self.tracker
+                .get_two_hand_distance()
+            )
+
+            if distance is not None:
+
+                if not hasattr(
+                    self,
+                    "_two_hand_scale_active"
+                ):
+
+                    self._two_hand_scale_active = False
+
+                if not self._two_hand_scale_active:
+
+                    self.history_manager.begin_action(
+                        obj
+                    )
+
+                    self._two_hand_scale_active = True
+
+                    self._two_hand_scale_object = obj
+
+                    self._two_hand_scale_distance = (
+                        distance
+                    )
+
+                    self._two_hand_scale_start = (
+                        obj.scale.copy()
+                    )
+
+                start_distance = (
+                    self._two_hand_scale_distance
+                )
+
+                if start_distance > 0:
+
                     scale_factor = (
-
-                        current_distance
-                        /
-                        self.gesture
-                        .grab_pinch_distance
-
+                        distance
+                        / start_distance
                     )
 
                     scale_factor = max(
@@ -1633,35 +1696,170 @@ class AI3DStudio(QMainWindow):
                         )
                     )
 
+                    start_scale = (
+                        self._two_hand_scale_start
+                    )
+
                     obj.scale[0] = (
-
-                        self.gesture
-                        .grab_scale[0]
+                        start_scale[0]
                         * scale_factor
-
                     )
 
                     obj.scale[1] = (
-
-                        self.gesture
-                        .grab_scale[1]
+                        start_scale[1]
                         * scale_factor
-
                     )
 
                     obj.scale[2] = (
-
-                        self.gesture
-                        .grab_scale[2]
+                        start_scale[2]
                         * scale_factor
-
                     )
 
-            self.viewport.update()
+                    self.viewport.update()
 
-    # ============================================================
-    # CLOSE
-    # ============================================================
+            return
+
+        if hasattr(
+            self,
+            "_two_hand_vertex_active"
+        ):
+
+            if self._two_hand_vertex_active:
+
+                vertex_object = getattr(
+                    self,
+                    "_two_hand_vertex_object",
+                    None
+                )
+
+                if vertex_object is not None:
+
+                    self.history_manager.commit_action(
+                        vertex_object
+                    )
+
+                self._two_hand_vertex_active = False
+                self._two_hand_vertex_object = None
+                self._two_hand_vertex_previous = None
+
+        if hasattr(
+            self,
+            "_two_hand_scale_active"
+        ):
+
+            if self._two_hand_scale_active:
+
+                scale_object = getattr(
+                    self,
+                    "_two_hand_scale_object",
+                    None
+                )
+
+                if scale_object is not None:
+
+                    self.history_manager.commit_action(
+                        scale_object
+                    )
+
+                self._two_hand_scale_active = False
+                self._two_hand_scale_object = None
+                self._two_hand_scale_distance = None
+                self._two_hand_scale_start = None
+
+        if gesture == "OPEN_HAND":
+
+            obj = self.viewport.selected_object
+
+            if obj is not None and palm is not None:
+
+                if not self.open_hand_holding:
+
+                    self.history_manager.begin_action(
+                        obj
+                    )
+
+                    self.open_hand_holding = True
+                    self.open_hand_object = obj
+
+                smooth = 0.20
+
+                obj.position[0] += (
+                    world_x
+                    - obj.position[0]
+                ) * smooth
+
+                obj.position[1] += (
+                    world_y
+                    - obj.position[1]
+                ) * smooth
+
+                self.viewport.update()
+
+            return
+
+        if self.open_hand_holding:
+
+            if self.open_hand_object is not None:
+
+                self.history_manager.commit_action(
+                    self.open_hand_object
+                )
+
+            self.open_hand_holding = False
+            self.open_hand_object = None
+
+        if gesture == "PINCH":
+
+            obj = self.viewport.selected_object
+
+            if obj is not None and palm is not None:
+
+                if not self.pinch_rotating:
+
+                    self.history_manager.begin_action(
+                        obj
+                    )
+
+                    self.pinch_rotating = True
+                    self.pinch_rotation_object = obj
+                    self.pinch_previous_palm = palm
+
+                else:
+
+                    previous_x, previous_y, previous_z = (
+                        self.pinch_previous_palm
+                    )
+
+                    current_x, current_y, current_z = palm
+
+                    dx = current_x - previous_x
+                    dy = current_y - previous_y
+
+                    obj.rotation[1] += (
+                        dx * 300
+                    )
+
+                    obj.rotation[0] += (
+                        dy * 300
+                    )
+
+                    self.pinch_previous_palm = palm
+
+                    self.viewport.update()
+
+            return
+
+        if self.pinch_rotating:
+
+            if self.pinch_rotation_object is not None:
+
+                self.history_manager.commit_action(
+                    self.pinch_rotation_object
+                )
+
+            self.pinch_rotating = False
+            self.pinch_rotation_object = None
+            self.pinch_previous_palm = None
 
     def closeEvent(
         self,
@@ -1695,10 +1893,6 @@ class AI3DStudio(QMainWindow):
             app.removeEventFilter(self)
 
         event.accept()
-
-    # ============================================================
-    # EVENT
-    # ============================================================
 
     def event(
         self,

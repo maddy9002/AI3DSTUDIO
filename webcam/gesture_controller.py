@@ -1,6 +1,3 @@
-from matplotlib.pyplot import axes
-
-
 class GestureController:
 
     def __init__(self):
@@ -15,13 +12,11 @@ class GestureController:
         # Hand orientation when grabbing
         self.grab_axes = None
 
-        # Cube rotation when grabbing
+        # Object rotation when grabbing
         self.grab_rotation = None
 
-        import numpy as np
-
-        # Cube rotation when grabbing
-        self.grab_rotation = None
+        # Object scale when grabbing
+        self.grab_scale = None
 
     def update_cursor(self, x, y):
 
@@ -42,7 +37,7 @@ class GestureController:
         self.grab_rotation = obj.rotation.copy()
 
         self.grab_scale = obj.scale.copy()
-        
+
     def release(self):
 
         self.is_grabbing = False
@@ -52,3 +47,5 @@ class GestureController:
         self.grab_axes = None
 
         self.grab_rotation = None
+
+        self.grab_scale = None
