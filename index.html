@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>AI3DSTUDIO</title>
 
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+    }
+}
+</script>
+
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 
@@ -417,17 +426,17 @@ body{
 
 <header class="topbar">
 
-    <div class="brand">
-        <div class="brand-mark"><span></span></div>
-        <div class="brand-name">AI3DSTUDIO</div>
-    </div>
+<div class="brand">
+    <div class="brand-mark"><span></span></div>
+    <div class="brand-name">AI3DSTUDIO</div>
+</div>
 
-    <div class="top-center">3D DESIGN ENVIRONMENT</div>
+<div class="top-center">3D DESIGN ENVIRONMENT</div>
 
-    <div class="system-status">
-        <span class="status-dot"></span>
-        SYSTEM ONLINE
-    </div>
+<div class="system-status">
+    <span class="status-dot"></span>
+    SYSTEM ONLINE
+</div>
 
 </header>
 
@@ -435,156 +444,152 @@ body{
 
 <aside class="toolbar">
 
-    <button class="tool active" data-tool="select">
-        <span class="tool-icon">↖</span>
-        SELECT
-    </button>
+<button class="tool active" data-tool="select">
+    <span class="tool-icon">↖</span>
+    SELECT
+</button>
 
-    <button class="tool" data-tool="translate">
-        <span class="tool-icon">✥</span>
-        MOVE
-    </button>
+<button class="tool" data-tool="translate">
+    <span class="tool-icon">✥</span>
+    MOVE
+</button>
 
-    <button class="tool" data-tool="rotate">
-        <span class="tool-icon">⟳</span>
-        ROTATE
-    </button>
+<button class="tool" data-tool="rotate">
+    <span class="tool-icon">⟳</span>
+    ROTATE
+</button>
 
-    <button class="tool" data-tool="scale">
-        <span class="tool-icon">◇</span>
-        SCALE
-    </button>
+<button class="tool" data-tool="scale">
+    <span class="tool-icon">◇</span>
+    SCALE
+</button>
 
-    <div class="tool-separator"></div>
+<div class="tool-separator"></div>
 
-    <button class="tool" data-create="cube">
-        <span class="tool-icon">■</span>
-        CUBE
-    </button>
+<button class="tool" data-create="cube">
+    <span class="tool-icon">■</span>
+    CUBE
+</button>
 
-    <button class="tool" data-create="sphere">
-        <span class="tool-icon">●</span>
-        SPHERE
-    </button>
+<button class="tool" data-create="sphere">
+    <span class="tool-icon">●</span>
+    SPHERE
+</button>
 
-    <button class="tool" data-create="cylinder">
-        <span class="tool-icon">▣</span>
-        CYLINDER
-    </button>
+<button class="tool" data-create="cylinder">
+    <span class="tool-icon">▣</span>
+    CYLINDER
+</button>
 
-    <div class="tool-separator"></div>
+<div class="tool-separator"></div>
 
-    <button class="tool" id="deleteTool">
-        <span class="tool-icon">×</span>
-        DELETE
-    </button>
+<button class="tool" id="deleteTool">
+    <span class="tool-icon">×</span>
+    DELETE
+</button>
 
-    <button class="tool" id="saveTool">
-        <span class="tool-icon">↓</span>
-        SAVE
-    </button>
+<button class="tool" id="saveTool">
+    <span class="tool-icon">↓</span>
+    SAVE
+</button>
 
-    <button class="tool" id="loadTool">
-        <span class="tool-icon">↑</span>
-        LOAD
-    </button>
+<button class="tool" id="loadTool">
+    <span class="tool-icon">↑</span>
+    LOAD
+</button>
 
 </aside>
 
 <main class="viewport-area">
 
-    <canvas id="viewport"></canvas>
+<canvas id="viewport"></canvas>
 
-    <div class="viewport-title">
-        AI3DSTUDIO / VIEWPORT
-    </div>
+<div class="viewport-title">
+    AI3DSTUDIO / VIEWPORT
+</div>
 
-    <div class="viewport-mode" id="modeLabel">
-        SELECT MODE
-    </div>
+<div class="viewport-mode" id="modeLabel">
+    SELECT MODE
+</div>
 
-    <div class="axis-indicator">
-        X / Y / Z
-    </div>
+<div class="axis-indicator">
+    X / Y / Z
+</div>
 
-    <div class="selection-info" id="selectionInfo">
-        NO OBJECT SELECTED
-    </div>
+<div class="selection-info" id="selectionInfo">
+    NO OBJECT SELECTED
+</div>
 
 </main>
 
 <aside class="right-panel">
 
-    <section class="panel-section">
+<section class="panel-section">
 
-        <div class="panel-title">SCENE HIERARCHY</div>
+<div class="panel-title">SCENE HIERARCHY</div>
 
-        <div class="hierarchy" id="hierarchy"></div>
+<div class="hierarchy" id="hierarchy"></div>
 
-    </section>
+</section>
 
-    <section class="panel-section">
+<section class="panel-section">
 
-        <div class="panel-title">PROPERTIES</div>
+<div class="panel-title">PROPERTIES</div>
 
-        <div class="property">
-            <label>NAME</label>
-            <input id="objectName" type="text">
-        </div>
+<div class="property">
+<label>NAME</label>
+<input id="objectName" type="text">
+</div>
 
-        <div class="property">
-            <label>POSITION</label>
-            <div class="property-values">
-                <input id="posX" type="number" step=".1">
-                <input id="posY" type="number" step=".1">
-                <input id="posZ" type="number" step=".1">
-            </div>
-        </div>
+<div class="property">
+<label>POSITION</label>
+<div class="property-values">
+<input id="posX" type="number" step=".1">
+<input id="posY" type="number" step=".1">
+<input id="posZ" type="number" step=".1">
+</div>
+</div>
 
-        <div class="property">
-            <label>ROTATION</label>
-            <div class="property-values">
-                <input id="rotX" type="number" step="1">
-                <input id="rotY" type="number" step="1">
-                <input id="rotZ" type="number" step="1">
-            </div>
-        </div>
+<div class="property">
+<label>ROTATION</label>
+<div class="property-values">
+<input id="rotX" type="number" step="1">
+<input id="rotY" type="number" step="1">
+<input id="rotZ" type="number" step="1">
+</div>
+</div>
 
-        <div class="property">
-            <label>SCALE</label>
-            <div class="property-values">
-                <input id="scaleX" type="number" step=".1">
-                <input id="scaleY" type="number" step=".1">
-                <input id="scaleZ" type="number" step=".1">
-            </div>
-        </div>
+<div class="property">
+<label>SCALE</label>
+<div class="property-values">
+<input id="scaleX" type="number" step=".1">
+<input id="scaleY" type="number" step=".1">
+<input id="scaleZ" type="number" step=".1">
+</div>
+</div>
 
-    </section>
+</section>
 
-    <section class="panel-section">
+<section class="panel-section">
 
-        <div class="panel-title">WEBCAM</div>
+<div class="panel-title">WEBCAM</div>
 
-        <div class="webcam-box">
-            WEBCAM STANDBY
-        </div>
+<div class="webcam-box">
+WEBCAM STANDBY
+</div>
 
-    </section>
+</section>
 
-    <section class="ai-panel">
+<section class="ai-panel">
 
-        <div class="panel-title">AI COMMAND</div>
+<div class="panel-title">AI COMMAND</div>
 
-        <div class="ai-input">
-            <input
-                id="aiCommand"
-                placeholder="Create Cube..."
-                autocomplete="off"
-            >
-            <button class="ai-send" id="aiSend">→</button>
-        </div>
+<div class="ai-input">
+<input id="aiCommand" placeholder="Create Cube..." autocomplete="off">
+<button class="ai-send" id="aiSend">→</button>
+</div>
 
-    </section>
+</section>
 
 </aside>
 
@@ -592,17 +597,17 @@ body{
 
 <footer class="bottom-bar">
 
-    <div class="bottom-left">
-        <span>AI ENGINE: <span class="orange">READY</span></span>
-        <span>MODE: <span class="orange" id="bottomMode">SELECT</span></span>
-        <span>OBJECTS: <span class="orange" id="objectCount">0</span></span>
-    </div>
+<div class="bottom-left">
+<span>AI ENGINE: <span class="orange">READY</span></span>
+<span>MODE: <span class="orange" id="bottomMode">SELECT</span></span>
+<span>OBJECTS: <span class="orange" id="objectCount">0</span></span>
+</div>
 
-    <div class="bottom-right">
-        <span>LEFT DRAG: ORBIT</span>
-        <span>RIGHT DRAG: PAN</span>
-        <span>SCROLL: ZOOM</span>
-    </div>
+<div class="bottom-right">
+<span>LEFT DRAG: ORBIT</span>
+<span>RIGHT DRAG: PAN</span>
+<span>SCROLL: ZOOM</span>
+</div>
 
 </footer>
 
@@ -610,87 +615,106 @@ body{
 
 <script type="module">
 
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+import * as THREE from "three";
 
 import { OrbitControls }
-from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
+from "three/addons/controls/OrbitControls.js";
 
 import { TransformControls }
-from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/TransformControls.js";
+from "three/addons/controls/TransformControls.js";
 
-const canvas = document.getElementById("viewport");
+const canvas =
+    document.getElementById("viewport");
 
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas,
-    antialias: true
-});
+const renderer =
+    new THREE.WebGLRenderer({
+        canvas:canvas,
+        antialias:true
+    });
 
-renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio,2)
+);
 
 renderer.setClearColor(0x050505);
 
-const scene = new THREE.Scene();
+const scene =
+    new THREE.Scene();
 
-scene.background = new THREE.Color(0x050505);
+scene.background =
+    new THREE.Color(0x050505);
 
-const camera = new THREE.PerspectiveCamera(
-    55,
-    1,
-    0.1,
-    1000
-);
+const camera =
+    new THREE.PerspectiveCamera(
+        55,
+        1,
+        0.1,
+        1000
+    );
 
 camera.position.set(7,5,8);
 
-const orbit = new OrbitControls(
-    camera,
-    canvas
-);
+const orbit =
+    new OrbitControls(
+        camera,
+        canvas
+    );
 
 orbit.enableDamping = true;
 orbit.dampingFactor = 0.08;
-
-orbit.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
-orbit.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
-orbit.mouseButtons.RIGHT = THREE.MOUSE.PAN;
-
 orbit.target.set(0,0,0);
 
-const ambient = new THREE.AmbientLight(
-    0xffffff,
-    1.6
-);
+orbit.mouseButtons.LEFT =
+    THREE.MOUSE.ROTATE;
+
+orbit.mouseButtons.MIDDLE =
+    THREE.MOUSE.DOLLY;
+
+orbit.mouseButtons.RIGHT =
+    THREE.MOUSE.PAN;
+
+const ambient =
+    new THREE.AmbientLight(
+        0xffffff,
+        1.7
+    );
 
 scene.add(ambient);
 
-const light = new THREE.DirectionalLight(
-    0xffffff,
-    2.5
-);
+const light =
+    new THREE.DirectionalLight(
+        0xffffff,
+        2.5
+    );
 
 light.position.set(5,10,8);
 
 scene.add(light);
 
-const grid = new THREE.GridHelper(
-    30,
-    30,
-    0x333333,
-    0x171717
-);
+const grid =
+    new THREE.GridHelper(
+        30,
+        30,
+        0x333333,
+        0x171717
+    );
 
 scene.add(grid);
 
-const axes = new THREE.AxesHelper(4);
+const axes =
+    new THREE.AxesHelper(4);
 
 scene.add(axes);
 
-const transform = new TransformControls(
-    camera,
-    canvas
-);
+const transform =
+    new TransformControls(
+        camera,
+        canvas
+    );
 
-scene.add(transform.getHelper());
+scene.add(
+    transform.getHelper()
+);
 
 transform.addEventListener(
     "dragging-changed",
@@ -706,19 +730,21 @@ transform.addEventListener(
     }
 );
 
-const raycaster = new THREE.Raycaster();
+const raycaster =
+    new THREE.Raycaster();
 
-const mouse = new THREE.Vector2();
+const mouse =
+    new THREE.Vector2();
 
 const objects = [];
 
 let selected = null;
 
-let tool = "select";
+let currentTool = "select";
 
 let objectNumber = 0;
 
-function toast(message){
+function showToast(message){
 
     const element =
         document.getElementById("toast");
@@ -727,17 +753,18 @@ function toast(message){
 
     element.classList.add("show");
 
-    clearTimeout(toast.timer);
+    clearTimeout(showToast.timer);
 
-    toast.timer = setTimeout(
-        function(){
-            element.classList.remove("show");
-        },
-        1400
-    );
+    showToast.timer =
+        setTimeout(
+            function(){
+                element.classList.remove("show");
+            },
+            1400
+        );
 }
 
-function material(){
+function createMaterial(){
 
     return new THREE.MeshStandardMaterial({
         color:0x777777,
@@ -752,7 +779,9 @@ function createObject(type){
 
     if(type === "cube"){
         geometry =
-            new THREE.BoxGeometry(2,2,2);
+            new THREE.BoxGeometry(
+                2,2,2
+            );
     }
 
     if(type === "sphere"){
@@ -781,7 +810,7 @@ function createObject(type){
     const object =
         new THREE.Mesh(
             geometry,
-            material()
+            createMaterial()
         );
 
     objectNumber++;
@@ -792,13 +821,10 @@ function createObject(type){
         "." +
         String(objectNumber).padStart(3,"0");
 
-    const offset =
-        (objects.length % 5) * 2.8 - 5.6;
-
     object.position.set(
-        offset,
+        0,
         1,
-        Math.floor(objects.length / 5) * 2.8
+        0
     );
 
     scene.add(object);
@@ -809,31 +835,44 @@ function createObject(type){
 
     updateHierarchy();
 
-    updateCount();
+    updateObjectCount();
 
-    toast(object.name + " created");
+    showToast(
+        object.name + " created"
+    );
 }
 
 function selectObject(object){
 
     if(selected){
-        selected.material.emissive.setHex(0x000000);
+        selected.material.emissive.setHex(
+            0x000000
+        );
     }
 
     selected = object;
 
     if(selected){
 
-        selected.material.emissive.setHex(0x331505);
+        selected.material.emissive.setHex(
+            0x331505
+        );
 
         document.getElementById(
             "selectionInfo"
         ).textContent =
-            "SELECTED: " + selected.name;
+            "SELECTED: " +
+            selected.name;
 
-        if(tool !== "select"){
-            transform.setMode(tool);
-            transform.attach(selected);
+        if(currentTool !== "select"){
+
+            transform.setMode(
+                currentTool
+            );
+
+            transform.attach(
+                selected
+            );
         }
 
     }else{
@@ -854,7 +893,10 @@ function selectObject(object){
 function deselect(){
 
     if(selected){
-        selected.material.emissive.setHex(0x000000);
+
+        selected.material.emissive.setHex(
+            0x000000
+        );
     }
 
     selected = null;
@@ -874,40 +916,51 @@ function deselect(){
 function updateHierarchy(){
 
     const hierarchy =
-        document.getElementById("hierarchy");
+        document.getElementById(
+            "hierarchy"
+        );
 
     hierarchy.innerHTML = "";
 
-    objects.forEach(function(object){
+    objects.forEach(
+        function(object){
 
-        const row =
-            document.createElement("div");
+            const row =
+                document.createElement(
+                    "div"
+                );
 
-        row.className = "object-row";
+            row.className =
+                "object-row";
 
-        if(object === selected){
-            row.classList.add("selected");
-        }
-
-        row.innerHTML =
-            '<span class="object-icon">◆</span>' +
-            '<span>' + object.name + '</span>';
-
-        row.addEventListener(
-            "click",
-            function(event){
-
-                event.stopPropagation();
-
-                selectObject(object);
+            if(object === selected){
+                row.classList.add(
+                    "selected"
+                );
             }
-        );
 
-        hierarchy.appendChild(row);
-    });
+            row.innerHTML =
+                '<span class="object-icon">◆</span>' +
+                '<span>' +
+                object.name +
+                '</span>';
+
+            row.addEventListener(
+                "click",
+                function(event){
+
+                    event.stopPropagation();
+
+                    selectObject(object);
+                }
+            );
+
+            hierarchy.appendChild(row);
+        }
+    );
 }
 
-function updateCount(){
+function updateObjectCount(){
 
     document.getElementById(
         "objectCount"
@@ -928,19 +981,23 @@ function updateProperties(){
 
     document.getElementById(
         "objectName"
-    ).value = selected.name;
+    ).value =
+        selected.name;
 
     document.getElementById(
         "posX"
-    ).value = selected.position.x.toFixed(2);
+    ).value =
+        selected.position.x.toFixed(2);
 
     document.getElementById(
         "posY"
-    ).value = selected.position.y.toFixed(2);
+    ).value =
+        selected.position.y.toFixed(2);
 
     document.getElementById(
         "posZ"
-    ).value = selected.position.z.toFixed(2);
+    ).value =
+        selected.position.z.toFixed(2);
 
     document.getElementById(
         "rotX"
@@ -979,114 +1036,46 @@ function updateProperties(){
         selected.scale.z.toFixed(2);
 }
 
-function applyProperties(){
+function setTool(tool){
 
-    if(!selected){
-        return;
-    }
-
-    const number = function(id, fallback){
-
-        const value =
-            parseFloat(
-                document.getElementById(id).value
-            );
-
-        return Number.isFinite(value)
-            ? value
-            : fallback;
-    };
-
-    selected.name =
-        document.getElementById(
-            "objectName"
-        ).value || selected.name;
-
-    selected.position.set(
-        number("posX",selected.position.x),
-        number("posY",selected.position.y),
-        number("posZ",selected.position.z)
-    );
-
-    selected.rotation.set(
-        THREE.MathUtils.degToRad(
-            number(
-                "rotX",
-                THREE.MathUtils.radToDeg(
-                    selected.rotation.x
-                )
-            )
-        ),
-        THREE.MathUtils.degToRad(
-            number(
-                "rotY",
-                THREE.MathUtils.radToDeg(
-                    selected.rotation.y
-                )
-            )
-        ),
-        THREE.MathUtils.degToRad(
-            number(
-                "rotZ",
-                THREE.MathUtils.radToDeg(
-                    selected.rotation.z
-                )
-            )
-        )
-    );
-
-    selected.scale.set(
-        Math.max(.01,number(
-            "scaleX",
-            selected.scale.x
-        )),
-        Math.max(.01,number(
-            "scaleY",
-            selected.scale.y
-        )),
-        Math.max(.01,number(
-            "scaleZ",
-            selected.scale.z
-        ))
-    );
-
-    updateHierarchy();
-    updateProperties();
-}
-
-function setTool(newTool){
-
-    tool = newTool;
+    currentTool = tool;
 
     document.querySelectorAll(
         ".tool[data-tool]"
-    ).forEach(function(button){
+    ).forEach(
+        function(button){
 
-        button.classList.toggle(
-            "active",
-            button.dataset.tool === newTool
-        );
-    });
+            button.classList.toggle(
+                "active",
+                button.dataset.tool === tool
+            );
+        }
+    );
 
     document.getElementById(
         "modeLabel"
     ).textContent =
-        newTool === "select"
+        tool === "select"
         ? "SELECT MODE"
-        : newTool.toUpperCase() + " MODE";
+        : tool.toUpperCase() + " MODE";
 
     document.getElementById(
         "bottomMode"
     ).textContent =
-        newTool === "select"
+        tool === "select"
         ? "SELECT"
-        : newTool.toUpperCase();
+        : tool.toUpperCase();
 
-    if(selected && newTool !== "select"){
+    if(
+        selected &&
+        tool !== "select"
+    ){
 
-        transform.setMode(newTool);
+        transform.setMode(tool);
 
-        transform.attach(selected);
+        transform.attach(
+            selected
+        );
 
     }else{
 
@@ -1098,7 +1087,9 @@ function deleteSelected(){
 
     if(!selected){
 
-        toast("No object selected");
+        showToast(
+            "No object selected"
+        );
 
         return;
     }
@@ -1113,7 +1104,11 @@ function deleteSelected(){
     selected.material.dispose();
 
     if(index !== -1){
-        objects.splice(index,1);
+
+        objects.splice(
+            index,
+            1
+        );
     }
 
     selected = null;
@@ -1124,48 +1119,58 @@ function deleteSelected(){
 
     updateProperties();
 
-    updateCount();
+    updateObjectCount();
 
     document.getElementById(
         "selectionInfo"
     ).textContent =
         "NO OBJECT SELECTED";
 
-    toast("Object deleted");
+    showToast(
+        "Object deleted"
+    );
 }
 
 function saveScene(){
 
     const data =
-        objects.map(function(object){
+        objects.map(
+            function(object){
 
-            return {
-                name:object.name,
-                geometry:object.geometry.type,
-                position:{
-                    x:object.position.x,
-                    y:object.position.y,
-                    z:object.position.z
-                },
-                rotation:{
-                    x:object.rotation.x,
-                    y:object.rotation.y,
-                    z:object.rotation.z
-                },
-                scale:{
-                    x:object.scale.x,
-                    y:object.scale.y,
-                    z:object.scale.z
-                }
-            };
-        });
+                return {
+                    name:object.name,
+                    geometry:
+                        object.geometry.type,
+
+                    position:{
+                        x:object.position.x,
+                        y:object.position.y,
+                        z:object.position.z
+                    },
+
+                    rotation:{
+                        x:object.rotation.x,
+                        y:object.rotation.y,
+                        z:object.rotation.z
+                    },
+
+                    scale:{
+                        x:object.scale.x,
+                        y:object.scale.y,
+                        z:object.scale.z
+                    }
+                };
+            }
+        );
 
     localStorage.setItem(
         "ai3dstudio_scene",
         JSON.stringify(data)
     );
 
-    toast("Scene saved");
+    showToast(
+        "Scene saved"
+    );
 }
 
 function loadScene(){
@@ -1177,7 +1182,9 @@ function loadScene(){
 
     if(!saved){
 
-        toast("No saved scene");
+        showToast(
+            "No saved scene"
+        );
 
         return;
     }
@@ -1202,87 +1209,99 @@ function loadScene(){
     const data =
         JSON.parse(saved);
 
-    data.forEach(function(item){
+    data.forEach(
+        function(item){
 
-        let geometry;
+            let geometry;
 
-        if(item.geometry === "SphereGeometry"){
+            if(
+                item.geometry ===
+                "SphereGeometry"
+            ){
 
-            geometry =
-                new THREE.SphereGeometry(
-                    1.2,
-                    32,
-                    20
+                geometry =
+                    new THREE.SphereGeometry(
+                        1.2,
+                        32,
+                        20
+                    );
+
+            }else if(
+                item.geometry ===
+                "CylinderGeometry"
+            ){
+
+                geometry =
+                    new THREE.CylinderGeometry(
+                        1.1,
+                        1.1,
+                        2.2,
+                        32
+                    );
+
+            }else{
+
+                geometry =
+                    new THREE.BoxGeometry(
+                        2,
+                        2,
+                        2
+                    );
+            }
+
+            const object =
+                new THREE.Mesh(
+                    geometry,
+                    createMaterial()
                 );
 
-        }else if(
-            item.geometry === "CylinderGeometry"
-        ){
+            object.name =
+                item.name;
 
-            geometry =
-                new THREE.CylinderGeometry(
-                    1.1,
-                    1.1,
-                    2.2,
-                    32
-                );
-
-        }else{
-
-            geometry =
-                new THREE.BoxGeometry(
-                    2,
-                    2,
-                    2
-                );
-        }
-
-        const object =
-            new THREE.Mesh(
-                geometry,
-                material()
+            object.position.set(
+                item.position.x,
+                item.position.y,
+                item.position.z
             );
 
-        object.name = item.name;
+            object.rotation.set(
+                item.rotation.x,
+                item.rotation.y,
+                item.rotation.z
+            );
 
-        object.position.set(
-            item.position.x,
-            item.position.y,
-            item.position.z
-        );
+            object.scale.set(
+                item.scale.x,
+                item.scale.y,
+                item.scale.z
+            );
 
-        object.rotation.set(
-            item.rotation.x,
-            item.rotation.y,
-            item.rotation.z
-        );
+            scene.add(object);
 
-        object.scale.set(
-            item.scale.x,
-            item.scale.y,
-            item.scale.z
-        );
+            objects.push(object);
+        }
+    );
 
-        scene.add(object);
-
-        objects.push(object);
-    });
-
-    objectNumber = objects.length;
+    objectNumber =
+        objects.length;
 
     updateHierarchy();
 
     updateProperties();
 
-    updateCount();
+    updateObjectCount();
 
-    toast("Scene loaded");
+    showToast(
+        "Scene loaded"
+    );
 }
 
-function processAI(command){
+function processAICommand(command){
 
     const text =
-        command.toLowerCase().trim();
+        command
+        .toLowerCase()
+        .trim();
 
     if(!text){
         return;
@@ -1370,58 +1389,23 @@ function processAI(command){
         return;
     }
 
-    toast("AI command not recognized");
-}
-
-function pickObject(event){
-
-    if(tool !== "select"){
-        return;
-    }
-
-    const rect =
-        canvas.getBoundingClientRect();
-
-    mouse.x =
-        ((event.clientX - rect.left) /
-        rect.width) * 2 - 1;
-
-    mouse.y =
-        -((event.clientY - rect.top) /
-        rect.height) * 2 + 1;
-
-    raycaster.setFromCamera(
-        mouse,
-        camera
+    showToast(
+        "AI command not recognized"
     );
-
-    const hits =
-        raycaster.intersectObjects(
-            objects,
-            false
-        );
-
-    if(hits.length){
-
-        selectObject(hits[0].object);
-
-    }else{
-
-        deselect();
-    }
 }
 
-let pointerDownX = 0;
-
-let pointerDownY = 0;
+let downX = 0;
+let downY = 0;
 
 canvas.addEventListener(
     "pointerdown",
     function(event){
 
-        pointerDownX = event.clientX;
+        downX =
+            event.clientX;
 
-        pointerDownY = event.clientY;
+        downY =
+            event.clientY;
     }
 );
 
@@ -1429,50 +1413,98 @@ canvas.addEventListener(
     "pointerup",
     function(event){
 
+        if(currentTool !== "select"){
+            return;
+        }
+
         const dx =
-            event.clientX - pointerDownX;
+            event.clientX - downX;
 
         const dy =
-            event.clientY - pointerDownY;
+            event.clientY - downY;
 
         const distance =
-            Math.sqrt(dx * dx + dy * dy);
+            Math.sqrt(
+                dx * dx +
+                dy * dy
+            );
 
-        if(distance < 5){
-            pickObject(event);
+        if(distance > 5){
+            return;
+        }
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+        mouse.x =
+            ((event.clientX -
+                rect.left) /
+                rect.width) *
+                2 - 1;
+
+        mouse.y =
+            -((event.clientY -
+                rect.top) /
+                rect.height) *
+                2 + 1;
+
+        raycaster.setFromCamera(
+            mouse,
+            camera
+        );
+
+        const hits =
+            raycaster.intersectObjects(
+                objects,
+                false
+            );
+
+        if(hits.length){
+
+            selectObject(
+                hits[0].object
+            );
+
+        }else{
+
+            deselect();
         }
     }
 );
 
 document.querySelectorAll(
     ".tool[data-tool]"
-).forEach(function(button){
+).forEach(
+    function(button){
 
-    button.addEventListener(
-        "click",
-        function(){
+        button.addEventListener(
+            "click",
+            function(){
 
-            setTool(
-                button.dataset.tool
-            );
-        }
-    );
-});
+                setTool(
+                    button.dataset.tool
+                );
+            }
+        );
+    }
+);
 
 document.querySelectorAll(
     ".tool[data-create]"
-).forEach(function(button){
+).forEach(
+    function(button){
 
-    button.addEventListener(
-        "click",
-        function(){
+        button.addEventListener(
+            "click",
+            function(){
 
-            createObject(
-                button.dataset.create
-            );
-        }
-    );
-});
+                createObject(
+                    button.dataset.create
+                );
+            }
+        );
+    }
+);
 
 document.getElementById(
     "deleteTool"
@@ -1506,7 +1538,9 @@ document.getElementById(
                 "aiCommand"
             );
 
-        processAI(input.value);
+        processAICommand(
+            input.value
+        );
 
         input.value = "";
     }
@@ -1520,7 +1554,9 @@ document.getElementById(
 
         if(event.key === "Enter"){
 
-            processAI(this.value);
+            processAICommand(
+                this.value
+            );
 
             this.value = "";
         }
@@ -1538,14 +1574,113 @@ document.getElementById(
     "scaleX",
     "scaleY",
     "scaleZ"
-].forEach(function(id){
+].forEach(
+    function(id){
 
-    document.getElementById(id)
-        .addEventListener(
-            "change",
-            applyProperties
-        );
-});
+        document.getElementById(id)
+            .addEventListener(
+                "change",
+                function(){
+
+                    if(!selected){
+                        return;
+                    }
+
+                    const value =
+                        function(id,fallback){
+
+                            const number =
+                                parseFloat(
+                                    document
+                                    .getElementById(id)
+                                    .value
+                                );
+
+                            return Number.isFinite(number)
+                                ? number
+                                : fallback;
+                        };
+
+                    selected.name =
+                        document
+                        .getElementById(
+                            "objectName"
+                        )
+                        .value ||
+                        selected.name;
+
+                    selected.position.set(
+                        value(
+                            "posX",
+                            selected.position.x
+                        ),
+                        value(
+                            "posY",
+                            selected.position.y
+                        ),
+                        value(
+                            "posZ",
+                            selected.position.z
+                        )
+                    );
+
+                    selected.rotation.set(
+                        THREE.MathUtils.degToRad(
+                            value(
+                                "rotX",
+                                THREE.MathUtils.radToDeg(
+                                    selected.rotation.x
+                                )
+                            )
+                        ),
+                        THREE.MathUtils.degToRad(
+                            value(
+                                "rotY",
+                                THREE.MathUtils.radToDeg(
+                                    selected.rotation.y
+                                )
+                            )
+                        ),
+                        THREE.MathUtils.degToRad(
+                            value(
+                                "rotZ",
+                                THREE.MathUtils.radToDeg(
+                                    selected.rotation.z
+                                )
+                            )
+                        )
+                    );
+
+                    selected.scale.set(
+                        Math.max(
+                            .01,
+                            value(
+                                "scaleX",
+                                selected.scale.x
+                            )
+                        ),
+                        Math.max(
+                            .01,
+                            value(
+                                "scaleY",
+                                selected.scale.y
+                            )
+                        ),
+                        Math.max(
+                            .01,
+                            value(
+                                "scaleZ",
+                                selected.scale.z
+                            )
+                        )
+                    );
+
+                    updateHierarchy();
+                    updateProperties();
+                }
+            );
+    }
+);
 
 function resize(){
 
@@ -1555,7 +1690,10 @@ function resize(){
     const height =
         canvas.clientHeight;
 
-    if(width <= 0 || height <= 0){
+    if(
+        width <= 0 ||
+        height <= 0
+    ){
         return;
     }
 
@@ -1578,7 +1716,9 @@ window.addEventListener(
 
 function animate(){
 
-    requestAnimationFrame(animate);
+    requestAnimationFrame(
+        animate
+    );
 
     orbit.update();
 
