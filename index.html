@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>AI3DSTUDIO</title>
 
     <style>
@@ -13,133 +12,429 @@
             padding: 0;
         }
 
+        html,
         body {
-            min-height: 100vh;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
             background: #050505;
-            color: white;
+            color: #ffffff;
             font-family: Arial, Helvetica, sans-serif;
-            overflow-x: hidden;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
         }
 
         .topbar {
-            height: 72px;
+            height: 58px;
+            flex-shrink: 0;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 40px;
-            border-bottom: 1px solid #202020;
-            background: rgba(5, 5, 5, 0.95);
+            padding: 0 22px;
+            background: #080808;
+            border-bottom: 1px solid #222222;
         }
 
-        .logo {
-            font-size: 22px;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-mark {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #ff8a24;
+            transform: rotate(45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .brand-mark span {
+            width: 9px;
+            height: 9px;
+            background: #ff8a24;
+        }
+
+        .brand-name {
+            font-size: 17px;
             font-weight: 700;
             letter-spacing: 2px;
         }
 
-        .status {
+        .top-center {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #777777;
+            font-size: 11px;
+            letter-spacing: 3px;
+        }
+
+        .system-status {
             display: flex;
             align-items: center;
-            gap: 10px;
-            color: #aaa;
-            font-size: 13px;
+            gap: 8px;
+            color: #999999;
+            font-size: 11px;
+            letter-spacing: 1px;
         }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
             background: #ff8a24;
-            box-shadow: 0 0 12px #ff8a24;
+            box-shadow: 0 0 10px #ff8a24;
         }
 
-        .hero {
-            min-height: calc(100vh - 72px);
+        .workspace {
+            flex: 1;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 76px minmax(0, 1fr) 270px;
+        }
+
+        .toolbar {
+            background: #090909;
+            border-right: 1px solid #222222;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 40px 20px;
+            padding: 12px 8px;
+            gap: 8px;
         }
 
-        .hero-label {
+        .tool {
+            width: 58px;
+            height: 52px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #777777;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 9px;
+            letter-spacing: 1px;
+            transition: 0.15s;
+        }
+
+        .tool:hover {
+            background: #151515;
+            color: #ffffff;
+        }
+
+        .tool.active {
+            border-color: #ff8a24;
             color: #ff8a24;
-            font-size: 13px;
-            letter-spacing: 4px;
-            margin-bottom: 25px;
+            background: #151515;
         }
 
-        h1 {
-            font-size: clamp(50px, 9vw, 110px);
-            letter-spacing: 8px;
-            line-height: 1;
-            margin-bottom: 25px;
+        .tool-icon {
+            display: block;
+            font-size: 17px;
+            margin-bottom: 5px;
         }
 
-        .subtitle {
-            max-width: 700px;
-            color: #999;
-            font-size: 18px;
-            line-height: 1.7;
-            margin-bottom: 40px;
+        .tool-separator {
+            width: 38px;
+            height: 1px;
+            background: #222222;
+            margin: 4px 0;
         }
 
-        .launch-button {
-            padding: 16px 34px;
+        .viewport-area {
+            position: relative;
+            min-width: 0;
+            min-height: 0;
+            background: #050505;
+            overflow: hidden;
+        }
+
+        #viewport {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: crosshair;
+        }
+
+        .viewport-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .viewport-title {
+            position: absolute;
+            top: 15px;
+            left: 18px;
+            color: #555555;
+            font-size: 10px;
+            letter-spacing: 2px;
+        }
+
+        .viewport-mode {
+            position: absolute;
+            top: 14px;
+            right: 18px;
+            padding: 6px 9px;
+            border: 1px solid #252525;
+            background: rgba(5, 5, 5, 0.8);
+            color: #777777;
+            font-size: 9px;
+            letter-spacing: 1px;
+        }
+
+        .axis-indicator {
+            position: absolute;
+            left: 18px;
+            bottom: 18px;
+            width: 80px;
+            height: 80px;
+            border: 1px solid #222222;
+            background: rgba(5, 5, 5, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555555;
+            font-size: 10px;
+        }
+
+        .selection-info {
+            position: absolute;
+            left: 18px;
+            bottom: 18px;
+            margin-left: 92px;
+            padding: 8px 12px;
+            border: 1px solid #222222;
+            background: rgba(5, 5, 5, 0.85);
+            color: #777777;
+            font-size: 10px;
+            min-width: 130px;
+        }
+
+        .right-panel {
+            background: #090909;
+            border-left: 1px solid #222222;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .panel-section {
+            border-bottom: 1px solid #222222;
+            padding: 15px;
+        }
+
+        .panel-title {
+            color: #777777;
+            font-size: 10px;
+            letter-spacing: 2px;
+            margin-bottom: 13px;
+        }
+
+        .hierarchy {
+            max-height: 190px;
+            overflow-y: auto;
+        }
+
+        .object-row {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 9px 8px;
+            color: #888888;
+            font-size: 11px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .object-row:hover {
+            background: #151515;
+            color: #ffffff;
+        }
+
+        .object-row.selected {
+            background: #1a120c;
+            color: #ff8a24;
+        }
+
+        .object-icon {
+            color: #555555;
+        }
+
+        .object-row.selected .object-icon {
+            color: #ff8a24;
+        }
+
+        .property {
+            display: grid;
+            grid-template-columns: 70px 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .property label {
+            color: #666666;
+            font-size: 10px;
+        }
+
+        .property input {
+            width: 100%;
+            min-width: 0;
+            height: 27px;
+            border: 1px solid #242424;
+            border-radius: 3px;
+            background: #0d0d0d;
+            color: #cccccc;
+            padding: 0 7px;
+            font-size: 10px;
+            outline: none;
+        }
+
+        .property input:focus {
+            border-color: #ff8a24;
+        }
+
+        .property-values {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+        }
+
+        .property-values input {
+            text-align: center;
+        }
+
+        .webcam-box {
+            height: 120px;
+            border: 1px solid #222222;
+            background:
+                linear-gradient(135deg, transparent 49%, #161616 50%, transparent 51%),
+                linear-gradient(45deg, transparent 49%, #161616 50%, transparent 51%),
+                #080808;
+            background-size: 24px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .webcam-label {
+            color: #444444;
+            font-size: 9px;
+            letter-spacing: 2px;
+        }
+
+        .webcam-status {
+            position: absolute;
+            top: 7px;
+            right: 7px;
+            color: #555555;
+            font-size: 8px;
+        }
+
+        .ai-panel {
+            margin-top: auto;
+            border-top: 1px solid #222222;
+            padding: 12px;
+        }
+
+        .ai-input {
+            display: flex;
+            gap: 6px;
+        }
+
+        .ai-input input {
+            flex: 1;
+            min-width: 0;
+            height: 34px;
+            border: 1px solid #292929;
+            border-radius: 4px;
+            background: #0d0d0d;
+            color: #ffffff;
+            padding: 0 9px;
+            outline: none;
+            font-size: 10px;
+        }
+
+        .ai-input input:focus {
+            border-color: #ff8a24;
+        }
+
+        .ai-send {
+            width: 40px;
+            height: 34px;
             border: 1px solid #ff8a24;
-            border-radius: 8px;
+            border-radius: 4px;
             background: #ff8a24;
             color: #050505;
-            font-size: 15px;
-            font-weight: 700;
             cursor: pointer;
-            transition: 0.2s;
+            font-weight: 700;
         }
 
-        .launch-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 30px rgba(255, 138, 36, 0.35);
+        .bottom-bar {
+            height: 36px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            background: #080808;
+            border-top: 1px solid #222222;
+            color: #555555;
+            font-size: 9px;
+            letter-spacing: 1px;
         }
 
-        .features {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(180px, 1fr));
+        .bottom-left,
+        .bottom-right {
+            display: flex;
             gap: 20px;
-            width: min(900px, 100%);
-            margin-top: 80px;
         }
 
-        .feature {
-            padding: 25px;
-            border: 1px solid #202020;
-            border-radius: 10px;
-            background: #0a0a0a;
-            text-align: left;
+        .orange {
+            color: #ff8a24;
         }
 
-        .feature h2 {
-            font-size: 16px;
-            margin-bottom: 10px;
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 55px;
+            transform: translateX(-50%) translateY(15px);
+            padding: 10px 18px;
+            border: 1px solid #ff8a24;
+            border-radius: 5px;
+            background: #0b0b0b;
+            color: #ffffff;
+            font-size: 11px;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.2s;
+            z-index: 100;
         }
 
-        .feature p {
-            color: #777;
-            font-size: 13px;
-            line-height: 1.6;
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
 
-        @media (max-width: 700px) {
-            .topbar {
-                padding: 0 20px;
+        @media (max-width: 850px) {
+            .workspace {
+                grid-template-columns: 65px minmax(0, 1fr);
             }
 
-            .features {
-                grid-template-columns: 1fr;
+            .right-panel {
+                display: none;
             }
 
-            h1 {
-                letter-spacing: 4px;
+            .top-center {
+                display: none;
             }
         }
     </style>
@@ -147,68 +442,981 @@
 
 <body>
 
-    <header class="topbar">
-        <div class="logo">AI3DSTUDIO</div>
-
-        <div class="status">
-            <span class="status-dot"></span>
-            SYSTEM ONLINE
+<header class="topbar">
+    <div class="brand">
+        <div class="brand-mark">
+            <span></span>
         </div>
-    </header>
+        <div class="brand-name">AI3DSTUDIO</div>
+    </div>
 
-    <main class="hero">
+    <div class="top-center">3D DESIGN ENVIRONMENT</div>
 
-        <div class="hero-label">
-            AI POWERED 3D DESIGN
-        </div>
+    <div class="system-status">
+        <span class="status-dot"></span>
+        SYSTEM ONLINE
+    </div>
+</header>
 
-        <h1>AI3DSTUDIO</h1>
+<div class="workspace">
 
-        <p class="subtitle">
-            An intelligent 3D design environment combining AI,
-            natural interaction, real-time modeling and advanced
-            visualization.
-        </p>
+    <aside class="toolbar">
 
-        <button class="launch-button" onclick="launchStudio()">
-            LAUNCH STUDIO
+        <button class="tool active" data-tool="select">
+            <span class="tool-icon">↖</span>
+            SELECT
         </button>
 
-        <section class="features">
+        <button class="tool" data-tool="move">
+            <span class="tool-icon">✥</span>
+            MOVE
+        </button>
 
-            <div class="feature">
-                <h2>AI DESIGN</h2>
-                <p>
-                    Create and manipulate 3D objects using
-                    intelligent commands.
-                </p>
+        <button class="tool" data-tool="rotate">
+            <span class="tool-icon">⟳</span>
+            ROTATE
+        </button>
+
+        <button class="tool" data-tool="scale">
+            <span class="tool-icon">◇</span>
+            SCALE
+        </button>
+
+        <div class="tool-separator"></div>
+
+        <button class="tool" data-create="cube">
+            <span class="tool-icon">■</span>
+            CUBE
+        </button>
+
+        <button class="tool" data-create="sphere">
+            <span class="tool-icon">●</span>
+            SPHERE
+        </button>
+
+        <button class="tool" data-create="cylinder">
+            <span class="tool-icon">▣</span>
+            CYLINDER
+        </button>
+
+        <div class="tool-separator"></div>
+
+        <button class="tool" id="deleteTool">
+            <span class="tool-icon">×</span>
+            DELETE
+        </button>
+
+        <button class="tool" id="saveTool">
+            <span class="tool-icon">↓</span>
+            SAVE
+        </button>
+
+        <button class="tool" id="loadTool">
+            <span class="tool-icon">↑</span>
+            LOAD
+        </button>
+
+    </aside>
+
+    <main class="viewport-area">
+
+        <canvas id="viewport"></canvas>
+
+        <div class="viewport-overlay">
+            <div class="viewport-title">
+                AI3DSTUDIO / VIEWPORT
             </div>
 
-            <div class="feature">
-                <h2>3D MODELING</h2>
-                <p>
-                    Work with objects, transformations,
-                    selection and interactive modeling.
-                </p>
+            <div class="viewport-mode" id="modeLabel">
+                SELECT MODE
             </div>
 
-            <div class="feature">
-                <h2>NATURAL CONTROL</h2>
-                <p>
-                    Explore interaction through mouse,
-                    keyboard, voice and hand tracking.
-                </p>
+            <div class="axis-indicator">
+                X / Y / Z
             </div>
 
-        </section>
+            <div class="selection-info" id="selectionInfo">
+                NO OBJECT SELECTED
+            </div>
+        </div>
 
     </main>
 
-    <script>
-        function launchStudio() {
-            alert("AI3DSTUDIO Web Studio is coming next.");
+    <aside class="right-panel">
+
+        <section class="panel-section">
+            <div class="panel-title">SCENE HIERARCHY</div>
+
+            <div class="hierarchy" id="hierarchy"></div>
+        </section>
+
+        <section class="panel-section">
+            <div class="panel-title">PROPERTIES</div>
+
+            <div class="property">
+                <label>NAME</label>
+                <input id="objectName" type="text" placeholder="No selection">
+            </div>
+
+            <div class="property">
+                <label>POSITION</label>
+                <div class="property-values">
+                    <input id="posX" type="number" step="0.1">
+                    <input id="posY" type="number" step="0.1">
+                    <input id="posZ" type="number" step="0.1">
+                </div>
+            </div>
+
+            <div class="property">
+                <label>ROTATION</label>
+                <div class="property-values">
+                    <input id="rotX" type="number" step="1">
+                    <input id="rotY" type="number" step="1">
+                    <input id="rotZ" type="number" step="1">
+                </div>
+            </div>
+
+            <div class="property">
+                <label>SCALE</label>
+                <div class="property-values">
+                    <input id="scaleX" type="number" step="0.1">
+                    <input id="scaleY" type="number" step="0.1">
+                    <input id="scaleZ" type="number" step="0.1">
+                </div>
+            </div>
+        </section>
+
+        <section class="panel-section">
+            <div class="panel-title">WEBCAM</div>
+
+            <div class="webcam-box">
+                <span class="webcam-label">WEBCAM READY</span>
+                <span class="webcam-status">STANDBY</span>
+            </div>
+        </section>
+
+        <section class="ai-panel">
+            <div class="panel-title">AI COMMAND</div>
+
+            <div class="ai-input">
+                <input
+                    id="aiCommand"
+                    type="text"
+                    placeholder="Create Cube..."
+                    autocomplete="off"
+                >
+                <button class="ai-send" id="aiSend">→</button>
+            </div>
+        </section>
+
+    </aside>
+
+</div>
+
+<footer class="bottom-bar">
+
+    <div class="bottom-left">
+        <span>AI ENGINE: <span class="orange">READY</span></span>
+        <span>MODE: <span class="orange" id="bottomMode">SELECT</span></span>
+        <span>OBJECTS: <span class="orange" id="objectCount">0</span></span>
+    </div>
+
+    <div class="bottom-right">
+        <span>MOUSE: ORBIT / SELECT</span>
+        <span>AI3DSTUDIO WEB</span>
+    </div>
+
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
+import { TransformControls } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/TransformControls.js";
+
+const canvas = document.getElementById("viewport");
+
+const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: false
+});
+
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+renderer.setClearColor(0x050505);
+
+const scene = new THREE.Scene();
+
+scene.background = new THREE.Color(0x050505);
+
+const camera = new THREE.PerspectiveCamera(
+    55,
+    canvas.clientWidth / canvas.clientHeight,
+    0.1,
+    1000
+);
+
+camera.position.set(6, 5, 8);
+
+const controls = new OrbitControls(camera, canvas);
+
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(0, 0, 0);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
+
+directionalLight.position.set(5, 10, 7);
+
+scene.add(directionalLight);
+
+const grid = new THREE.GridHelper(30, 30, 0x333333, 0x181818);
+
+scene.add(grid);
+
+const axes = new THREE.AxesHelper(4);
+
+scene.add(axes);
+
+const objects = [];
+
+let selectedObject = null;
+
+let currentTool = "select";
+
+let objectNumber = 0;
+
+const raycaster = new THREE.Raycaster();
+
+const pointer = new THREE.Vector2();
+
+const transformControls = new TransformControls(camera, renderer.domElement);
+
+scene.add(transformControls.getHelper());
+
+transformControls.addEventListener("dragging-changed", function(event) {
+    controls.enabled = !event.value;
+});
+
+transformControls.addEventListener("objectChange", function() {
+    updateProperties();
+});
+
+function showToast(message) {
+    const toast = document.getElementById("toast");
+
+    toast.textContent = message;
+
+    toast.classList.add("show");
+
+    clearTimeout(showToast.timer);
+
+    showToast.timer = setTimeout(function() {
+        toast.classList.remove("show");
+    }, 1600);
+}
+
+function createMaterial() {
+    return new THREE.MeshStandardMaterial({
+        color: 0x777777,
+        roughness: 0.55,
+        metalness: 0.25
+    });
+}
+
+function createObject(type) {
+
+    let geometry;
+
+    if (type === "cube") {
+        geometry = new THREE.BoxGeometry(2, 2, 2);
+    }
+
+    if (type === "sphere") {
+        geometry = new THREE.SphereGeometry(1.25, 32, 20);
+    }
+
+    if (type === "cylinder") {
+        geometry = new THREE.CylinderGeometry(1.15, 1.15, 2.2, 32);
+    }
+
+    if (!geometry) {
+        return;
+    }
+
+    const mesh = new THREE.Mesh(
+        geometry,
+        createMaterial()
+    );
+
+    objectNumber++;
+
+    mesh.name =
+        type.charAt(0).toUpperCase() +
+        type.slice(1) +
+        "." +
+        String(objectNumber).padStart(3, "0");
+
+    mesh.position.set(
+        objects.length * 0.4,
+        1,
+        0
+    );
+
+    scene.add(mesh);
+
+    objects.push(mesh);
+
+    selectObject(mesh);
+
+    updateHierarchy();
+
+    updateObjectCount();
+
+    showToast(mesh.name + " created");
+}
+
+function selectObject(object) {
+
+    if (selectedObject === object) {
+        return;
+    }
+
+    if (selectedObject) {
+        selectedObject.material.emissive.setHex(0x000000);
+    }
+
+    selectedObject = object;
+
+    if (selectedObject) {
+        selectedObject.material.emissive.setHex(0x331505);
+
+        transformControls.attach(selectedObject);
+
+        updateProperties();
+
+        document.getElementById("selectionInfo").textContent =
+            "SELECTED: " + selectedObject.name;
+    } else {
+        transformControls.detach();
+
+        document.getElementById("selectionInfo").textContent =
+            "NO OBJECT SELECTED";
+    }
+
+    updateHierarchy();
+}
+
+function clearSelection() {
+
+    if (selectedObject) {
+        selectedObject.material.emissive.setHex(0x000000);
+    }
+
+    selectedObject = null;
+
+    transformControls.detach();
+
+    document.getElementById("selectionInfo").textContent =
+        "NO OBJECT SELECTED";
+
+    updateProperties();
+
+    updateHierarchy();
+}
+
+function updateHierarchy() {
+
+    const hierarchy = document.getElementById("hierarchy");
+
+    hierarchy.innerHTML = "";
+
+    objects.forEach(function(object) {
+
+        const row = document.createElement("div");
+
+        row.className = "object-row";
+
+        if (object === selectedObject) {
+            row.classList.add("selected");
         }
-    </script>
+
+        row.innerHTML =
+            '<span class="object-icon">◆</span>' +
+            '<span>' + object.name + '</span>';
+
+        row.addEventListener("click", function() {
+            selectObject(object);
+        });
+
+        hierarchy.appendChild(row);
+    });
+}
+
+function updateObjectCount() {
+
+    document.getElementById("objectCount").textContent =
+        objects.length;
+}
+
+function updateProperties() {
+
+    const nameInput = document.getElementById("objectName");
+
+    if (!selectedObject) {
+
+        nameInput.value = "";
+
+        [
+            "posX",
+            "posY",
+            "posZ",
+            "rotX",
+            "rotY",
+            "rotZ",
+            "scaleX",
+            "scaleY",
+            "scaleZ"
+        ].forEach(function(id) {
+            document.getElementById(id).value = "";
+        });
+
+        return;
+    }
+
+    nameInput.value = selectedObject.name;
+
+    document.getElementById("posX").value =
+        selectedObject.position.x.toFixed(2);
+
+    document.getElementById("posY").value =
+        selectedObject.position.y.toFixed(2);
+
+    document.getElementById("posZ").value =
+        selectedObject.position.z.toFixed(2);
+
+    document.getElementById("rotX").value =
+        THREE.MathUtils.radToDeg(selectedObject.rotation.x).toFixed(1);
+
+    document.getElementById("rotY").value =
+        THREE.MathUtils.radToDeg(selectedObject.rotation.y).toFixed(1);
+
+    document.getElementById("rotZ").value =
+        THREE.MathUtils.radToDeg(selectedObject.rotation.z).toFixed(1);
+
+    document.getElementById("scaleX").value =
+        selectedObject.scale.x.toFixed(2);
+
+    document.getElementById("scaleY").value =
+        selectedObject.scale.y.toFixed(2);
+
+    document.getElementById("scaleZ").value =
+        selectedObject.scale.z.toFixed(2);
+}
+
+function updateSelectedFromProperties() {
+
+    if (!selectedObject) {
+        return;
+    }
+
+    const value = function(id) {
+        return parseFloat(document.getElementById(id).value) || 0;
+    };
+
+    selectedObject.position.set(
+        value("posX"),
+        value("posY"),
+        value("posZ")
+    );
+
+    selectedObject.rotation.set(
+        THREE.MathUtils.degToRad(value("rotX")),
+        THREE.MathUtils.degToRad(value("rotY")),
+        THREE.MathUtils.degToRad(value("rotZ"))
+    );
+
+    selectedObject.scale.set(
+        Math.max(0.01, value("scaleX")),
+        Math.max(0.01, value("scaleY")),
+        Math.max(0.01, value("scaleZ"))
+    );
+
+    selectedObject.name =
+        document.getElementById("objectName").value ||
+        selectedObject.name;
+
+    updateHierarchy();
+}
+
+function setTool(tool) {
+
+    currentTool = tool;
+
+    document.querySelectorAll(".tool[data-tool]").forEach(function(button) {
+
+        button.classList.toggle(
+            "active",
+            button.dataset.tool === tool
+        );
+
+    });
+
+    document.getElementById("modeLabel").textContent =
+        tool.toUpperCase() + " MODE";
+
+    document.getElementById("bottomMode").textContent =
+        tool.toUpperCase();
+
+    if (selectedObject && tool !== "select") {
+
+        transformControls.setMode(tool);
+
+        transformControls.attach(selectedObject);
+
+    } else {
+
+        transformControls.detach();
+
+    }
+
+    if (tool === "select") {
+        canvas.style.cursor = "crosshair";
+    } else {
+        canvas.style.cursor = "default";
+    }
+}
+
+function deleteSelected() {
+
+    if (!selectedObject) {
+        showToast("No object selected");
+        return;
+    }
+
+    const name = selectedObject.name;
+
+    scene.remove(selectedObject);
+
+    selectedObject.geometry.dispose();
+
+    selectedObject.material.dispose();
+
+    const index = objects.indexOf(selectedObject);
+
+    if (index !== -1) {
+        objects.splice(index, 1);
+    }
+
+    selectedObject = null;
+
+    transformControls.detach();
+
+    updateHierarchy();
+
+    updateProperties();
+
+    updateObjectCount();
+
+    document.getElementById("selectionInfo").textContent =
+        "NO OBJECT SELECTED";
+
+    showToast(name + " deleted");
+}
+
+function saveScene() {
+
+    const data = objects.map(function(object) {
+
+        return {
+            name: object.name,
+            geometry: object.geometry.type,
+            position: {
+                x: object.position.x,
+                y: object.position.y,
+                z: object.position.z
+            },
+            rotation: {
+                x: object.rotation.x,
+                y: object.rotation.y,
+                z: object.rotation.z
+            },
+            scale: {
+                x: object.scale.x,
+                y: object.scale.y,
+                z: object.scale.z
+            }
+        };
+
+    });
+
+    localStorage.setItem(
+        "ai3dstudio_scene",
+        JSON.stringify(data)
+    );
+
+    showToast("Scene saved");
+}
+
+function loadScene() {
+
+    const saved =
+        localStorage.getItem("ai3dstudio_scene");
+
+    if (!saved) {
+        showToast("No saved scene");
+        return;
+    }
+
+    objects.slice().forEach(function(object) {
+
+        scene.remove(object);
+
+        object.geometry.dispose();
+
+        object.material.dispose();
+
+    });
+
+    objects.length = 0;
+
+    selectedObject = null;
+
+    transformControls.detach();
+
+    const data = JSON.parse(saved);
+
+    data.forEach(function(item) {
+
+        let type = "cube";
+
+        if (item.geometry === "SphereGeometry") {
+            type = "sphere";
+        }
+
+        if (item.geometry === "CylinderGeometry") {
+            type = "cylinder";
+        }
+
+        let geometry;
+
+        if (type === "cube") {
+            geometry = new THREE.BoxGeometry(2, 2, 2);
+        }
+
+        if (type === "sphere") {
+            geometry = new THREE.SphereGeometry(1.25, 32, 20);
+        }
+
+        if (type === "cylinder") {
+            geometry = new THREE.CylinderGeometry(
+                1.15,
+                1.15,
+                2.2,
+                32
+            );
+        }
+
+        const mesh = new THREE.Mesh(
+            geometry,
+            createMaterial()
+        );
+
+        mesh.name = item.name;
+
+        mesh.position.set(
+            item.position.x,
+            item.position.y,
+            item.position.z
+        );
+
+        mesh.rotation.set(
+            item.rotation.x,
+            item.rotation.y,
+            item.rotation.z
+        );
+
+        mesh.scale.set(
+            item.scale.x,
+            item.scale.y,
+            item.scale.z
+        );
+
+        scene.add(mesh);
+
+        objects.push(mesh);
+
+    });
+
+    objectNumber = objects.length;
+
+    updateHierarchy();
+
+    updateProperties();
+
+    updateObjectCount();
+
+    showToast("Scene loaded");
+}
+
+function resetScene() {
+
+    objects.slice().forEach(function(object) {
+
+        scene.remove(object);
+
+        object.geometry.dispose();
+
+        object.material.dispose();
+
+    });
+
+    objects.length = 0;
+
+    selectedObject = null;
+
+    transformControls.detach();
+
+    objectNumber = 0;
+
+    updateHierarchy();
+
+    updateProperties();
+
+    updateObjectCount();
+
+    showToast("Scene reset");
+}
+
+function processAICommand(command) {
+
+    const text = command.toLowerCase().trim();
+
+    if (!text) {
+        return;
+    }
+
+    if (
+        text.includes("create cube") ||
+        text === "cube" ||
+        text.includes("add cube")
+    ) {
+        createObject("cube");
+        return;
+    }
+
+    if (
+        text.includes("create sphere") ||
+        text === "sphere" ||
+        text.includes("add sphere")
+    ) {
+        createObject("sphere");
+        return;
+    }
+
+    if (
+        text.includes("create cylinder") ||
+        text === "cylinder" ||
+        text.includes("add cylinder")
+    ) {
+        createObject("cylinder");
+        return;
+    }
+
+    if (text.includes("delete")) {
+        deleteSelected();
+        return;
+    }
+
+    if (text.includes("save")) {
+        saveScene();
+        return;
+    }
+
+    if (text.includes("load")) {
+        loadScene();
+        return;
+    }
+
+    if (text.includes("reset")) {
+        resetScene();
+        return;
+    }
+
+    if (text.includes("select")) {
+        setTool("select");
+        showToast("Select tool active");
+        return;
+    }
+
+    if (text.includes("move")) {
+        setTool("move");
+        showToast("Move tool active");
+        return;
+    }
+
+    if (text.includes("rotate")) {
+        setTool("rotate");
+        showToast("Rotate tool active");
+        return;
+    }
+
+    if (text.includes("scale")) {
+        setTool("scale");
+        showToast("Scale tool active");
+        return;
+    }
+
+    showToast("AI command not recognized");
+}
+
+canvas.addEventListener("pointerdown", function(event) {
+
+    if (currentTool !== "select") {
+        return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+
+    pointer.x =
+        ((event.clientX - rect.left) / rect.width) * 2 - 1;
+
+    pointer.y =
+        -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(pointer, camera);
+
+    const hits = raycaster.intersectObjects(objects, false);
+
+    if (hits.length > 0) {
+        selectObject(hits[0].object);
+    } else {
+        clearSelection();
+    }
+
+});
+
+document.querySelectorAll(".tool[data-tool]").forEach(function(button) {
+
+    button.addEventListener("click", function() {
+        setTool(button.dataset.tool);
+    });
+
+});
+
+document.querySelectorAll(".tool[data-create]").forEach(function(button) {
+
+    button.addEventListener("click", function() {
+        createObject(button.dataset.create);
+    });
+
+});
+
+document.getElementById("deleteTool").addEventListener(
+    "click",
+    deleteSelected
+);
+
+document.getElementById("saveTool").addEventListener(
+    "click",
+    saveScene
+);
+
+document.getElementById("loadTool").addEventListener(
+    "click",
+    loadScene
+);
+
+document.getElementById("aiSend").addEventListener(
+    "click",
+    function() {
+
+        const input = document.getElementById("aiCommand");
+
+        processAICommand(input.value);
+
+        input.value = "";
+
+    }
+);
+
+document.getElementById("aiCommand").addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.key === "Enter") {
+
+            processAICommand(this.value);
+
+            this.value = "";
+
+        }
+
+    }
+);
+
+[
+    "posX",
+    "posY",
+    "posZ",
+    "rotX",
+    "rotY",
+    "rotZ",
+    "scaleX",
+    "scaleY",
+    "scaleZ"
+].forEach(function(id) {
+
+    document.getElementById(id).addEventListener(
+        "change",
+        updateSelectedFromProperties
+    );
+
+});
+
+document.getElementById("objectName").addEventListener(
+    "change",
+    updateSelectedFromProperties
+);
+
+window.addEventListener("resize", function() {
+
+    const width = canvas.clientWidth;
+
+    const height = canvas.clientHeight;
+
+    camera.aspect = width / height;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(width, height, false);
+
+});
+
+function animate() {
+
+    requestAnimationFrame(animate);
+
+    controls.update();
+
+    renderer.render(scene, camera);
+
+}
+
+createObject("cube");
+
+setTool("select");
+
+animate();
+
+</script>
 
 </body>
 </html>
