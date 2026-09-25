@@ -1,452 +1,424 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI3DSTUDIO</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI3DSTUDIO</title>
 
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
 
-        html,
-        body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #050505;
-            color: #ffffff;
-            font-family: Arial, Helvetica, sans-serif;
-        }
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#050505;
+    color:#fff;
+    font-family:Arial,Helvetica,sans-serif
+}
 
-        body {
-            display: flex;
-            flex-direction: column;
-        }
+body{
+    display:flex;
+    flex-direction:column
+}
 
-        .topbar {
-            height: 58px;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 22px;
-            background: #080808;
-            border-bottom: 1px solid #222222;
-        }
+.topbar{
+    height:58px;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 22px;
+    background:#080808;
+    border-bottom:1px solid #222
+}
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+.brand{
+    display:flex;
+    align-items:center;
+    gap:12px
+}
 
-        .brand-mark {
-            width: 30px;
-            height: 30px;
-            border: 2px solid #ff8a24;
-            transform: rotate(45deg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+.brand-mark{
+    width:28px;
+    height:28px;
+    border:2px solid #ff8a24;
+    transform:rotate(45deg);
+    display:flex;
+    align-items:center;
+    justify-content:center
+}
 
-        .brand-mark span {
-            width: 9px;
-            height: 9px;
-            background: #ff8a24;
-        }
+.brand-mark span{
+    width:8px;
+    height:8px;
+    background:#ff8a24
+}
 
-        .brand-name {
-            font-size: 17px;
-            font-weight: 700;
-            letter-spacing: 2px;
-        }
+.brand-name{
+    font-size:17px;
+    font-weight:700;
+    letter-spacing:2px
+}
 
-        .top-center {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #777777;
-            font-size: 11px;
-            letter-spacing: 3px;
-        }
+.top-center{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    color:#666;
+    font-size:10px;
+    letter-spacing:3px
+}
 
-        .system-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #999999;
-            font-size: 11px;
-            letter-spacing: 1px;
-        }
+.system-status{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:#888;
+    font-size:10px;
+    letter-spacing:1px
+}
 
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #ff8a24;
-            box-shadow: 0 0 10px #ff8a24;
-        }
+.status-dot{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#ff8a24;
+    box-shadow:0 0 10px #ff8a24
+}
 
-        .workspace {
-            flex: 1;
-            min-height: 0;
-            display: grid;
-            grid-template-columns: 76px minmax(0, 1fr) 270px;
-        }
+.workspace{
+    flex:1;
+    min-height:0;
+    display:grid;
+    grid-template-columns:76px minmax(0,1fr) 270px
+}
 
-        .toolbar {
-            background: #090909;
-            border-right: 1px solid #222222;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 12px 8px;
-            gap: 8px;
-        }
+.toolbar{
+    background:#090909;
+    border-right:1px solid #222;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:10px 8px;
+    gap:7px
+}
 
-        .tool {
-            width: 58px;
-            height: 52px;
-            border: 1px solid transparent;
-            background: transparent;
-            color: #777777;
-            cursor: pointer;
-            border-radius: 6px;
-            font-size: 9px;
-            letter-spacing: 1px;
-            transition: 0.15s;
-        }
+.tool{
+    width:58px;
+    height:48px;
+    border:1px solid transparent;
+    border-radius:6px;
+    background:transparent;
+    color:#777;
+    cursor:pointer;
+    font-size:8px;
+    letter-spacing:1px;
+    transition:.15s
+}
 
-        .tool:hover {
-            background: #151515;
-            color: #ffffff;
-        }
+.tool:hover{
+    background:#151515;
+    color:#fff
+}
 
-        .tool.active {
-            border-color: #ff8a24;
-            color: #ff8a24;
-            background: #151515;
-        }
+.tool.active{
+    border-color:#ff8a24;
+    color:#ff8a24;
+    background:#151515
+}
 
-        .tool-icon {
-            display: block;
-            font-size: 17px;
-            margin-bottom: 5px;
-        }
+.tool-icon{
+    display:block;
+    font-size:16px;
+    margin-bottom:4px
+}
 
-        .tool-separator {
-            width: 38px;
-            height: 1px;
-            background: #222222;
-            margin: 4px 0;
-        }
+.tool-separator{
+    width:38px;
+    height:1px;
+    background:#222;
+    margin:3px
+}
 
-        .viewport-area {
-            position: relative;
-            min-width: 0;
-            min-height: 0;
-            background: #050505;
-            overflow: hidden;
-        }
+.viewport-area{
+    position:relative;
+    min-width:0;
+    min-height:0;
+    overflow:hidden;
+    background:#050505
+}
 
-        #viewport {
-            width: 100%;
-            height: 100%;
-            display: block;
-            cursor: crosshair;
-        }
+#viewport{
+    width:100%;
+    height:100%;
+    display:block;
+    touch-action:none;
+    outline:none
+}
 
-        .viewport-overlay {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-        }
+.viewport-title{
+    position:absolute;
+    top:14px;
+    left:17px;
+    color:#555;
+    font-size:9px;
+    letter-spacing:2px;
+    pointer-events:none
+}
 
-        .viewport-title {
-            position: absolute;
-            top: 15px;
-            left: 18px;
-            color: #555555;
-            font-size: 10px;
-            letter-spacing: 2px;
-        }
+.viewport-mode{
+    position:absolute;
+    top:12px;
+    right:17px;
+    padding:6px 9px;
+    border:1px solid #242424;
+    background:rgba(5,5,5,.8);
+    color:#777;
+    font-size:8px;
+    letter-spacing:1px;
+    pointer-events:none
+}
 
-        .viewport-mode {
-            position: absolute;
-            top: 14px;
-            right: 18px;
-            padding: 6px 9px;
-            border: 1px solid #252525;
-            background: rgba(5, 5, 5, 0.8);
-            color: #777777;
-            font-size: 9px;
-            letter-spacing: 1px;
-        }
+.axis-indicator{
+    position:absolute;
+    left:16px;
+    bottom:16px;
+    width:70px;
+    height:70px;
+    border:1px solid #222;
+    background:rgba(5,5,5,.7);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#555;
+    font-size:9px;
+    pointer-events:none
+}
 
-        .axis-indicator {
-            position: absolute;
-            left: 18px;
-            bottom: 18px;
-            width: 80px;
-            height: 80px;
-            border: 1px solid #222222;
-            background: rgba(5, 5, 5, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #555555;
-            font-size: 10px;
-        }
+.selection-info{
+    position:absolute;
+    left:100px;
+    bottom:16px;
+    padding:8px 11px;
+    border:1px solid #222;
+    background:rgba(5,5,5,.85);
+    color:#777;
+    font-size:9px;
+    pointer-events:none
+}
 
-        .selection-info {
-            position: absolute;
-            left: 18px;
-            bottom: 18px;
-            margin-left: 92px;
-            padding: 8px 12px;
-            border: 1px solid #222222;
-            background: rgba(5, 5, 5, 0.85);
-            color: #777777;
-            font-size: 10px;
-            min-width: 130px;
-        }
+.right-panel{
+    background:#090909;
+    border-left:1px solid #222;
+    display:flex;
+    flex-direction:column;
+    min-height:0
+}
 
-        .right-panel {
-            background: #090909;
-            border-left: 1px solid #222222;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
+.panel-section{
+    border-bottom:1px solid #222;
+    padding:14px
+}
 
-        .panel-section {
-            border-bottom: 1px solid #222222;
-            padding: 15px;
-        }
+.panel-title{
+    color:#777;
+    font-size:9px;
+    letter-spacing:2px;
+    margin-bottom:12px
+}
 
-        .panel-title {
-            color: #777777;
-            font-size: 10px;
-            letter-spacing: 2px;
-            margin-bottom: 13px;
-        }
+.hierarchy{
+    max-height:180px;
+    overflow-y:auto
+}
 
-        .hierarchy {
-            max-height: 190px;
-            overflow-y: auto;
-        }
+.object-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px;
+    color:#888;
+    font-size:10px;
+    border-radius:4px;
+    cursor:pointer
+}
 
-        .object-row {
-            display: flex;
-            align-items: center;
-            gap: 9px;
-            padding: 9px 8px;
-            color: #888888;
-            font-size: 11px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+.object-row:hover{
+    background:#151515;
+    color:#fff
+}
 
-        .object-row:hover {
-            background: #151515;
-            color: #ffffff;
-        }
+.object-row.selected{
+    background:#1b120b;
+    color:#ff8a24
+}
 
-        .object-row.selected {
-            background: #1a120c;
-            color: #ff8a24;
-        }
+.object-icon{
+    color:#555
+}
 
-        .object-icon {
-            color: #555555;
-        }
+.object-row.selected .object-icon{
+    color:#ff8a24
+}
 
-        .object-row.selected .object-icon {
-            color: #ff8a24;
-        }
+.property{
+    display:grid;
+    grid-template-columns:67px 1fr;
+    gap:7px;
+    align-items:center;
+    margin-bottom:7px
+}
 
-        .property {
-            display: grid;
-            grid-template-columns: 70px 1fr;
-            gap: 8px;
-            margin-bottom: 8px;
-            align-items: center;
-        }
+.property label{
+    color:#666;
+    font-size:9px
+}
 
-        .property label {
-            color: #666666;
-            font-size: 10px;
-        }
+.property input{
+    width:100%;
+    height:26px;
+    border:1px solid #242424;
+    border-radius:3px;
+    background:#0d0d0d;
+    color:#ccc;
+    padding:0 6px;
+    font-size:9px;
+    outline:none
+}
 
-        .property input {
-            width: 100%;
-            min-width: 0;
-            height: 27px;
-            border: 1px solid #242424;
-            border-radius: 3px;
-            background: #0d0d0d;
-            color: #cccccc;
-            padding: 0 7px;
-            font-size: 10px;
-            outline: none;
-        }
+.property input:focus{
+    border-color:#ff8a24
+}
 
-        .property input:focus {
-            border-color: #ff8a24;
-        }
+.property-values{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:4px
+}
 
-        .property-values {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 5px;
-        }
+.property-values input{
+    text-align:center
+}
 
-        .property-values input {
-            text-align: center;
-        }
+.webcam-box{
+    height:105px;
+    border:1px solid #222;
+    background:#080808;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#444;
+    font-size:8px;
+    letter-spacing:2px
+}
 
-        .webcam-box {
-            height: 120px;
-            border: 1px solid #222222;
-            background:
-                linear-gradient(135deg, transparent 49%, #161616 50%, transparent 51%),
-                linear-gradient(45deg, transparent 49%, #161616 50%, transparent 51%),
-                #080808;
-            background-size: 24px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
+.ai-panel{
+    margin-top:auto;
+    border-top:1px solid #222;
+    padding:12px
+}
 
-        .webcam-label {
-            color: #444444;
-            font-size: 9px;
-            letter-spacing: 2px;
-        }
+.ai-input{
+    display:flex;
+    gap:5px
+}
 
-        .webcam-status {
-            position: absolute;
-            top: 7px;
-            right: 7px;
-            color: #555555;
-            font-size: 8px;
-        }
+.ai-input input{
+    flex:1;
+    min-width:0;
+    height:33px;
+    border:1px solid #292929;
+    border-radius:4px;
+    background:#0d0d0d;
+    color:#fff;
+    padding:0 8px;
+    outline:none;
+    font-size:9px
+}
 
-        .ai-panel {
-            margin-top: auto;
-            border-top: 1px solid #222222;
-            padding: 12px;
-        }
+.ai-input input:focus{
+    border-color:#ff8a24
+}
 
-        .ai-input {
-            display: flex;
-            gap: 6px;
-        }
+.ai-send{
+    width:38px;
+    border:1px solid #ff8a24;
+    border-radius:4px;
+    background:#ff8a24;
+    color:#050505;
+    cursor:pointer;
+    font-weight:bold
+}
 
-        .ai-input input {
-            flex: 1;
-            min-width: 0;
-            height: 34px;
-            border: 1px solid #292929;
-            border-radius: 4px;
-            background: #0d0d0d;
-            color: #ffffff;
-            padding: 0 9px;
-            outline: none;
-            font-size: 10px;
-        }
+.bottom-bar{
+    height:34px;
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 14px;
+    background:#080808;
+    border-top:1px solid #222;
+    color:#555;
+    font-size:8px;
+    letter-spacing:1px
+}
 
-        .ai-input input:focus {
-            border-color: #ff8a24;
-        }
+.bottom-left,
+.bottom-right{
+    display:flex;
+    gap:18px
+}
 
-        .ai-send {
-            width: 40px;
-            height: 34px;
-            border: 1px solid #ff8a24;
-            border-radius: 4px;
-            background: #ff8a24;
-            color: #050505;
-            cursor: pointer;
-            font-weight: 700;
-        }
+.orange{
+    color:#ff8a24
+}
 
-        .bottom-bar {
-            height: 36px;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 15px;
-            background: #080808;
-            border-top: 1px solid #222222;
-            color: #555555;
-            font-size: 9px;
-            letter-spacing: 1px;
-        }
+.toast{
+    position:fixed;
+    left:50%;
+    bottom:48px;
+    transform:translateX(-50%) translateY(10px);
+    padding:9px 16px;
+    border:1px solid #ff8a24;
+    border-radius:5px;
+    background:#0b0b0b;
+    color:#fff;
+    font-size:10px;
+    opacity:0;
+    pointer-events:none;
+    transition:.2s;
+    z-index:100
+}
 
-        .bottom-left,
-        .bottom-right {
-            display: flex;
-            gap: 20px;
-        }
+.toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0)
+}
 
-        .orange {
-            color: #ff8a24;
-        }
+@media(max-width:850px){
+    .workspace{
+        grid-template-columns:65px minmax(0,1fr)
+    }
 
-        .toast {
-            position: fixed;
-            left: 50%;
-            bottom: 55px;
-            transform: translateX(-50%) translateY(15px);
-            padding: 10px 18px;
-            border: 1px solid #ff8a24;
-            border-radius: 5px;
-            background: #0b0b0b;
-            color: #ffffff;
-            font-size: 11px;
-            opacity: 0;
-            pointer-events: none;
-            transition: 0.2s;
-            z-index: 100;
-        }
+    .right-panel{
+        display:none
+    }
 
-        .toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        @media (max-width: 850px) {
-            .workspace {
-                grid-template-columns: 65px minmax(0, 1fr);
-            }
-
-            .right-panel {
-                display: none;
-            }
-
-            .top-center {
-                display: none;
-            }
-        }
-    </style>
+    .top-center{
+        display:none
+    }
+}
+</style>
 </head>
 
 <body>
 
 <header class="topbar">
+
     <div class="brand">
-        <div class="brand-mark">
-            <span></span>
-        </div>
+        <div class="brand-mark"><span></span></div>
         <div class="brand-name">AI3DSTUDIO</div>
     </div>
 
@@ -456,160 +428,165 @@
         <span class="status-dot"></span>
         SYSTEM ONLINE
     </div>
+
 </header>
 
 <div class="workspace">
 
-    <aside class="toolbar">
+<aside class="toolbar">
 
-        <button class="tool active" data-tool="select">
-            <span class="tool-icon">↖</span>
-            SELECT
-        </button>
+    <button class="tool active" data-tool="select">
+        <span class="tool-icon">↖</span>
+        SELECT
+    </button>
 
-        <button class="tool" data-tool="move">
-            <span class="tool-icon">✥</span>
-            MOVE
-        </button>
+    <button class="tool" data-tool="translate">
+        <span class="tool-icon">✥</span>
+        MOVE
+    </button>
 
-        <button class="tool" data-tool="rotate">
-            <span class="tool-icon">⟳</span>
-            ROTATE
-        </button>
+    <button class="tool" data-tool="rotate">
+        <span class="tool-icon">⟳</span>
+        ROTATE
+    </button>
 
-        <button class="tool" data-tool="scale">
-            <span class="tool-icon">◇</span>
-            SCALE
-        </button>
+    <button class="tool" data-tool="scale">
+        <span class="tool-icon">◇</span>
+        SCALE
+    </button>
 
-        <div class="tool-separator"></div>
+    <div class="tool-separator"></div>
 
-        <button class="tool" data-create="cube">
-            <span class="tool-icon">■</span>
-            CUBE
-        </button>
+    <button class="tool" data-create="cube">
+        <span class="tool-icon">■</span>
+        CUBE
+    </button>
 
-        <button class="tool" data-create="sphere">
-            <span class="tool-icon">●</span>
-            SPHERE
-        </button>
+    <button class="tool" data-create="sphere">
+        <span class="tool-icon">●</span>
+        SPHERE
+    </button>
 
-        <button class="tool" data-create="cylinder">
-            <span class="tool-icon">▣</span>
-            CYLINDER
-        </button>
+    <button class="tool" data-create="cylinder">
+        <span class="tool-icon">▣</span>
+        CYLINDER
+    </button>
 
-        <div class="tool-separator"></div>
+    <div class="tool-separator"></div>
 
-        <button class="tool" id="deleteTool">
-            <span class="tool-icon">×</span>
-            DELETE
-        </button>
+    <button class="tool" id="deleteTool">
+        <span class="tool-icon">×</span>
+        DELETE
+    </button>
 
-        <button class="tool" id="saveTool">
-            <span class="tool-icon">↓</span>
-            SAVE
-        </button>
+    <button class="tool" id="saveTool">
+        <span class="tool-icon">↓</span>
+        SAVE
+    </button>
 
-        <button class="tool" id="loadTool">
-            <span class="tool-icon">↑</span>
-            LOAD
-        </button>
+    <button class="tool" id="loadTool">
+        <span class="tool-icon">↑</span>
+        LOAD
+    </button>
 
-    </aside>
+</aside>
 
-    <main class="viewport-area">
+<main class="viewport-area">
 
-        <canvas id="viewport"></canvas>
+    <canvas id="viewport"></canvas>
 
-        <div class="viewport-overlay">
-            <div class="viewport-title">
-                AI3DSTUDIO / VIEWPORT
-            </div>
+    <div class="viewport-title">
+        AI3DSTUDIO / VIEWPORT
+    </div>
 
-            <div class="viewport-mode" id="modeLabel">
-                SELECT MODE
-            </div>
+    <div class="viewport-mode" id="modeLabel">
+        SELECT MODE
+    </div>
 
-            <div class="axis-indicator">
-                X / Y / Z
-            </div>
+    <div class="axis-indicator">
+        X / Y / Z
+    </div>
 
-            <div class="selection-info" id="selectionInfo">
-                NO OBJECT SELECTED
+    <div class="selection-info" id="selectionInfo">
+        NO OBJECT SELECTED
+    </div>
+
+</main>
+
+<aside class="right-panel">
+
+    <section class="panel-section">
+
+        <div class="panel-title">SCENE HIERARCHY</div>
+
+        <div class="hierarchy" id="hierarchy"></div>
+
+    </section>
+
+    <section class="panel-section">
+
+        <div class="panel-title">PROPERTIES</div>
+
+        <div class="property">
+            <label>NAME</label>
+            <input id="objectName" type="text">
+        </div>
+
+        <div class="property">
+            <label>POSITION</label>
+            <div class="property-values">
+                <input id="posX" type="number" step=".1">
+                <input id="posY" type="number" step=".1">
+                <input id="posZ" type="number" step=".1">
             </div>
         </div>
 
-    </main>
-
-    <aside class="right-panel">
-
-        <section class="panel-section">
-            <div class="panel-title">SCENE HIERARCHY</div>
-
-            <div class="hierarchy" id="hierarchy"></div>
-        </section>
-
-        <section class="panel-section">
-            <div class="panel-title">PROPERTIES</div>
-
-            <div class="property">
-                <label>NAME</label>
-                <input id="objectName" type="text" placeholder="No selection">
+        <div class="property">
+            <label>ROTATION</label>
+            <div class="property-values">
+                <input id="rotX" type="number" step="1">
+                <input id="rotY" type="number" step="1">
+                <input id="rotZ" type="number" step="1">
             </div>
+        </div>
 
-            <div class="property">
-                <label>POSITION</label>
-                <div class="property-values">
-                    <input id="posX" type="number" step="0.1">
-                    <input id="posY" type="number" step="0.1">
-                    <input id="posZ" type="number" step="0.1">
-                </div>
+        <div class="property">
+            <label>SCALE</label>
+            <div class="property-values">
+                <input id="scaleX" type="number" step=".1">
+                <input id="scaleY" type="number" step=".1">
+                <input id="scaleZ" type="number" step=".1">
             </div>
+        </div>
 
-            <div class="property">
-                <label>ROTATION</label>
-                <div class="property-values">
-                    <input id="rotX" type="number" step="1">
-                    <input id="rotY" type="number" step="1">
-                    <input id="rotZ" type="number" step="1">
-                </div>
-            </div>
+    </section>
 
-            <div class="property">
-                <label>SCALE</label>
-                <div class="property-values">
-                    <input id="scaleX" type="number" step="0.1">
-                    <input id="scaleY" type="number" step="0.1">
-                    <input id="scaleZ" type="number" step="0.1">
-                </div>
-            </div>
-        </section>
+    <section class="panel-section">
 
-        <section class="panel-section">
-            <div class="panel-title">WEBCAM</div>
+        <div class="panel-title">WEBCAM</div>
 
-            <div class="webcam-box">
-                <span class="webcam-label">WEBCAM READY</span>
-                <span class="webcam-status">STANDBY</span>
-            </div>
-        </section>
+        <div class="webcam-box">
+            WEBCAM STANDBY
+        </div>
 
-        <section class="ai-panel">
-            <div class="panel-title">AI COMMAND</div>
+    </section>
 
-            <div class="ai-input">
-                <input
-                    id="aiCommand"
-                    type="text"
-                    placeholder="Create Cube..."
-                    autocomplete="off"
-                >
-                <button class="ai-send" id="aiSend">→</button>
-            </div>
-        </section>
+    <section class="ai-panel">
 
-    </aside>
+        <div class="panel-title">AI COMMAND</div>
+
+        <div class="ai-input">
+            <input
+                id="aiCommand"
+                placeholder="Create Cube..."
+                autocomplete="off"
+            >
+            <button class="ai-send" id="aiSend">→</button>
+        </div>
+
+    </section>
+
+</aside>
 
 </div>
 
@@ -622,8 +599,9 @@
     </div>
 
     <div class="bottom-right">
-        <span>MOUSE: ORBIT / SELECT</span>
-        <span>AI3DSTUDIO WEB</span>
+        <span>LEFT DRAG: ORBIT</span>
+        <span>RIGHT DRAG: PAN</span>
+        <span>SCROLL: ZOOM</span>
     </div>
 
 </footer>
@@ -633,19 +611,22 @@
 <script type="module">
 
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
-import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
-import { TransformControls } from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/TransformControls.js";
+
+import { OrbitControls }
+from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js";
+
+import { TransformControls }
+from "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/TransformControls.js";
 
 const canvas = document.getElementById("viewport");
 
 const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha: false
+    canvas: canvas,
+    antialias: true
 });
 
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
 renderer.setClearColor(0x050505);
 
 const scene = new THREE.Scene();
@@ -654,30 +635,49 @@ scene.background = new THREE.Color(0x050505);
 
 const camera = new THREE.PerspectiveCamera(
     55,
-    canvas.clientWidth / canvas.clientHeight,
+    1,
     0.1,
     1000
 );
 
-camera.position.set(6, 5, 8);
+camera.position.set(7,5,8);
 
-const controls = new OrbitControls(camera, canvas);
+const orbit = new OrbitControls(
+    camera,
+    canvas
+);
 
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.target.set(0, 0, 0);
+orbit.enableDamping = true;
+orbit.dampingFactor = 0.08;
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+orbit.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+orbit.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+orbit.mouseButtons.RIGHT = THREE.MOUSE.PAN;
 
-scene.add(ambientLight);
+orbit.target.set(0,0,0);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
+const ambient = new THREE.AmbientLight(
+    0xffffff,
+    1.6
+);
 
-directionalLight.position.set(5, 10, 7);
+scene.add(ambient);
 
-scene.add(directionalLight);
+const light = new THREE.DirectionalLight(
+    0xffffff,
+    2.5
+);
 
-const grid = new THREE.GridHelper(30, 30, 0x333333, 0x181818);
+light.position.set(5,10,8);
+
+scene.add(light);
+
+const grid = new THREE.GridHelper(
+    30,
+    30,
+    0x333333,
+    0x171717
+);
 
 scene.add(grid);
 
@@ -685,166 +685,207 @@ const axes = new THREE.AxesHelper(4);
 
 scene.add(axes);
 
-const objects = [];
+const transform = new TransformControls(
+    camera,
+    canvas
+);
 
-let selectedObject = null;
+scene.add(transform.getHelper());
 
-let currentTool = "select";
+transform.addEventListener(
+    "dragging-changed",
+    function(event){
+        orbit.enabled = !event.value;
+    }
+);
 
-let objectNumber = 0;
+transform.addEventListener(
+    "objectChange",
+    function(){
+        updateProperties();
+    }
+);
 
 const raycaster = new THREE.Raycaster();
 
-const pointer = new THREE.Vector2();
+const mouse = new THREE.Vector2();
 
-const transformControls = new TransformControls(camera, renderer.domElement);
+const objects = [];
 
-scene.add(transformControls.getHelper());
+let selected = null;
 
-transformControls.addEventListener("dragging-changed", function(event) {
-    controls.enabled = !event.value;
-});
+let tool = "select";
 
-transformControls.addEventListener("objectChange", function() {
-    updateProperties();
-});
+let objectNumber = 0;
 
-function showToast(message) {
-    const toast = document.getElementById("toast");
+function toast(message){
 
-    toast.textContent = message;
+    const element =
+        document.getElementById("toast");
 
-    toast.classList.add("show");
+    element.textContent = message;
 
-    clearTimeout(showToast.timer);
+    element.classList.add("show");
 
-    showToast.timer = setTimeout(function() {
-        toast.classList.remove("show");
-    }, 1600);
+    clearTimeout(toast.timer);
+
+    toast.timer = setTimeout(
+        function(){
+            element.classList.remove("show");
+        },
+        1400
+    );
 }
 
-function createMaterial() {
+function material(){
+
     return new THREE.MeshStandardMaterial({
-        color: 0x777777,
-        roughness: 0.55,
-        metalness: 0.25
+        color:0x777777,
+        roughness:.55,
+        metalness:.2
     });
 }
 
-function createObject(type) {
+function createObject(type){
 
     let geometry;
 
-    if (type === "cube") {
-        geometry = new THREE.BoxGeometry(2, 2, 2);
+    if(type === "cube"){
+        geometry =
+            new THREE.BoxGeometry(2,2,2);
     }
 
-    if (type === "sphere") {
-        geometry = new THREE.SphereGeometry(1.25, 32, 20);
+    if(type === "sphere"){
+        geometry =
+            new THREE.SphereGeometry(
+                1.2,
+                32,
+                20
+            );
     }
 
-    if (type === "cylinder") {
-        geometry = new THREE.CylinderGeometry(1.15, 1.15, 2.2, 32);
+    if(type === "cylinder"){
+        geometry =
+            new THREE.CylinderGeometry(
+                1.1,
+                1.1,
+                2.2,
+                32
+            );
     }
 
-    if (!geometry) {
+    if(!geometry){
         return;
     }
 
-    const mesh = new THREE.Mesh(
-        geometry,
-        createMaterial()
-    );
+    const object =
+        new THREE.Mesh(
+            geometry,
+            material()
+        );
 
     objectNumber++;
 
-    mesh.name =
+    object.name =
         type.charAt(0).toUpperCase() +
         type.slice(1) +
         "." +
-        String(objectNumber).padStart(3, "0");
+        String(objectNumber).padStart(3,"0");
 
-    mesh.position.set(
-        objects.length * 0.4,
+    const offset =
+        (objects.length % 5) * 2.8 - 5.6;
+
+    object.position.set(
+        offset,
         1,
-        0
+        Math.floor(objects.length / 5) * 2.8
     );
 
-    scene.add(mesh);
+    scene.add(object);
 
-    objects.push(mesh);
+    objects.push(object);
 
-    selectObject(mesh);
+    selectObject(object);
 
     updateHierarchy();
 
-    updateObjectCount();
+    updateCount();
 
-    showToast(mesh.name + " created");
+    toast(object.name + " created");
 }
 
-function selectObject(object) {
+function selectObject(object){
 
-    if (selectedObject === object) {
-        return;
+    if(selected){
+        selected.material.emissive.setHex(0x000000);
     }
 
-    if (selectedObject) {
-        selectedObject.material.emissive.setHex(0x000000);
-    }
+    selected = object;
 
-    selectedObject = object;
+    if(selected){
 
-    if (selectedObject) {
-        selectedObject.material.emissive.setHex(0x331505);
+        selected.material.emissive.setHex(0x331505);
 
-        transformControls.attach(selectedObject);
+        document.getElementById(
+            "selectionInfo"
+        ).textContent =
+            "SELECTED: " + selected.name;
 
-        updateProperties();
+        if(tool !== "select"){
+            transform.setMode(tool);
+            transform.attach(selected);
+        }
 
-        document.getElementById("selectionInfo").textContent =
-            "SELECTED: " + selectedObject.name;
-    } else {
-        transformControls.detach();
+    }else{
 
-        document.getElementById("selectionInfo").textContent =
+        transform.detach();
+
+        document.getElementById(
+            "selectionInfo"
+        ).textContent =
             "NO OBJECT SELECTED";
     }
 
     updateHierarchy();
-}
-
-function clearSelection() {
-
-    if (selectedObject) {
-        selectedObject.material.emissive.setHex(0x000000);
-    }
-
-    selectedObject = null;
-
-    transformControls.detach();
-
-    document.getElementById("selectionInfo").textContent =
-        "NO OBJECT SELECTED";
 
     updateProperties();
-
-    updateHierarchy();
 }
 
-function updateHierarchy() {
+function deselect(){
 
-    const hierarchy = document.getElementById("hierarchy");
+    if(selected){
+        selected.material.emissive.setHex(0x000000);
+    }
+
+    selected = null;
+
+    transform.detach();
+
+    document.getElementById(
+        "selectionInfo"
+    ).textContent =
+        "NO OBJECT SELECTED";
+
+    updateHierarchy();
+
+    updateProperties();
+}
+
+function updateHierarchy(){
+
+    const hierarchy =
+        document.getElementById("hierarchy");
 
     hierarchy.innerHTML = "";
 
-    objects.forEach(function(object) {
+    objects.forEach(function(object){
 
-        const row = document.createElement("div");
+        const row =
+            document.createElement("div");
 
         row.className = "object-row";
 
-        if (object === selectedObject) {
+        if(object === selected){
             row.classList.add("selected");
         }
 
@@ -852,307 +893,379 @@ function updateHierarchy() {
             '<span class="object-icon">◆</span>' +
             '<span>' + object.name + '</span>';
 
-        row.addEventListener("click", function() {
-            selectObject(object);
-        });
+        row.addEventListener(
+            "click",
+            function(event){
+
+                event.stopPropagation();
+
+                selectObject(object);
+            }
+        );
 
         hierarchy.appendChild(row);
     });
 }
 
-function updateObjectCount() {
+function updateCount(){
 
-    document.getElementById("objectCount").textContent =
+    document.getElementById(
+        "objectCount"
+    ).textContent =
         objects.length;
 }
 
-function updateProperties() {
+function updateProperties(){
 
-    const nameInput = document.getElementById("objectName");
+    if(!selected){
 
-    if (!selectedObject) {
-
-        nameInput.value = "";
-
-        [
-            "posX",
-            "posY",
-            "posZ",
-            "rotX",
-            "rotY",
-            "rotZ",
-            "scaleX",
-            "scaleY",
-            "scaleZ"
-        ].forEach(function(id) {
-            document.getElementById(id).value = "";
-        });
+        document.getElementById(
+            "objectName"
+        ).value = "";
 
         return;
     }
 
-    nameInput.value = selectedObject.name;
+    document.getElementById(
+        "objectName"
+    ).value = selected.name;
 
-    document.getElementById("posX").value =
-        selectedObject.position.x.toFixed(2);
+    document.getElementById(
+        "posX"
+    ).value = selected.position.x.toFixed(2);
 
-    document.getElementById("posY").value =
-        selectedObject.position.y.toFixed(2);
+    document.getElementById(
+        "posY"
+    ).value = selected.position.y.toFixed(2);
 
-    document.getElementById("posZ").value =
-        selectedObject.position.z.toFixed(2);
+    document.getElementById(
+        "posZ"
+    ).value = selected.position.z.toFixed(2);
 
-    document.getElementById("rotX").value =
-        THREE.MathUtils.radToDeg(selectedObject.rotation.x).toFixed(1);
+    document.getElementById(
+        "rotX"
+    ).value =
+        THREE.MathUtils.radToDeg(
+            selected.rotation.x
+        ).toFixed(1);
 
-    document.getElementById("rotY").value =
-        THREE.MathUtils.radToDeg(selectedObject.rotation.y).toFixed(1);
+    document.getElementById(
+        "rotY"
+    ).value =
+        THREE.MathUtils.radToDeg(
+            selected.rotation.y
+        ).toFixed(1);
 
-    document.getElementById("rotZ").value =
-        THREE.MathUtils.radToDeg(selectedObject.rotation.z).toFixed(1);
+    document.getElementById(
+        "rotZ"
+    ).value =
+        THREE.MathUtils.radToDeg(
+            selected.rotation.z
+        ).toFixed(1);
 
-    document.getElementById("scaleX").value =
-        selectedObject.scale.x.toFixed(2);
+    document.getElementById(
+        "scaleX"
+    ).value =
+        selected.scale.x.toFixed(2);
 
-    document.getElementById("scaleY").value =
-        selectedObject.scale.y.toFixed(2);
+    document.getElementById(
+        "scaleY"
+    ).value =
+        selected.scale.y.toFixed(2);
 
-    document.getElementById("scaleZ").value =
-        selectedObject.scale.z.toFixed(2);
+    document.getElementById(
+        "scaleZ"
+    ).value =
+        selected.scale.z.toFixed(2);
 }
 
-function updateSelectedFromProperties() {
+function applyProperties(){
 
-    if (!selectedObject) {
+    if(!selected){
         return;
     }
 
-    const value = function(id) {
-        return parseFloat(document.getElementById(id).value) || 0;
+    const number = function(id, fallback){
+
+        const value =
+            parseFloat(
+                document.getElementById(id).value
+            );
+
+        return Number.isFinite(value)
+            ? value
+            : fallback;
     };
 
-    selectedObject.position.set(
-        value("posX"),
-        value("posY"),
-        value("posZ")
+    selected.name =
+        document.getElementById(
+            "objectName"
+        ).value || selected.name;
+
+    selected.position.set(
+        number("posX",selected.position.x),
+        number("posY",selected.position.y),
+        number("posZ",selected.position.z)
     );
 
-    selectedObject.rotation.set(
-        THREE.MathUtils.degToRad(value("rotX")),
-        THREE.MathUtils.degToRad(value("rotY")),
-        THREE.MathUtils.degToRad(value("rotZ"))
+    selected.rotation.set(
+        THREE.MathUtils.degToRad(
+            number(
+                "rotX",
+                THREE.MathUtils.radToDeg(
+                    selected.rotation.x
+                )
+            )
+        ),
+        THREE.MathUtils.degToRad(
+            number(
+                "rotY",
+                THREE.MathUtils.radToDeg(
+                    selected.rotation.y
+                )
+            )
+        ),
+        THREE.MathUtils.degToRad(
+            number(
+                "rotZ",
+                THREE.MathUtils.radToDeg(
+                    selected.rotation.z
+                )
+            )
+        )
     );
 
-    selectedObject.scale.set(
-        Math.max(0.01, value("scaleX")),
-        Math.max(0.01, value("scaleY")),
-        Math.max(0.01, value("scaleZ"))
+    selected.scale.set(
+        Math.max(.01,number(
+            "scaleX",
+            selected.scale.x
+        )),
+        Math.max(.01,number(
+            "scaleY",
+            selected.scale.y
+        )),
+        Math.max(.01,number(
+            "scaleZ",
+            selected.scale.z
+        ))
     );
-
-    selectedObject.name =
-        document.getElementById("objectName").value ||
-        selectedObject.name;
 
     updateHierarchy();
+    updateProperties();
 }
 
-function setTool(tool) {
+function setTool(newTool){
 
-    currentTool = tool;
+    tool = newTool;
 
-    document.querySelectorAll(".tool[data-tool]").forEach(function(button) {
+    document.querySelectorAll(
+        ".tool[data-tool]"
+    ).forEach(function(button){
 
         button.classList.toggle(
             "active",
-            button.dataset.tool === tool
+            button.dataset.tool === newTool
         );
-
     });
 
-    document.getElementById("modeLabel").textContent =
-        tool.toUpperCase() + " MODE";
+    document.getElementById(
+        "modeLabel"
+    ).textContent =
+        newTool === "select"
+        ? "SELECT MODE"
+        : newTool.toUpperCase() + " MODE";
 
-    document.getElementById("bottomMode").textContent =
-        tool.toUpperCase();
+    document.getElementById(
+        "bottomMode"
+    ).textContent =
+        newTool === "select"
+        ? "SELECT"
+        : newTool.toUpperCase();
 
-    if (selectedObject && tool !== "select") {
+    if(selected && newTool !== "select"){
 
-        transformControls.setMode(tool);
+        transform.setMode(newTool);
 
-        transformControls.attach(selectedObject);
+        transform.attach(selected);
 
-    } else {
+    }else{
 
-        transformControls.detach();
-
-    }
-
-    if (tool === "select") {
-        canvas.style.cursor = "crosshair";
-    } else {
-        canvas.style.cursor = "default";
+        transform.detach();
     }
 }
 
-function deleteSelected() {
+function deleteSelected(){
 
-    if (!selectedObject) {
-        showToast("No object selected");
+    if(!selected){
+
+        toast("No object selected");
+
         return;
     }
 
-    const name = selectedObject.name;
+    const index =
+        objects.indexOf(selected);
 
-    scene.remove(selectedObject);
+    scene.remove(selected);
 
-    selectedObject.geometry.dispose();
+    selected.geometry.dispose();
 
-    selectedObject.material.dispose();
+    selected.material.dispose();
 
-    const index = objects.indexOf(selectedObject);
-
-    if (index !== -1) {
-        objects.splice(index, 1);
+    if(index !== -1){
+        objects.splice(index,1);
     }
 
-    selectedObject = null;
+    selected = null;
 
-    transformControls.detach();
+    transform.detach();
 
     updateHierarchy();
 
     updateProperties();
 
-    updateObjectCount();
+    updateCount();
 
-    document.getElementById("selectionInfo").textContent =
+    document.getElementById(
+        "selectionInfo"
+    ).textContent =
         "NO OBJECT SELECTED";
 
-    showToast(name + " deleted");
+    toast("Object deleted");
 }
 
-function saveScene() {
+function saveScene(){
 
-    const data = objects.map(function(object) {
+    const data =
+        objects.map(function(object){
 
-        return {
-            name: object.name,
-            geometry: object.geometry.type,
-            position: {
-                x: object.position.x,
-                y: object.position.y,
-                z: object.position.z
-            },
-            rotation: {
-                x: object.rotation.x,
-                y: object.rotation.y,
-                z: object.rotation.z
-            },
-            scale: {
-                x: object.scale.x,
-                y: object.scale.y,
-                z: object.scale.z
-            }
-        };
-
-    });
+            return {
+                name:object.name,
+                geometry:object.geometry.type,
+                position:{
+                    x:object.position.x,
+                    y:object.position.y,
+                    z:object.position.z
+                },
+                rotation:{
+                    x:object.rotation.x,
+                    y:object.rotation.y,
+                    z:object.rotation.z
+                },
+                scale:{
+                    x:object.scale.x,
+                    y:object.scale.y,
+                    z:object.scale.z
+                }
+            };
+        });
 
     localStorage.setItem(
         "ai3dstudio_scene",
         JSON.stringify(data)
     );
 
-    showToast("Scene saved");
+    toast("Scene saved");
 }
 
-function loadScene() {
+function loadScene(){
 
     const saved =
-        localStorage.getItem("ai3dstudio_scene");
+        localStorage.getItem(
+            "ai3dstudio_scene"
+        );
 
-    if (!saved) {
-        showToast("No saved scene");
+    if(!saved){
+
+        toast("No saved scene");
+
         return;
     }
 
-    objects.slice().forEach(function(object) {
+    objects.slice().forEach(
+        function(object){
 
-        scene.remove(object);
+            scene.remove(object);
 
-        object.geometry.dispose();
+            object.geometry.dispose();
 
-        object.material.dispose();
-
-    });
+            object.material.dispose();
+        }
+    );
 
     objects.length = 0;
 
-    selectedObject = null;
+    selected = null;
 
-    transformControls.detach();
+    transform.detach();
 
-    const data = JSON.parse(saved);
+    const data =
+        JSON.parse(saved);
 
-    data.forEach(function(item) {
-
-        let type = "cube";
-
-        if (item.geometry === "SphereGeometry") {
-            type = "sphere";
-        }
-
-        if (item.geometry === "CylinderGeometry") {
-            type = "cylinder";
-        }
+    data.forEach(function(item){
 
         let geometry;
 
-        if (type === "cube") {
-            geometry = new THREE.BoxGeometry(2, 2, 2);
+        if(item.geometry === "SphereGeometry"){
+
+            geometry =
+                new THREE.SphereGeometry(
+                    1.2,
+                    32,
+                    20
+                );
+
+        }else if(
+            item.geometry === "CylinderGeometry"
+        ){
+
+            geometry =
+                new THREE.CylinderGeometry(
+                    1.1,
+                    1.1,
+                    2.2,
+                    32
+                );
+
+        }else{
+
+            geometry =
+                new THREE.BoxGeometry(
+                    2,
+                    2,
+                    2
+                );
         }
 
-        if (type === "sphere") {
-            geometry = new THREE.SphereGeometry(1.25, 32, 20);
-        }
-
-        if (type === "cylinder") {
-            geometry = new THREE.CylinderGeometry(
-                1.15,
-                1.15,
-                2.2,
-                32
+        const object =
+            new THREE.Mesh(
+                geometry,
+                material()
             );
-        }
 
-        const mesh = new THREE.Mesh(
-            geometry,
-            createMaterial()
-        );
+        object.name = item.name;
 
-        mesh.name = item.name;
-
-        mesh.position.set(
+        object.position.set(
             item.position.x,
             item.position.y,
             item.position.z
         );
 
-        mesh.rotation.set(
+        object.rotation.set(
             item.rotation.x,
             item.rotation.y,
             item.rotation.z
         );
 
-        mesh.scale.set(
+        object.scale.set(
             item.scale.x,
             item.scale.y,
             item.scale.z
         );
 
-        scene.add(mesh);
+        scene.add(object);
 
-        objects.push(mesh);
-
+        objects.push(object);
     });
 
     objectNumber = objects.length;
@@ -1161,208 +1274,261 @@ function loadScene() {
 
     updateProperties();
 
-    updateObjectCount();
+    updateCount();
 
-    showToast("Scene loaded");
+    toast("Scene loaded");
 }
 
-function resetScene() {
+function processAI(command){
 
-    objects.slice().forEach(function(object) {
+    const text =
+        command.toLowerCase().trim();
 
-        scene.remove(object);
-
-        object.geometry.dispose();
-
-        object.material.dispose();
-
-    });
-
-    objects.length = 0;
-
-    selectedObject = null;
-
-    transformControls.detach();
-
-    objectNumber = 0;
-
-    updateHierarchy();
-
-    updateProperties();
-
-    updateObjectCount();
-
-    showToast("Scene reset");
-}
-
-function processAICommand(command) {
-
-    const text = command.toLowerCase().trim();
-
-    if (!text) {
+    if(!text){
         return;
     }
 
-    if (
+    if(
         text.includes("create cube") ||
         text === "cube" ||
         text.includes("add cube")
-    ) {
+    ){
+
         createObject("cube");
+
         return;
     }
 
-    if (
+    if(
         text.includes("create sphere") ||
         text === "sphere" ||
         text.includes("add sphere")
-    ) {
+    ){
+
         createObject("sphere");
+
         return;
     }
 
-    if (
+    if(
         text.includes("create cylinder") ||
         text === "cylinder" ||
         text.includes("add cylinder")
-    ) {
+    ){
+
         createObject("cylinder");
+
         return;
     }
 
-    if (text.includes("delete")) {
+    if(text.includes("delete")){
+
         deleteSelected();
+
         return;
     }
 
-    if (text.includes("save")) {
+    if(text.includes("save")){
+
         saveScene();
+
         return;
     }
 
-    if (text.includes("load")) {
+    if(text.includes("load")){
+
         loadScene();
+
         return;
     }
 
-    if (text.includes("reset")) {
-        resetScene();
+    if(text.includes("move")){
+
+        setTool("translate");
+
         return;
     }
 
-    if (text.includes("select")) {
-        setTool("select");
-        showToast("Select tool active");
-        return;
-    }
+    if(text.includes("rotate")){
 
-    if (text.includes("move")) {
-        setTool("move");
-        showToast("Move tool active");
-        return;
-    }
-
-    if (text.includes("rotate")) {
         setTool("rotate");
-        showToast("Rotate tool active");
+
         return;
     }
 
-    if (text.includes("scale")) {
+    if(text.includes("scale")){
+
         setTool("scale");
-        showToast("Scale tool active");
+
         return;
     }
 
-    showToast("AI command not recognized");
+    if(text.includes("select")){
+
+        setTool("select");
+
+        return;
+    }
+
+    toast("AI command not recognized");
 }
 
-canvas.addEventListener("pointerdown", function(event) {
+function pickObject(event){
 
-    if (currentTool !== "select") {
+    if(tool !== "select"){
         return;
     }
 
-    const rect = canvas.getBoundingClientRect();
+    const rect =
+        canvas.getBoundingClientRect();
 
-    pointer.x =
-        ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.x =
+        ((event.clientX - rect.left) /
+        rect.width) * 2 - 1;
 
-    pointer.y =
-        -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    mouse.y =
+        -((event.clientY - rect.top) /
+        rect.height) * 2 + 1;
 
-    raycaster.setFromCamera(pointer, camera);
+    raycaster.setFromCamera(
+        mouse,
+        camera
+    );
 
-    const hits = raycaster.intersectObjects(objects, false);
+    const hits =
+        raycaster.intersectObjects(
+            objects,
+            false
+        );
 
-    if (hits.length > 0) {
+    if(hits.length){
+
         selectObject(hits[0].object);
-    } else {
-        clearSelection();
+
+    }else{
+
+        deselect();
     }
+}
 
+let pointerDownX = 0;
+
+let pointerDownY = 0;
+
+canvas.addEventListener(
+    "pointerdown",
+    function(event){
+
+        pointerDownX = event.clientX;
+
+        pointerDownY = event.clientY;
+    }
+);
+
+canvas.addEventListener(
+    "pointerup",
+    function(event){
+
+        const dx =
+            event.clientX - pointerDownX;
+
+        const dy =
+            event.clientY - pointerDownY;
+
+        const distance =
+            Math.sqrt(dx * dx + dy * dy);
+
+        if(distance < 5){
+            pickObject(event);
+        }
+    }
+);
+
+document.querySelectorAll(
+    ".tool[data-tool]"
+).forEach(function(button){
+
+    button.addEventListener(
+        "click",
+        function(){
+
+            setTool(
+                button.dataset.tool
+            );
+        }
+    );
 });
 
-document.querySelectorAll(".tool[data-tool]").forEach(function(button) {
+document.querySelectorAll(
+    ".tool[data-create]"
+).forEach(function(button){
 
-    button.addEventListener("click", function() {
-        setTool(button.dataset.tool);
-    });
+    button.addEventListener(
+        "click",
+        function(){
 
+            createObject(
+                button.dataset.create
+            );
+        }
+    );
 });
 
-document.querySelectorAll(".tool[data-create]").forEach(function(button) {
-
-    button.addEventListener("click", function() {
-        createObject(button.dataset.create);
-    });
-
-});
-
-document.getElementById("deleteTool").addEventListener(
+document.getElementById(
+    "deleteTool"
+).addEventListener(
     "click",
     deleteSelected
 );
 
-document.getElementById("saveTool").addEventListener(
+document.getElementById(
+    "saveTool"
+).addEventListener(
     "click",
     saveScene
 );
 
-document.getElementById("loadTool").addEventListener(
+document.getElementById(
+    "loadTool"
+).addEventListener(
     "click",
     loadScene
 );
 
-document.getElementById("aiSend").addEventListener(
+document.getElementById(
+    "aiSend"
+).addEventListener(
     "click",
-    function() {
+    function(){
 
-        const input = document.getElementById("aiCommand");
+        const input =
+            document.getElementById(
+                "aiCommand"
+            );
 
-        processAICommand(input.value);
+        processAI(input.value);
 
         input.value = "";
-
     }
 );
 
-document.getElementById("aiCommand").addEventListener(
+document.getElementById(
+    "aiCommand"
+).addEventListener(
     "keydown",
-    function(event) {
+    function(event){
 
-        if (event.key === "Enter") {
+        if(event.key === "Enter"){
 
-            processAICommand(this.value);
+            processAI(this.value);
 
             this.value = "";
-
         }
-
     }
 );
 
 [
+    "objectName",
     "posX",
     "posY",
     "posZ",
@@ -1372,43 +1538,57 @@ document.getElementById("aiCommand").addEventListener(
     "scaleX",
     "scaleY",
     "scaleZ"
-].forEach(function(id) {
+].forEach(function(id){
 
-    document.getElementById(id).addEventListener(
-        "change",
-        updateSelectedFromProperties
-    );
-
+    document.getElementById(id)
+        .addEventListener(
+            "change",
+            applyProperties
+        );
 });
 
-document.getElementById("objectName").addEventListener(
-    "change",
-    updateSelectedFromProperties
-);
+function resize(){
 
-window.addEventListener("resize", function() {
+    const width =
+        canvas.clientWidth;
 
-    const width = canvas.clientWidth;
+    const height =
+        canvas.clientHeight;
 
-    const height = canvas.clientHeight;
+    if(width <= 0 || height <= 0){
+        return;
+    }
 
-    camera.aspect = width / height;
+    camera.aspect =
+        width / height;
 
     camera.updateProjectionMatrix();
 
-    renderer.setSize(width, height, false);
+    renderer.setSize(
+        width,
+        height,
+        false
+    );
+}
 
-});
+window.addEventListener(
+    "resize",
+    resize
+);
 
-function animate() {
+function animate(){
 
     requestAnimationFrame(animate);
 
-    controls.update();
+    orbit.update();
 
-    renderer.render(scene, camera);
-
+    renderer.render(
+        scene,
+        camera
+    );
 }
+
+resize();
 
 createObject("cube");
 
