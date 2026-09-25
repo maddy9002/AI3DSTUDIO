@@ -2,8 +2,411 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI3DSTUDIO</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #05070a;
+    color: #e8edf3;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input {
+    font-family: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+#app {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #05070a;
+}
+
+.topbar {
+    height: 58px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid #1b222b;
+    background: #080b10;
+}
+
+.logo {
+    color: #ff8a24;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+.subtitle {
+    margin-left: 14px;
+    color: #68727d;
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+.system {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: #8c98a5;
+}
+
+.system-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #46d369;
+    box-shadow: 0 0 10px rgba(70,211,105,.7);
+}
+
+.workspace {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+}
+
+.left-panel {
+    width: 180px;
+    flex-shrink: 0;
+    border-right: 1px solid #1b222b;
+    background: #080b10;
+    padding: 14px 12px;
+}
+
+.panel-title {
+    color: #66717d;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin: 6px 5px 10px;
+}
+
+.tool {
+    width: 100%;
+    height: 38px;
+    margin-bottom: 6px;
+    border: 1px solid #202934;
+    border-radius: 5px;
+    background: #0c1117;
+    color: #aeb8c2;
+    text-align: left;
+    padding-left: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.tool:hover {
+    border-color: #ff8a24;
+    color: #ff8a24;
+}
+
+.tool.active {
+    background: rgba(255,138,36,.12);
+    border-color: #ff8a24;
+    color: #ff8a24;
+}
+
+.viewport-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: #05070a;
+}
+
+#viewport {
+    position: absolute;
+    inset: 0;
+}
+
+#viewport canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.hand-cursor {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+    margin-top: -9px;
+    border: 2px solid #ff8a24;
+    border-radius: 50%;
+    box-shadow: 0 0 14px rgba(255,138,36,.9);
+    pointer-events: none;
+    display: none;
+    z-index: 20;
+}
+
+.hand-cursor.pinching {
+    width: 25px;
+    height: 25px;
+    margin-left: -12.5px;
+    margin-top: -12.5px;
+    background: rgba(255,138,36,.18);
+}
+
+.crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+}
+
+.axis-label {
+    position: absolute;
+    bottom: 12px;
+    left: 14px;
+    color: #4e5965;
+    font-size: 9px;
+    letter-spacing: 1px;
+    pointer-events: none;
+}
+
+.right-panel {
+    width: 285px;
+    flex-shrink: 0;
+    border-left: 1px solid #1b222b;
+    background: #080b10;
+    display: flex;
+    flex-direction: column;
+}
+
+.section {
+    border-bottom: 1px solid #1b222b;
+    padding: 13px;
+}
+
+.hierarchy {
+    max-height: 190px;
+    overflow-y: auto;
+}
+
+.object-row {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 9px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #929da8;
+    font-size: 11px;
+    margin-bottom: 3px;
+    cursor: pointer;
+}
+
+.object-row:hover {
+    background: #0e141b;
+}
+
+.object-row.selected {
+    border-color: #ff8a24;
+    background: rgba(255,138,36,.1);
+    color: #ff8a24;
+}
+
+.object-type {
+    margin-left: auto;
+    color: #4f5964;
+    font-size: 8px;
+}
+
+.property-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 7px 0;
+    font-size: 10px;
+}
+
+.property-name {
+    color: #66717d;
+}
+
+.property-value {
+    color: #b8c0c9;
+    font-family: monospace;
+}
+
+.webcam-box {
+    position: relative;
+    width: 100%;
+    height: 155px;
+    overflow: hidden;
+    border: 1px solid #202934;
+    border-radius: 5px;
+    background: #030507;
+}
+
+#webcam {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: none;
+}
+
+.webcam-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #4d5864;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-align: center;
+    padding: 15px;
+}
+
+.webcam-placeholder strong {
+    color: #6c7782;
+    margin-bottom: 7px;
+}
+
+.webcam-status {
+    position: absolute;
+    left: 8px;
+    bottom: 7px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    background: rgba(0,0,0,.65);
+    color: #79848f;
+    font-size: 8px;
+    letter-spacing: 1px;
+}
+
+.webcam-status.active {
+    color: #46d369;
+}
+
+.webcam-status.warning {
+    color: #ffb15c;
+}
+
+.camera-button {
+    width: 100%;
+    height: 31px;
+    margin-top: 8px;
+    border: 1px solid #26303a;
+    background: #0c1117;
+    color: #929da8;
+    border-radius: 4px;
+    font-size: 9px;
+    letter-spacing: 1px;
+}
+
+.camera-button:hover {
+    border-color: #ff8a24;
+    color: #ff8a24;
+}
+
+.ai-input {
+    width: 100%;
+    height: 38px;
+    padding: 0 11px;
+    border: 1px solid #222b35;
+    border-radius: 4px;
+    outline: none;
+    background: #05080c;
+    color: #dbe2e8;
+    font-size: 10px;
+}
+
+.ai-input:focus {
+    border-color: #ff8a24;
+}
+
+.ai-output {
+    height: 80px;
+    overflow-y: auto;
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid #1b232c;
+    border-radius: 4px;
+    background: #05080c;
+    color: #68747f;
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+.bottom-bar {
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 0 15px;
+    border-top: 1px solid #1b222b;
+    background: #080b10;
+    color: #66717d;
+    font-size: 9px;
+    letter-spacing: 1px;
+}
+
+.status-value {
+    color: #aeb8c2;
+}
+
+.orange {
+    color: #ff8a24;
+}
+
+@media (max-width: 900px) {
+    .left-panel {
+        width: 135px;
+    }
+
+    .right-panel {
+        width: 235px;
+    }
+
+    .subtitle {
+        display: none;
+    }
+}
+
+@media (max-width: 700px) {
+    .left-panel {
+        width: 105px;
+    }
+
+    .right-panel {
+        display: none;
+    }
+
+    .tool {
+        font-size: 8px;
+        padding-left: 7px;
+    }
+}
+</style>
 
 <script type="importmap">
 {
@@ -13,1728 +416,2007 @@
     }
 }
 </script>
-
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-
-html,body{
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    background:#050505;
-    color:#fff;
-    font-family:Arial,Helvetica,sans-serif
-}
-
-body{
-    display:flex;
-    flex-direction:column
-}
-
-.topbar{
-    height:58px;
-    flex-shrink:0;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 22px;
-    background:#080808;
-    border-bottom:1px solid #222
-}
-
-.brand{
-    display:flex;
-    align-items:center;
-    gap:12px
-}
-
-.brand-mark{
-    width:28px;
-    height:28px;
-    border:2px solid #ff8a24;
-    transform:rotate(45deg);
-    display:flex;
-    align-items:center;
-    justify-content:center
-}
-
-.brand-mark span{
-    width:8px;
-    height:8px;
-    background:#ff8a24
-}
-
-.brand-name{
-    font-size:17px;
-    font-weight:700;
-    letter-spacing:2px
-}
-
-.top-center{
-    position:absolute;
-    left:50%;
-    transform:translateX(-50%);
-    color:#666;
-    font-size:10px;
-    letter-spacing:3px
-}
-
-.system-status{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    color:#888;
-    font-size:10px;
-    letter-spacing:1px
-}
-
-.status-dot{
-    width:7px;
-    height:7px;
-    border-radius:50%;
-    background:#ff8a24;
-    box-shadow:0 0 10px #ff8a24
-}
-
-.workspace{
-    flex:1;
-    min-height:0;
-    display:grid;
-    grid-template-columns:76px minmax(0,1fr) 270px
-}
-
-.toolbar{
-    background:#090909;
-    border-right:1px solid #222;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    padding:10px 8px;
-    gap:7px
-}
-
-.tool{
-    width:58px;
-    height:48px;
-    border:1px solid transparent;
-    border-radius:6px;
-    background:transparent;
-    color:#777;
-    cursor:pointer;
-    font-size:8px;
-    letter-spacing:1px;
-    transition:.15s
-}
-
-.tool:hover{
-    background:#151515;
-    color:#fff
-}
-
-.tool.active{
-    border-color:#ff8a24;
-    color:#ff8a24;
-    background:#151515
-}
-
-.tool-icon{
-    display:block;
-    font-size:16px;
-    margin-bottom:4px
-}
-
-.tool-separator{
-    width:38px;
-    height:1px;
-    background:#222;
-    margin:3px
-}
-
-.viewport-area{
-    position:relative;
-    min-width:0;
-    min-height:0;
-    overflow:hidden;
-    background:#050505
-}
-
-#viewport{
-    width:100%;
-    height:100%;
-    display:block;
-    touch-action:none;
-    outline:none
-}
-
-.viewport-title{
-    position:absolute;
-    top:14px;
-    left:17px;
-    color:#555;
-    font-size:9px;
-    letter-spacing:2px;
-    pointer-events:none
-}
-
-.viewport-mode{
-    position:absolute;
-    top:12px;
-    right:17px;
-    padding:6px 9px;
-    border:1px solid #242424;
-    background:rgba(5,5,5,.8);
-    color:#777;
-    font-size:8px;
-    letter-spacing:1px;
-    pointer-events:none
-}
-
-.axis-indicator{
-    position:absolute;
-    left:16px;
-    bottom:16px;
-    width:70px;
-    height:70px;
-    border:1px solid #222;
-    background:rgba(5,5,5,.7);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#555;
-    font-size:9px;
-    pointer-events:none
-}
-
-.selection-info{
-    position:absolute;
-    left:100px;
-    bottom:16px;
-    padding:8px 11px;
-    border:1px solid #222;
-    background:rgba(5,5,5,.85);
-    color:#777;
-    font-size:9px;
-    pointer-events:none
-}
-
-.right-panel{
-    background:#090909;
-    border-left:1px solid #222;
-    display:flex;
-    flex-direction:column;
-    min-height:0
-}
-
-.panel-section{
-    border-bottom:1px solid #222;
-    padding:14px
-}
-
-.panel-title{
-    color:#777;
-    font-size:9px;
-    letter-spacing:2px;
-    margin-bottom:12px
-}
-
-.hierarchy{
-    max-height:180px;
-    overflow-y:auto
-}
-
-.object-row{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    padding:8px;
-    color:#888;
-    font-size:10px;
-    border-radius:4px;
-    cursor:pointer
-}
-
-.object-row:hover{
-    background:#151515;
-    color:#fff
-}
-
-.object-row.selected{
-    background:#1b120b;
-    color:#ff8a24
-}
-
-.object-icon{
-    color:#555
-}
-
-.object-row.selected .object-icon{
-    color:#ff8a24
-}
-
-.property{
-    display:grid;
-    grid-template-columns:67px 1fr;
-    gap:7px;
-    align-items:center;
-    margin-bottom:7px
-}
-
-.property label{
-    color:#666;
-    font-size:9px
-}
-
-.property input{
-    width:100%;
-    height:26px;
-    border:1px solid #242424;
-    border-radius:3px;
-    background:#0d0d0d;
-    color:#ccc;
-    padding:0 6px;
-    font-size:9px;
-    outline:none
-}
-
-.property input:focus{
-    border-color:#ff8a24
-}
-
-.property-values{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:4px
-}
-
-.property-values input{
-    text-align:center
-}
-
-.webcam-box{
-    height:105px;
-    border:1px solid #222;
-    background:#080808;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#444;
-    font-size:8px;
-    letter-spacing:2px
-}
-
-.ai-panel{
-    margin-top:auto;
-    border-top:1px solid #222;
-    padding:12px
-}
-
-.ai-input{
-    display:flex;
-    gap:5px
-}
-
-.ai-input input{
-    flex:1;
-    min-width:0;
-    height:33px;
-    border:1px solid #292929;
-    border-radius:4px;
-    background:#0d0d0d;
-    color:#fff;
-    padding:0 8px;
-    outline:none;
-    font-size:9px
-}
-
-.ai-input input:focus{
-    border-color:#ff8a24
-}
-
-.ai-send{
-    width:38px;
-    border:1px solid #ff8a24;
-    border-radius:4px;
-    background:#ff8a24;
-    color:#050505;
-    cursor:pointer;
-    font-weight:bold
-}
-
-.bottom-bar{
-    height:34px;
-    flex-shrink:0;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding:0 14px;
-    background:#080808;
-    border-top:1px solid #222;
-    color:#555;
-    font-size:8px;
-    letter-spacing:1px
-}
-
-.bottom-left,
-.bottom-right{
-    display:flex;
-    gap:18px
-}
-
-.orange{
-    color:#ff8a24
-}
-
-.toast{
-    position:fixed;
-    left:50%;
-    bottom:48px;
-    transform:translateX(-50%) translateY(10px);
-    padding:9px 16px;
-    border:1px solid #ff8a24;
-    border-radius:5px;
-    background:#0b0b0b;
-    color:#fff;
-    font-size:10px;
-    opacity:0;
-    pointer-events:none;
-    transition:.2s;
-    z-index:100
-}
-
-.toast.show{
-    opacity:1;
-    transform:translateX(-50%) translateY(0)
-}
-
-@media(max-width:850px){
-    .workspace{
-        grid-template-columns:65px minmax(0,1fr)
-    }
-
-    .right-panel{
-        display:none
-    }
-
-    .top-center{
-        display:none
-    }
-}
-</style>
 </head>
 
 <body>
 
-<header class="topbar">
+<div id="app">
 
-<div class="brand">
-    <div class="brand-mark"><span></span></div>
-    <div class="brand-name">AI3DSTUDIO</div>
-</div>
+    <div class="topbar">
+        <div>
+            <span class="logo">AI3DSTUDIO</span>
+            <span class="subtitle">AI POWERED 3D DESIGN ENVIRONMENT</span>
+        </div>
 
-<div class="top-center">3D DESIGN ENVIRONMENT</div>
+        <div class="system">
+            <span class="system-dot"></span>
+            <span id="systemStatus">SYSTEM ONLINE</span>
+        </div>
+    </div>
 
-<div class="system-status">
-    <span class="status-dot"></span>
-    SYSTEM ONLINE
-</div>
+    <div class="workspace">
 
-</header>
+        <aside class="left-panel">
 
-<div class="workspace">
+            <div class="panel-title">TOOLS</div>
 
-<aside class="toolbar">
+            <button class="tool active" data-tool="select">SELECT</button>
+            <button class="tool" data-tool="move">MOVE</button>
+            <button class="tool" data-tool="rotate">ROTATE</button>
+            <button class="tool" data-tool="scale">SCALE</button>
 
-<button class="tool active" data-tool="select">
-    <span class="tool-icon">↖</span>
-    SELECT
-</button>
+            <div class="panel-title" style="margin-top:20px;">CREATE</div>
 
-<button class="tool" data-tool="translate">
-    <span class="tool-icon">✥</span>
-    MOVE
-</button>
+            <button class="tool" id="cubeButton">CUBE</button>
+            <button class="tool" id="sphereButton">SPHERE</button>
+            <button class="tool" id="cylinderButton">CYLINDER</button>
 
-<button class="tool" data-tool="rotate">
-    <span class="tool-icon">⟳</span>
-    ROTATE
-</button>
+            <div class="panel-title" style="margin-top:20px;">SCENE</div>
 
-<button class="tool" data-tool="scale">
-    <span class="tool-icon">◇</span>
-    SCALE
-</button>
+            <button class="tool" id="deleteButton">DELETE</button>
+            <button class="tool" id="duplicateButton">DUPLICATE</button>
+            <button class="tool" id="saveButton">SAVE</button>
+            <button class="tool" id="loadButton">LOAD</button>
 
-<div class="tool-separator"></div>
+        </aside>
 
-<button class="tool" data-create="cube">
-    <span class="tool-icon">■</span>
-    CUBE
-</button>
+        <main class="viewport-wrap">
 
-<button class="tool" data-create="sphere">
-    <span class="tool-icon">●</span>
-    SPHERE
-</button>
+            <div id="viewport"></div>
 
-<button class="tool" data-create="cylinder">
-    <span class="tool-icon">▣</span>
-    CYLINDER
-</button>
+            <div id="handCursor" class="hand-cursor"></div>
 
-<div class="tool-separator"></div>
+            <div class="axis-label">
+                X / Y / Z AXES ACTIVE
+            </div>
 
-<button class="tool" id="deleteTool">
-    <span class="tool-icon">×</span>
-    DELETE
-</button>
+        </main>
 
-<button class="tool" id="saveTool">
-    <span class="tool-icon">↓</span>
-    SAVE
-</button>
+        <aside class="right-panel">
 
-<button class="tool" id="loadTool">
-    <span class="tool-icon">↑</span>
-    LOAD
-</button>
+            <div class="section">
+                <div class="panel-title">HIERARCHY</div>
+                <div id="hierarchy" class="hierarchy"></div>
+            </div>
 
-</aside>
+            <div class="section">
+                <div class="panel-title">PROPERTIES</div>
+                <div id="properties">
+                    <div class="property-row">
+                        <span class="property-name">OBJECT</span>
+                        <span class="property-value">NONE</span>
+                    </div>
+                </div>
+            </div>
 
-<main class="viewport-area">
+            <div class="section">
+                <div class="panel-title">WEBCAM / HAND CONTROL</div>
 
-<canvas id="viewport"></canvas>
+                <div class="webcam-box">
+                    <video id="webcam" autoplay muted playsinline></video>
 
-<div class="viewport-title">
-    AI3DSTUDIO / VIEWPORT
-</div>
+                    <div id="webcamPlaceholder" class="webcam-placeholder">
+                        <strong>WEBCAM STANDBY</strong>
+                        <span>Mouse + keyboard controls remain active</span>
+                    </div>
 
-<div class="viewport-mode" id="modeLabel">
-    SELECT MODE
-</div>
+                    <div id="webcamStatus" class="webcam-status">
+                        CAMERA OFF
+                    </div>
+                </div>
 
-<div class="axis-indicator">
-    X / Y / Z
-</div>
+                <button id="cameraButton" class="camera-button">
+                    ENABLE HAND CONTROL
+                </button>
+            </div>
 
-<div class="selection-info" id="selectionInfo">
-    NO OBJECT SELECTED
-</div>
+            <div class="section">
+                <div class="panel-title">AI COMMAND</div>
 
-</main>
+                <input
+                    id="aiCommand"
+                    class="ai-input"
+                    type="text"
+                    placeholder="Create Cube / Move Cube / Delete"
+                >
 
-<aside class="right-panel">
+                <div id="aiOutput" class="ai-output">
+                    AI ENGINE READY
+                </div>
+            </div>
 
-<section class="panel-section">
+        </aside>
 
-<div class="panel-title">SCENE HIERARCHY</div>
+    </div>
 
-<div class="hierarchy" id="hierarchy"></div>
-
-</section>
-
-<section class="panel-section">
-
-<div class="panel-title">PROPERTIES</div>
-
-<div class="property">
-<label>NAME</label>
-<input id="objectName" type="text">
-</div>
-
-<div class="property">
-<label>POSITION</label>
-<div class="property-values">
-<input id="posX" type="number" step=".1">
-<input id="posY" type="number" step=".1">
-<input id="posZ" type="number" step=".1">
-</div>
-</div>
-
-<div class="property">
-<label>ROTATION</label>
-<div class="property-values">
-<input id="rotX" type="number" step="1">
-<input id="rotY" type="number" step="1">
-<input id="rotZ" type="number" step="1">
-</div>
-</div>
-
-<div class="property">
-<label>SCALE</label>
-<div class="property-values">
-<input id="scaleX" type="number" step=".1">
-<input id="scaleY" type="number" step=".1">
-<input id="scaleZ" type="number" step=".1">
-</div>
-</div>
-
-</section>
-
-<section class="panel-section">
-
-<div class="panel-title">WEBCAM</div>
-
-<div class="webcam-box">
-WEBCAM STANDBY
-</div>
-
-</section>
-
-<section class="ai-panel">
-
-<div class="panel-title">AI COMMAND</div>
-
-<div class="ai-input">
-<input id="aiCommand" placeholder="Create Cube..." autocomplete="off">
-<button class="ai-send" id="aiSend">→</button>
-</div>
-
-</section>
-
-</aside>
+    <div class="bottom-bar">
+        <span>AI ENGINE <span class="status-value orange">READY</span></span>
+        <span>MODE <span id="modeStatus" class="status-value">SELECT</span></span>
+        <span>INPUT <span id="inputStatus" class="status-value">MOUSE + KEYBOARD</span></span>
+        <span>HAND <span id="handStatus" class="status-value">OFF</span></span>
+        <span>OBJECTS <span id="objectCount" class="status-value">0</span></span>
+    </div>
 
 </div>
-
-<footer class="bottom-bar">
-
-<div class="bottom-left">
-<span>AI ENGINE: <span class="orange">READY</span></span>
-<span>MODE: <span class="orange" id="bottomMode">SELECT</span></span>
-<span>OBJECTS: <span class="orange" id="objectCount">0</span></span>
-</div>
-
-<div class="bottom-right">
-<span>LEFT DRAG: ORBIT</span>
-<span>RIGHT DRAG: PAN</span>
-<span>SCROLL: ZOOM</span>
-</div>
-
-</footer>
-
-<div class="toast" id="toast"></div>
 
 <script type="module">
 
 import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
 
-import { OrbitControls }
-from "three/addons/controls/OrbitControls.js";
+let scene;
+let camera;
+let renderer;
+let orbit;
+let transform;
+let raycaster;
+let mouse;
 
-import { TransformControls }
-from "three/addons/controls/TransformControls.js";
+let selectedObject = null;
+let currentTool = "select";
 
-const canvas =
-    document.getElementById("viewport");
+let objects = [];
+let history = [];
+let historyIndex = -1;
 
-const renderer =
-    new THREE.WebGLRenderer({
-        canvas:canvas,
-        antialias:true
-    });
+let webcamStream = null;
+let handLandmarker = null;
+let handAnimationFrame = null;
+let handControlEnabled = false;
+let cameraStarting = false;
 
-renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio,2)
-);
+let lastHandTime = 0;
+let lastPalmX = null;
+let lastPalmY = null;
+let lastPalmZ = null;
+let lastPinchDistance = null;
+let lastPalmAngle = null;
+let pinchActive = false;
+let handGrabObject = null;
 
-renderer.setClearColor(0x050505);
+let twoHandPreviousDistance = null;
 
-const scene =
-    new THREE.Scene();
+const viewport = document.getElementById("viewport");
+const webcam = document.getElementById("webcam");
+const webcamPlaceholder = document.getElementById("webcamPlaceholder");
+const webcamStatus = document.getElementById("webcamStatus");
+const cameraButton = document.getElementById("cameraButton");
+const handCursor = document.getElementById("handCursor");
 
-scene.background =
-    new THREE.Color(0x050505);
+const hierarchy = document.getElementById("hierarchy");
+const properties = document.getElementById("properties");
 
-const camera =
-    new THREE.PerspectiveCamera(
-        55,
-        1,
-        0.1,
+const modeStatus = document.getElementById("modeStatus");
+const inputStatus = document.getElementById("inputStatus");
+const handStatus = document.getElementById("handStatus");
+const objectCount = document.getElementById("objectCount");
+
+const aiCommand = document.getElementById("aiCommand");
+const aiOutput = document.getElementById("aiOutput");
+
+const systemStatus = document.getElementById("systemStatus");
+
+const clock = new THREE.Clock();
+
+function init() {
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x05070a);
+
+    camera = new THREE.PerspectiveCamera(
+        50,
+        viewport.clientWidth / viewport.clientHeight,
+        0.01,
         1000
     );
 
-camera.position.set(7,5,8);
+    camera.position.set(6, 5, 7);
 
-const orbit =
-    new OrbitControls(
-        camera,
-        canvas
+    renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    renderer.setSize(
+        viewport.clientWidth,
+        viewport.clientHeight
     );
 
-orbit.enableDamping = true;
-orbit.dampingFactor = 0.08;
-orbit.target.set(0,0,0);
+    viewport.appendChild(renderer.domElement);
 
-orbit.mouseButtons.LEFT =
-    THREE.MOUSE.ROTATE;
+    orbit = new OrbitControls(camera, renderer.domElement);
+    orbit.enableDamping = true;
+    orbit.dampingFactor = 0.08;
+    orbit.target.set(0, 0, 0);
 
-orbit.mouseButtons.MIDDLE =
-    THREE.MOUSE.DOLLY;
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
 
-orbit.mouseButtons.RIGHT =
-    THREE.MOUSE.PAN;
-
-const ambient =
-    new THREE.AmbientLight(
+    const ambient = new THREE.HemisphereLight(
         0xffffff,
-        1.7
+        0x222222,
+        2.2
     );
 
-scene.add(ambient);
+    scene.add(ambient);
 
-const light =
-    new THREE.DirectionalLight(
+    const directional = new THREE.DirectionalLight(
         0xffffff,
-        2.5
+        2
     );
 
-light.position.set(5,10,8);
+    directional.position.set(5, 8, 5);
+    scene.add(directional);
 
-scene.add(light);
-
-const grid =
-    new THREE.GridHelper(
-        30,
-        30,
-        0x333333,
-        0x171717
+    const grid = new THREE.GridHelper(
+        20,
+        20,
+        0x303842,
+        0x171d24
     );
 
-scene.add(grid);
+    scene.add(grid);
 
-const axes =
-    new THREE.AxesHelper(4);
+    const axes = new THREE.AxesHelper(3);
+    scene.add(axes);
 
-scene.add(axes);
-
-const transform =
-    new TransformControls(
+    transform = new TransformControls(
         camera,
-        canvas
+        renderer.domElement
     );
 
-scene.add(
-    transform.getHelper()
-);
+    transform.setSize(0.9);
 
-transform.addEventListener(
-    "dragging-changed",
-    function(event){
+    transform.addEventListener("dragging-changed", event => {
         orbit.enabled = !event.value;
-    }
-);
+    });
 
-transform.addEventListener(
-    "objectChange",
-    function(){
+    transform.addEventListener("objectChange", () => {
         updateProperties();
-    }
-);
+    });
 
-const raycaster =
-    new THREE.Raycaster();
+    scene.add(transform.getHelper());
 
-const mouse =
-    new THREE.Vector2();
+    renderer.domElement.addEventListener(
+        "pointerdown",
+        onViewportPointerDown
+    );
 
-const objects = [];
+    renderer.domElement.addEventListener(
+        "pointermove",
+        onViewportPointerMove
+    );
 
-let selected = null;
+    renderer.domElement.addEventListener(
+        "wheel",
+        () => {
+            inputStatus.textContent = "MOUSE + KEYBOARD";
+        }
+    );
 
-let currentTool = "select";
+    window.addEventListener("resize", resize);
 
-let objectNumber = 0;
+    setupTools();
+    setupButtons();
+    setupKeyboard();
 
-function showToast(message){
+    animate();
 
-    const element =
-        document.getElementById("toast");
-
-    element.textContent = message;
-
-    element.classList.add("show");
-
-    clearTimeout(showToast.timer);
-
-    showToast.timer =
-        setTimeout(
-            function(){
-                element.classList.remove("show");
-            },
-            1400
-        );
+    addCube();
 }
 
-function createMaterial(){
+function resize() {
 
-    return new THREE.MeshStandardMaterial({
-        color:0x777777,
-        roughness:.55,
-        metalness:.2
+    if (!camera || !renderer) {
+        return;
+    }
+
+    const width = viewport.clientWidth;
+    const height = viewport.clientHeight;
+
+    if (height <= 0) {
+        return;
+    }
+
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(width, height);
+}
+
+function animate() {
+
+    requestAnimationFrame(animate);
+
+    orbit.update();
+
+    renderer.render(scene, camera);
+}
+
+function setupTools() {
+
+    document.querySelectorAll(".tool[data-tool]").forEach(button => {
+
+        button.addEventListener("click", () => {
+
+            setTool(button.dataset.tool);
+
+        });
+
     });
 }
 
-function createObject(type){
-
-    let geometry;
-
-    if(type === "cube"){
-        geometry =
-            new THREE.BoxGeometry(
-                2,2,2
-            );
-    }
-
-    if(type === "sphere"){
-        geometry =
-            new THREE.SphereGeometry(
-                1.2,
-                32,
-                20
-            );
-    }
-
-    if(type === "cylinder"){
-        geometry =
-            new THREE.CylinderGeometry(
-                1.1,
-                1.1,
-                2.2,
-                32
-            );
-    }
-
-    if(!geometry){
-        return;
-    }
-
-    const object =
-        new THREE.Mesh(
-            geometry,
-            createMaterial()
-        );
-
-    objectNumber++;
-
-    object.name =
-        type.charAt(0).toUpperCase() +
-        type.slice(1) +
-        "." +
-        String(objectNumber).padStart(3,"0");
-
-    object.position.set(
-        0,
-        1,
-        0
-    );
-
-    scene.add(object);
-
-    objects.push(object);
-
-    selectObject(object);
-
-    updateHierarchy();
-
-    updateObjectCount();
-
-    showToast(
-        object.name + " created"
-    );
-}
-
-function selectObject(object){
-
-    if(selected){
-        selected.material.emissive.setHex(
-            0x000000
-        );
-    }
-
-    selected = object;
-
-    if(selected){
-
-        selected.material.emissive.setHex(
-            0x331505
-        );
-
-        document.getElementById(
-            "selectionInfo"
-        ).textContent =
-            "SELECTED: " +
-            selected.name;
-
-        if(currentTool !== "select"){
-
-            transform.setMode(
-                currentTool
-            );
-
-            transform.attach(
-                selected
-            );
-        }
-
-    }else{
-
-        transform.detach();
-
-        document.getElementById(
-            "selectionInfo"
-        ).textContent =
-            "NO OBJECT SELECTED";
-    }
-
-    updateHierarchy();
-
-    updateProperties();
-}
-
-function deselect(){
-
-    if(selected){
-
-        selected.material.emissive.setHex(
-            0x000000
-        );
-    }
-
-    selected = null;
-
-    transform.detach();
-
-    document.getElementById(
-        "selectionInfo"
-    ).textContent =
-        "NO OBJECT SELECTED";
-
-    updateHierarchy();
-
-    updateProperties();
-}
-
-function updateHierarchy(){
-
-    const hierarchy =
-        document.getElementById(
-            "hierarchy"
-        );
-
-    hierarchy.innerHTML = "";
-
-    objects.forEach(
-        function(object){
-
-            const row =
-                document.createElement(
-                    "div"
-                );
-
-            row.className =
-                "object-row";
-
-            if(object === selected){
-                row.classList.add(
-                    "selected"
-                );
-            }
-
-            row.innerHTML =
-                '<span class="object-icon">◆</span>' +
-                '<span>' +
-                object.name +
-                '</span>';
-
-            row.addEventListener(
-                "click",
-                function(event){
-
-                    event.stopPropagation();
-
-                    selectObject(object);
-                }
-            );
-
-            hierarchy.appendChild(row);
-        }
-    );
-}
-
-function updateObjectCount(){
-
-    document.getElementById(
-        "objectCount"
-    ).textContent =
-        objects.length;
-}
-
-function updateProperties(){
-
-    if(!selected){
-
-        document.getElementById(
-            "objectName"
-        ).value = "";
-
-        return;
-    }
-
-    document.getElementById(
-        "objectName"
-    ).value =
-        selected.name;
-
-    document.getElementById(
-        "posX"
-    ).value =
-        selected.position.x.toFixed(2);
-
-    document.getElementById(
-        "posY"
-    ).value =
-        selected.position.y.toFixed(2);
-
-    document.getElementById(
-        "posZ"
-    ).value =
-        selected.position.z.toFixed(2);
-
-    document.getElementById(
-        "rotX"
-    ).value =
-        THREE.MathUtils.radToDeg(
-            selected.rotation.x
-        ).toFixed(1);
-
-    document.getElementById(
-        "rotY"
-    ).value =
-        THREE.MathUtils.radToDeg(
-            selected.rotation.y
-        ).toFixed(1);
-
-    document.getElementById(
-        "rotZ"
-    ).value =
-        THREE.MathUtils.radToDeg(
-            selected.rotation.z
-        ).toFixed(1);
-
-    document.getElementById(
-        "scaleX"
-    ).value =
-        selected.scale.x.toFixed(2);
-
-    document.getElementById(
-        "scaleY"
-    ).value =
-        selected.scale.y.toFixed(2);
-
-    document.getElementById(
-        "scaleZ"
-    ).value =
-        selected.scale.z.toFixed(2);
-}
-
-function setTool(tool){
+function setTool(tool) {
 
     currentTool = tool;
 
-    document.querySelectorAll(
-        ".tool[data-tool]"
-    ).forEach(
-        function(button){
+    document.querySelectorAll(".tool[data-tool]").forEach(button => {
 
-            button.classList.toggle(
-                "active",
-                button.dataset.tool === tool
-            );
-        }
-    );
-
-    document.getElementById(
-        "modeLabel"
-    ).textContent =
-        tool === "select"
-        ? "SELECT MODE"
-        : tool.toUpperCase() + " MODE";
-
-    document.getElementById(
-        "bottomMode"
-    ).textContent =
-        tool === "select"
-        ? "SELECT"
-        : tool.toUpperCase();
-
-    if(
-        selected &&
-        tool !== "select"
-    ){
-
-        transform.setMode(tool);
-
-        transform.attach(
-            selected
+        button.classList.toggle(
+            "active",
+            button.dataset.tool === tool
         );
 
-    }else{
+    });
 
-        transform.detach();
+    modeStatus.textContent = tool.toUpperCase();
+
+    if (transform && selectedObject) {
+
+        if (tool === "move") {
+            transform.setMode("translate");
+            transform.attach(selectedObject);
+        }
+
+        if (tool === "rotate") {
+            transform.setMode("rotate");
+            transform.attach(selectedObject);
+        }
+
+        if (tool === "scale") {
+            transform.setMode("scale");
+            transform.attach(selectedObject);
+        }
+
+        if (tool === "select") {
+            transform.detach();
+        }
     }
 }
 
-function deleteSelected(){
+function setupButtons() {
 
-    if(!selected){
+    document.getElementById("cubeButton").addEventListener(
+        "click",
+        () => addCube()
+    );
 
-        showToast(
-            "No object selected"
+    document.getElementById("sphereButton").addEventListener(
+        "click",
+        () => addSphere()
+    );
+
+    document.getElementById("cylinderButton").addEventListener(
+        "click",
+        () => addCylinder()
+    );
+
+    document.getElementById("deleteButton").addEventListener(
+        "click",
+        deleteSelected
+    );
+
+    document.getElementById("duplicateButton").addEventListener(
+        "click",
+        duplicateSelected
+    );
+
+    document.getElementById("saveButton").addEventListener(
+        "click",
+        saveScene
+    );
+
+    document.getElementById("loadButton").addEventListener(
+        "click",
+        loadScene
+    );
+
+    cameraButton.addEventListener(
+        "click",
+        toggleCamera
+    );
+
+    aiCommand.addEventListener(
+        "keydown",
+        event => {
+
+            if (event.key === "Enter") {
+
+                executeAICommand(
+                    aiCommand.value.trim()
+                );
+
+                aiCommand.value = "";
+
+            }
+
+        }
+    );
+}
+
+function setupKeyboard() {
+
+    window.addEventListener("keydown", event => {
+
+        if (
+            document.activeElement === aiCommand
+        ) {
+            return;
+        }
+
+        const key = event.key.toLowerCase();
+
+        if (key === "q") {
+            setTool("select");
+        }
+
+        if (key === "w") {
+            setTool("move");
+        }
+
+        if (key === "e") {
+            setTool("rotate");
+        }
+
+        if (key === "r") {
+            setTool("scale");
+        }
+
+        if (key === "delete" || key === "backspace") {
+            deleteSelected();
+        }
+
+        if (
+            (event.ctrlKey || event.metaKey) &&
+            key === "d"
+        ) {
+            event.preventDefault();
+            duplicateSelected();
+        }
+
+        if (
+            (event.ctrlKey || event.metaKey) &&
+            key === "s"
+        ) {
+            event.preventDefault();
+            saveScene();
+        }
+
+        if (
+            (event.ctrlKey || event.metaKey) &&
+            key === "o"
+        ) {
+            event.preventDefault();
+            loadScene();
+        }
+
+        if (
+            (event.ctrlKey || event.metaKey) &&
+            key === "z"
+        ) {
+            event.preventDefault();
+            undo();
+        }
+
+        if (
+            (event.ctrlKey || event.metaKey) &&
+            key === "y"
+        ) {
+            event.preventDefault();
+            redo();
+        }
+
+        if (key === "escape") {
+            transform.detach();
+            selectedObject = null;
+            updateHierarchy();
+            updateProperties();
+        }
+
+    });
+}
+
+function onViewportPointerMove(event) {
+
+    inputStatus.textContent = "MOUSE + KEYBOARD";
+
+}
+
+function onViewportPointerDown(event) {
+
+    inputStatus.textContent = "MOUSE + KEYBOARD";
+
+    const rect = renderer.domElement.getBoundingClientRect();
+
+    mouse.x =
+        ((event.clientX - rect.left) / rect.width) * 2 - 1;
+
+    mouse.y =
+        -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    const hits = raycaster.intersectObjects(
+        objects,
+        false
+    );
+
+    if (hits.length > 0) {
+
+        selectObject(hits[0].object);
+
+    } else {
+
+        selectObject(null);
+
+    }
+}
+
+function selectObject(object) {
+
+    selectedObject = object;
+
+    if (object) {
+
+        object.material.emissiveIntensity = 0.5;
+
+        if (currentTool === "move") {
+            transform.setMode("translate");
+            transform.attach(object);
+        }
+
+        if (currentTool === "rotate") {
+            transform.setMode("rotate");
+            transform.attach(object);
+        }
+
+        if (currentTool === "scale") {
+            transform.setMode("scale");
+            transform.attach(object);
+        }
+
+    } else {
+
+        transform.detach();
+
+    }
+
+    updateHierarchy();
+    updateProperties();
+}
+
+function makeMaterial() {
+
+    return new THREE.MeshStandardMaterial({
+        color: 0x8b98a6,
+        metalness: 0.35,
+        roughness: 0.55
+    });
+
+}
+
+function addCube() {
+
+    const geometry = new THREE.BoxGeometry(
+        1,
+        1,
+        1
+    );
+
+    const mesh = new THREE.Mesh(
+        geometry,
+        makeMaterial()
+    );
+
+    mesh.name = "Cube";
+
+    mesh.position.set(
+        (objects.length % 4) * 1.6 - 2.4,
+        0.5,
+        Math.floor(objects.length / 4) * 1.6
+    );
+
+    scene.add(mesh);
+    objects.push(mesh);
+
+    selectObject(mesh);
+    recordHistory();
+    refreshScene();
+
+}
+
+function addSphere() {
+
+    const geometry = new THREE.SphereGeometry(
+        0.65,
+        32,
+        20
+    );
+
+    const mesh = new THREE.Mesh(
+        geometry,
+        makeMaterial()
+    );
+
+    mesh.name = "Sphere";
+
+    mesh.position.set(
+        (objects.length % 4) * 1.6 - 2.4,
+        0.65,
+        Math.floor(objects.length / 4) * 1.6
+    );
+
+    scene.add(mesh);
+    objects.push(mesh);
+
+    selectObject(mesh);
+    recordHistory();
+    refreshScene();
+
+}
+
+function addCylinder() {
+
+    const geometry = new THREE.CylinderGeometry(
+        0.6,
+        0.6,
+        1.2,
+        32
+    );
+
+    const mesh = new THREE.Mesh(
+        geometry,
+        makeMaterial()
+    );
+
+    mesh.name = "Cylinder";
+
+    mesh.position.set(
+        (objects.length % 4) * 1.6 - 2.4,
+        0.6,
+        Math.floor(objects.length / 4) * 1.6
+    );
+
+    scene.add(mesh);
+    objects.push(mesh);
+
+    selectObject(mesh);
+    recordHistory();
+    refreshScene();
+
+}
+
+function deleteSelected() {
+
+    if (!selectedObject) {
+        return;
+    }
+
+    const object = selectedObject;
+
+    transform.detach();
+
+    scene.remove(object);
+
+    const index = objects.indexOf(object);
+
+    if (index !== -1) {
+        objects.splice(index, 1);
+    }
+
+    object.geometry.dispose();
+
+    if (object.material) {
+        object.material.dispose();
+    }
+
+    selectedObject = null;
+
+    recordHistory();
+    refreshScene();
+
+}
+
+function duplicateSelected() {
+
+    if (!selectedObject) {
+        return;
+    }
+
+    const copy = selectedObject.clone();
+
+    copy.name =
+        selectedObject.name + "_Copy";
+
+    copy.position.x += 1;
+
+    scene.add(copy);
+    objects.push(copy);
+
+    selectObject(copy);
+
+    recordHistory();
+    refreshScene();
+
+}
+
+function refreshScene() {
+
+    objectCount.textContent =
+        objects.length.toString();
+
+    updateHierarchy();
+    updateProperties();
+
+}
+
+function updateHierarchy() {
+
+    hierarchy.innerHTML = "";
+
+    objects.forEach(object => {
+
+        const row =
+            document.createElement("div");
+
+        row.className = "object-row";
+
+        if (object === selectedObject) {
+            row.classList.add("selected");
+        }
+
+        row.innerHTML =
+            `<span>${object.name}</span>
+             <span class="object-type">${object.geometry.type}</span>`;
+
+        row.addEventListener(
+            "click",
+            () => selectObject(object)
         );
+
+        hierarchy.appendChild(row);
+
+    });
+
+}
+
+function updateProperties() {
+
+    if (!selectedObject) {
+
+        properties.innerHTML = `
+            <div class="property-row">
+                <span class="property-name">OBJECT</span>
+                <span class="property-value">NONE</span>
+            </div>
+        `;
 
         return;
     }
 
-    const index =
-        objects.indexOf(selected);
+    const p = selectedObject.position;
+    const r = selectedObject.rotation;
+    const s = selectedObject.scale;
 
-    scene.remove(selected);
+    properties.innerHTML = `
+        <div class="property-row">
+            <span class="property-name">OBJECT</span>
+            <span class="property-value">${selectedObject.name}</span>
+        </div>
 
-    selected.geometry.dispose();
+        <div class="property-row">
+            <span class="property-name">POSITION</span>
+            <span class="property-value">
+                ${p.x.toFixed(2)},
+                ${p.y.toFixed(2)},
+                ${p.z.toFixed(2)}
+            </span>
+        </div>
 
-    selected.material.dispose();
+        <div class="property-row">
+            <span class="property-name">ROTATION</span>
+            <span class="property-value">
+                ${THREE.MathUtils.radToDeg(r.x).toFixed(1)},
+                ${THREE.MathUtils.radToDeg(r.y).toFixed(1)},
+                ${THREE.MathUtils.radToDeg(r.z).toFixed(1)}
+            </span>
+        </div>
 
-    if(index !== -1){
+        <div class="property-row">
+            <span class="property-name">SCALE</span>
+            <span class="property-value">
+                ${s.x.toFixed(2)},
+                ${s.y.toFixed(2)},
+                ${s.z.toFixed(2)}
+            </span>
+        </div>
+    `;
 
-        objects.splice(
-            index,
-            1
-        );
-    }
-
-    selected = null;
-
-    transform.detach();
-
-    updateHierarchy();
-
-    updateProperties();
-
-    updateObjectCount();
-
-    document.getElementById(
-        "selectionInfo"
-    ).textContent =
-        "NO OBJECT SELECTED";
-
-    showToast(
-        "Object deleted"
-    );
 }
 
-function saveScene(){
+function recordHistory() {
 
-    const data =
-        objects.map(
-            function(object){
+    const state = objects.map(object => ({
+        name: object.name,
+        type: object.geometry.type,
+        position: object.position.toArray(),
+        rotation: [
+            object.rotation.x,
+            object.rotation.y,
+            object.rotation.z
+        ],
+        scale: object.scale.toArray()
+    }));
 
-                return {
-                    name:object.name,
-                    geometry:
-                        object.geometry.type,
+    history =
+        history.slice(0, historyIndex + 1);
 
-                    position:{
-                        x:object.position.x,
-                        y:object.position.y,
-                        z:object.position.z
-                    },
+    history.push(
+        JSON.stringify(state)
+    );
 
-                    rotation:{
-                        x:object.rotation.x,
-                        y:object.rotation.y,
-                        z:object.rotation.z
-                    },
+    historyIndex =
+        history.length - 1;
 
-                    scale:{
-                        x:object.scale.x,
-                        y:object.scale.y,
-                        z:object.scale.z
-                    }
-                };
-            }
+}
+
+function restoreHistory(index) {
+
+    if (
+        index < 0 ||
+        index >= history.length
+    ) {
+        return;
+    }
+
+    const state =
+        JSON.parse(history[index]);
+
+    objects.forEach(object => {
+
+        scene.remove(object);
+
+        if (object.geometry) {
+            object.geometry.dispose();
+        }
+
+        if (object.material) {
+            object.material.dispose();
+        }
+
+    });
+
+    objects = [];
+    selectedObject = null;
+    transform.detach();
+
+    state.forEach(data => {
+
+        let geometry;
+
+        if (data.type === "BoxGeometry") {
+            geometry = new THREE.BoxGeometry(1, 1, 1);
+        }
+
+        if (data.type === "SphereGeometry") {
+            geometry = new THREE.SphereGeometry(
+                0.65,
+                32,
+                20
+            );
+        }
+
+        if (data.type === "CylinderGeometry") {
+            geometry = new THREE.CylinderGeometry(
+                0.6,
+                0.6,
+                1.2,
+                32
+            );
+        }
+
+        if (!geometry) {
+            geometry = new THREE.BoxGeometry(1, 1, 1);
+        }
+
+        const mesh = new THREE.Mesh(
+            geometry,
+            makeMaterial()
         );
+
+        mesh.name = data.name;
+
+        mesh.position.fromArray(
+            data.position
+        );
+
+        mesh.rotation.set(
+            data.rotation[0],
+            data.rotation[1],
+            data.rotation[2]
+        );
+
+        mesh.scale.fromArray(
+            data.scale
+        );
+
+        scene.add(mesh);
+        objects.push(mesh);
+
+    });
+
+    historyIndex = index;
+
+    refreshScene();
+
+}
+
+function undo() {
+
+    if (historyIndex <= 0) {
+        return;
+    }
+
+    restoreHistory(
+        historyIndex - 1
+    );
+
+}
+
+function redo() {
+
+    if (
+        historyIndex >= history.length - 1
+    ) {
+        return;
+    }
+
+    restoreHistory(
+        historyIndex + 1
+    );
+
+}
+
+function saveScene() {
+
+    const data = objects.map(object => ({
+        name: object.name,
+        type: object.geometry.type,
+        position: object.position.toArray(),
+        rotation: [
+            object.rotation.x,
+            object.rotation.y,
+            object.rotation.z
+        ],
+        scale: object.scale.toArray()
+    }));
 
     localStorage.setItem(
         "ai3dstudio_scene",
         JSON.stringify(data)
     );
 
-    showToast(
-        "Scene saved"
-    );
+    aiOutput.textContent =
+        "Scene saved locally.";
+
 }
 
-function loadScene(){
+function loadScene() {
 
-    const saved =
+    const stored =
         localStorage.getItem(
             "ai3dstudio_scene"
         );
 
-    if(!saved){
+    if (!stored) {
 
-        showToast(
-            "No saved scene"
-        );
+        aiOutput.textContent =
+            "No saved scene found.";
 
         return;
     }
 
-    objects.slice().forEach(
-        function(object){
+    const state =
+        JSON.parse(stored);
 
-            scene.remove(object);
+    objects.forEach(object => {
 
+        scene.remove(object);
+
+        if (object.geometry) {
             object.geometry.dispose();
+        }
 
+        if (object.material) {
             object.material.dispose();
         }
-    );
 
-    objects.length = 0;
+    });
 
-    selected = null;
-
+    objects = [];
+    selectedObject = null;
     transform.detach();
 
-    const data =
-        JSON.parse(saved);
+    state.forEach(data => {
 
-    data.forEach(
-        function(item){
+        let geometry;
 
-            let geometry;
-
-            if(
-                item.geometry ===
-                "SphereGeometry"
-            ){
-
-                geometry =
-                    new THREE.SphereGeometry(
-                        1.2,
-                        32,
-                        20
-                    );
-
-            }else if(
-                item.geometry ===
-                "CylinderGeometry"
-            ){
-
-                geometry =
-                    new THREE.CylinderGeometry(
-                        1.1,
-                        1.1,
-                        2.2,
-                        32
-                    );
-
-            }else{
-
-                geometry =
-                    new THREE.BoxGeometry(
-                        2,
-                        2,
-                        2
-                    );
-            }
-
-            const object =
-                new THREE.Mesh(
-                    geometry,
-                    createMaterial()
-                );
-
-            object.name =
-                item.name;
-
-            object.position.set(
-                item.position.x,
-                item.position.y,
-                item.position.z
+        if (data.type === "BoxGeometry") {
+            geometry = new THREE.BoxGeometry(1, 1, 1);
+        } else if (data.type === "SphereGeometry") {
+            geometry = new THREE.SphereGeometry(
+                0.65,
+                32,
+                20
             );
-
-            object.rotation.set(
-                item.rotation.x,
-                item.rotation.y,
-                item.rotation.z
+        } else if (data.type === "CylinderGeometry") {
+            geometry = new THREE.CylinderGeometry(
+                0.6,
+                0.6,
+                1.2,
+                32
             );
-
-            object.scale.set(
-                item.scale.x,
-                item.scale.y,
-                item.scale.z
-            );
-
-            scene.add(object);
-
-            objects.push(object);
+        } else {
+            geometry = new THREE.BoxGeometry(1, 1, 1);
         }
-    );
 
-    objectNumber =
-        objects.length;
+        const mesh = new THREE.Mesh(
+            geometry,
+            makeMaterial()
+        );
 
-    updateHierarchy();
+        mesh.name = data.name;
 
-    updateProperties();
+        mesh.position.fromArray(
+            data.position
+        );
 
-    updateObjectCount();
+        mesh.rotation.set(
+            data.rotation[0],
+            data.rotation[1],
+            data.rotation[2]
+        );
 
-    showToast(
-        "Scene loaded"
-    );
+        mesh.scale.fromArray(
+            data.scale
+        );
+
+        scene.add(mesh);
+        objects.push(mesh);
+
+    });
+
+    refreshScene();
+
+    aiOutput.textContent =
+        "Scene loaded.";
+
 }
 
-function processAICommand(command){
+function executeAICommand(command) {
+
+    if (!command) {
+        return;
+    }
 
     const text =
-        command
-        .toLowerCase()
-        .trim();
+        command.toLowerCase();
 
-    if(!text){
-        return;
-    }
-
-    if(
+    if (
         text.includes("create cube") ||
-        text === "cube" ||
-        text.includes("add cube")
-    ){
+        text === "cube"
+    ) {
 
-        createObject("cube");
+        addCube();
+
+        aiOutput.textContent =
+            "AI: Cube created.";
 
         return;
     }
 
-    if(
+    if (
         text.includes("create sphere") ||
-        text === "sphere" ||
-        text.includes("add sphere")
-    ){
+        text === "sphere"
+    ) {
 
-        createObject("sphere");
+        addSphere();
+
+        aiOutput.textContent =
+            "AI: Sphere created.";
 
         return;
     }
 
-    if(
+    if (
         text.includes("create cylinder") ||
-        text === "cylinder" ||
-        text.includes("add cylinder")
-    ){
+        text === "cylinder"
+    ) {
 
-        createObject("cylinder");
+        addCylinder();
+
+        aiOutput.textContent =
+            "AI: Cylinder created.";
 
         return;
     }
 
-    if(text.includes("delete")){
+    if (text.includes("delete")) {
 
         deleteSelected();
 
-        return;
-    }
-
-    if(text.includes("save")){
-
-        saveScene();
+        aiOutput.textContent =
+            "AI: Selected object deleted.";
 
         return;
     }
 
-    if(text.includes("load")){
+    if (text.includes("duplicate")) {
 
-        loadScene();
+        duplicateSelected();
 
-        return;
-    }
-
-    if(text.includes("move")){
-
-        setTool("translate");
+        aiOutput.textContent =
+            "AI: Object duplicated.";
 
         return;
     }
 
-    if(text.includes("rotate")){
+    if (text.includes("move")) {
+
+        setTool("move");
+
+        aiOutput.textContent =
+            "AI: Move mode activated.";
+
+        return;
+    }
+
+    if (text.includes("rotate")) {
 
         setTool("rotate");
 
+        aiOutput.textContent =
+            "AI: Rotate mode activated.";
+
         return;
     }
 
-    if(text.includes("scale")){
+    if (text.includes("scale")) {
 
         setTool("scale");
 
+        aiOutput.textContent =
+            "AI: Scale mode activated.";
+
         return;
     }
 
-    if(text.includes("select")){
+    if (text.includes("select")) {
 
         setTool("select");
 
+        aiOutput.textContent =
+            "AI: Select mode activated.";
+
         return;
     }
 
-    showToast(
-        "AI command not recognized"
-    );
+    aiOutput.textContent =
+        "AI: Command not recognized.";
+
 }
 
-let downX = 0;
-let downY = 0;
+async function toggleCamera() {
 
-canvas.addEventListener(
-    "pointerdown",
-    function(event){
-
-        downX =
-            event.clientX;
-
-        downY =
-            event.clientY;
+    if (cameraStarting) {
+        return;
     }
-);
 
-canvas.addEventListener(
-    "pointerup",
-    function(event){
+    if (handControlEnabled) {
 
-        if(currentTool !== "select"){
-            return;
+        stopCamera();
+
+        return;
+    }
+
+    await startCamera();
+
+}
+
+async function startCamera() {
+
+    cameraStarting = true;
+
+    cameraButton.textContent =
+        "STARTING CAMERA...";
+
+    webcamStatus.textContent =
+        "STARTING";
+
+    webcamStatus.className =
+        "webcam-status";
+
+    try {
+
+        if (
+            !navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia
+        ) {
+            throw new Error(
+                "Camera API unavailable"
+            );
         }
 
-        const dx =
-            event.clientX - downX;
+        webcamStream =
+            await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: {
+                        ideal: 640
+                    },
+                    height: {
+                        ideal: 480
+                    },
+                    facingMode: "user"
+                },
+                audio: false
+            });
 
-        const dy =
-            event.clientY - downY;
+        webcam.srcObject =
+            webcamStream;
 
-        const distance =
-            Math.sqrt(
-                dx * dx +
-                dy * dy
-            );
+        await webcam.play();
 
-        if(distance > 5){
-            return;
-        }
+        webcam.style.display =
+            "block";
 
-        const rect =
-            canvas.getBoundingClientRect();
+        webcamPlaceholder.style.display =
+            "none";
 
-        mouse.x =
-            ((event.clientX -
-                rect.left) /
-                rect.width) *
-                2 - 1;
+        handControlEnabled = true;
 
-        mouse.y =
-            -((event.clientY -
-                rect.top) /
-                rect.height) *
-                2 + 1;
+        webcamStatus.textContent =
+            "HAND CONTROL ACTIVE";
 
-        raycaster.setFromCamera(
-            mouse,
-            camera
+        webcamStatus.className =
+            "webcam-status active";
+
+        handStatus.textContent =
+            "ACTIVE";
+
+        inputStatus.textContent =
+            "HAND + MOUSE + KEYBOARD";
+
+        cameraButton.textContent =
+            "DISABLE HAND CONTROL";
+
+        systemStatus.textContent =
+            "SYSTEM ONLINE";
+
+        await initializeHandTracker();
+
+        startHandLoop();
+
+    } catch (error) {
+
+        stopCamera();
+
+        webcamStatus.textContent =
+            "CAMERA UNAVAILABLE";
+
+        webcamStatus.className =
+            "webcam-status warning";
+
+        cameraButton.textContent =
+            "ENABLE HAND CONTROL";
+
+        handStatus.textContent =
+            "OFF";
+
+        inputStatus.textContent =
+            "MOUSE + KEYBOARD";
+
+        aiOutput.textContent =
+            "Hand control unavailable. Mouse and keyboard controls remain active.";
+
+    } finally {
+
+        cameraStarting = false;
+
+    }
+
+}
+
+function stopCamera() {
+
+    handControlEnabled = false;
+
+    if (handAnimationFrame) {
+
+        cancelAnimationFrame(
+            handAnimationFrame
         );
 
-        const hits =
-            raycaster.intersectObjects(
-                objects,
-                false
+        handAnimationFrame = null;
+
+    }
+
+    if (webcamStream) {
+
+        webcamStream
+            .getTracks()
+            .forEach(track => track.stop());
+
+        webcamStream = null;
+
+    }
+
+    webcam.srcObject = null;
+
+    webcam.style.display =
+        "none";
+
+    webcamPlaceholder.style.display =
+        "flex";
+
+    webcamStatus.textContent =
+        "CAMERA OFF";
+
+    webcamStatus.className =
+        "webcam-status";
+
+    handStatus.textContent =
+        "OFF";
+
+    inputStatus.textContent =
+        "MOUSE + KEYBOARD";
+
+    cameraButton.textContent =
+        "ENABLE HAND CONTROL";
+
+    pinchActive = false;
+    handGrabObject = null;
+
+    resetHandState();
+
+}
+
+async function initializeHandTracker() {
+
+    if (handLandmarker) {
+        return;
+    }
+
+    try {
+
+        const visionModule =
+            await import(
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs"
             );
 
-        if(hits.length){
+        const {
+            FilesetResolver,
+            HandLandmarker
+        } = visionModule;
 
-            selectObject(
-                hits[0].object
+        const fileset =
+            await FilesetResolver.forVisionTasks(
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
             );
 
-        }else{
+        handLandmarker =
+            await HandLandmarker.createFromOptions(
+                fileset,
+                {
+                    baseOptions: {
+                        modelAssetPath:
+                            "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+                    },
 
-            deselect();
-        }
-    }
-);
+                    runningMode: "VIDEO",
 
-document.querySelectorAll(
-    ".tool[data-tool]"
-).forEach(
-    function(button){
+                    numHands: 2,
 
-        button.addEventListener(
-            "click",
-            function(){
+                    minHandDetectionConfidence: 0.5,
 
-                setTool(
-                    button.dataset.tool
-                );
-            }
-        );
-    }
-);
+                    minHandPresenceConfidence: 0.5,
 
-document.querySelectorAll(
-    ".tool[data-create]"
-).forEach(
-    function(button){
-
-        button.addEventListener(
-            "click",
-            function(){
-
-                createObject(
-                    button.dataset.create
-                );
-            }
-        );
-    }
-);
-
-document.getElementById(
-    "deleteTool"
-).addEventListener(
-    "click",
-    deleteSelected
-);
-
-document.getElementById(
-    "saveTool"
-).addEventListener(
-    "click",
-    saveScene
-);
-
-document.getElementById(
-    "loadTool"
-).addEventListener(
-    "click",
-    loadScene
-);
-
-document.getElementById(
-    "aiSend"
-).addEventListener(
-    "click",
-    function(){
-
-        const input =
-            document.getElementById(
-                "aiCommand"
-            );
-
-        processAICommand(
-            input.value
-        );
-
-        input.value = "";
-    }
-);
-
-document.getElementById(
-    "aiCommand"
-).addEventListener(
-    "keydown",
-    function(event){
-
-        if(event.key === "Enter"){
-
-            processAICommand(
-                this.value
-            );
-
-            this.value = "";
-        }
-    }
-);
-
-[
-    "objectName",
-    "posX",
-    "posY",
-    "posZ",
-    "rotX",
-    "rotY",
-    "rotZ",
-    "scaleX",
-    "scaleY",
-    "scaleZ"
-].forEach(
-    function(id){
-
-        document.getElementById(id)
-            .addEventListener(
-                "change",
-                function(){
-
-                    if(!selected){
-                        return;
-                    }
-
-                    const value =
-                        function(id,fallback){
-
-                            const number =
-                                parseFloat(
-                                    document
-                                    .getElementById(id)
-                                    .value
-                                );
-
-                            return Number.isFinite(number)
-                                ? number
-                                : fallback;
-                        };
-
-                    selected.name =
-                        document
-                        .getElementById(
-                            "objectName"
-                        )
-                        .value ||
-                        selected.name;
-
-                    selected.position.set(
-                        value(
-                            "posX",
-                            selected.position.x
-                        ),
-                        value(
-                            "posY",
-                            selected.position.y
-                        ),
-                        value(
-                            "posZ",
-                            selected.position.z
-                        )
-                    );
-
-                    selected.rotation.set(
-                        THREE.MathUtils.degToRad(
-                            value(
-                                "rotX",
-                                THREE.MathUtils.radToDeg(
-                                    selected.rotation.x
-                                )
-                            )
-                        ),
-                        THREE.MathUtils.degToRad(
-                            value(
-                                "rotY",
-                                THREE.MathUtils.radToDeg(
-                                    selected.rotation.y
-                                )
-                            )
-                        ),
-                        THREE.MathUtils.degToRad(
-                            value(
-                                "rotZ",
-                                THREE.MathUtils.radToDeg(
-                                    selected.rotation.z
-                                )
-                            )
-                        )
-                    );
-
-                    selected.scale.set(
-                        Math.max(
-                            .01,
-                            value(
-                                "scaleX",
-                                selected.scale.x
-                            )
-                        ),
-                        Math.max(
-                            .01,
-                            value(
-                                "scaleY",
-                                selected.scale.y
-                            )
-                        ),
-                        Math.max(
-                            .01,
-                            value(
-                                "scaleZ",
-                                selected.scale.z
-                            )
-                        )
-                    );
-
-                    updateHierarchy();
-                    updateProperties();
+                    minTrackingConfidence: 0.5
                 }
             );
+
+    } catch (error) {
+
+        handLandmarker = null;
+
+        aiOutput.textContent =
+            "Hand tracking could not be loaded. Mouse and keyboard controls remain active.";
+
     }
-);
 
-function resize(){
+}
 
-    const width =
-        canvas.clientWidth;
+function startHandLoop() {
 
-    const height =
-        canvas.clientHeight;
-
-    if(
-        width <= 0 ||
-        height <= 0
-    ){
+    if (!handControlEnabled) {
         return;
     }
 
-    camera.aspect =
-        width / height;
+    if (
+        !handLandmarker ||
+        webcam.readyState < 2
+    ) {
 
-    camera.updateProjectionMatrix();
+        handAnimationFrame =
+            requestAnimationFrame(
+                startHandLoop
+            );
 
-    renderer.setSize(
-        width,
-        height,
-        false
-    );
+        return;
+
+    }
+
+    const now =
+        performance.now();
+
+    try {
+
+        const result =
+            handLandmarker.detectForVideo(
+                webcam,
+                now
+            );
+
+        processHandResult(result);
+
+    } catch (error) {
+
+        resetHandState();
+
+    }
+
+    handAnimationFrame =
+        requestAnimationFrame(
+            startHandLoop
+        );
+
 }
 
-window.addEventListener(
-    "resize",
-    resize
-);
+function processHandResult(result) {
 
-function animate(){
+    if (
+        !result ||
+        !result.landmarks ||
+        result.landmarks.length === 0
+    ) {
 
-    requestAnimationFrame(
-        animate
+        handStatus.textContent =
+            "NO HAND";
+
+        handCursor.style.display =
+            "none";
+
+        releaseHand();
+
+        return;
+    }
+
+    handStatus.textContent =
+        result.landmarks.length === 2
+            ? "2 HANDS"
+            : "1 HAND";
+
+    const hand =
+        result.landmarks[0];
+
+    const index =
+        hand[8];
+
+    const thumb =
+        hand[4];
+
+    const wrist =
+        hand[0];
+
+    const indexBase =
+        hand[5];
+
+    const pinkyBase =
+        hand[17];
+
+    const indexTipX =
+        1 - index.x;
+
+    const indexTipY =
+        index.y;
+
+    updateHandCursor(
+        indexTipX,
+        indexTipY
     );
 
-    orbit.update();
+    const pinchDistance =
+        distance3D(
+            thumb,
+            index
+        );
 
-    renderer.render(
-        scene,
+    const palmX =
+        (
+            wrist.x +
+            indexBase.x +
+            pinkyBase.x
+        ) / 3;
+
+    const palmY =
+        (
+            wrist.y +
+            indexBase.y +
+            pinkyBase.y
+        ) / 3;
+
+    const palmZ =
+        (
+            wrist.z +
+            indexBase.z +
+            pinkyBase.z
+        ) / 3;
+
+    const palmAngle =
+        Math.atan2(
+            indexBase.y - pinkyBase.y,
+            indexBase.x - pinkyBase.x
+        );
+
+    const isPinching =
+        pinchDistance < 0.065;
+
+    if (isPinching && !pinchActive) {
+
+        pinchActive = true;
+
+        handleHandGrab(
+            indexTipX,
+            indexTipY
+        );
+
+        lastPalmX = palmX;
+        lastPalmY = palmY;
+        lastPalmZ = palmZ;
+        lastPinchDistance = pinchDistance;
+        lastPalmAngle = palmAngle;
+
+    }
+
+    if (isPinching && pinchActive) {
+
+        handleHandManipulation(
+            palmX,
+            palmY,
+            palmZ,
+            pinchDistance,
+            palmAngle
+        );
+
+    }
+
+    if (!isPinching && pinchActive) {
+
+        releaseHand();
+
+    }
+
+    if (
+        result.landmarks.length === 2
+    ) {
+
+        processTwoHands(
+            result.landmarks
+        );
+
+    } else {
+
+        twoHandPreviousDistance =
+            null;
+
+    }
+
+    lastHandTime =
+        performance.now();
+
+}
+
+function updateHandCursor(
+    normalizedX,
+    normalizedY
+) {
+
+    const rect =
+        viewport.getBoundingClientRect();
+
+    const x =
+        Math.max(
+            0,
+            Math.min(
+                rect.width,
+                normalizedX * rect.width
+            )
+        );
+
+    const y =
+        Math.max(
+            0,
+            Math.min(
+                rect.height,
+                normalizedY * rect.height
+            )
+        );
+
+    handCursor.style.left =
+        `${x}px`;
+
+    handCursor.style.top =
+        `${y}px`;
+
+    handCursor.style.display =
+        "block";
+
+    handCursor.classList.toggle(
+        "pinching",
+        pinchActive
+    );
+
+}
+
+function handleHandGrab(
+    x,
+    y
+) {
+
+    if (!selectedObject) {
+
+        const object =
+            objectFromScreen(
+                x,
+                y
+            );
+
+        if (object) {
+            selectObject(object);
+        }
+
+    }
+
+    handGrabObject =
+        selectedObject;
+
+}
+
+function handleHandManipulation(
+    palmX,
+    palmY,
+    palmZ,
+    pinchDistance,
+    palmAngle
+) {
+
+    if (!handGrabObject) {
+        return;
+    }
+
+    const object =
+        handGrabObject;
+
+    const dx =
+        palmX - lastPalmX;
+
+    const dy =
+        palmY - lastPalmY;
+
+    const dz =
+        palmZ - lastPalmZ;
+
+    const distanceChange =
+        pinchDistance -
+        lastPinchDistance;
+
+    const angleChange =
+        normalizeAngle(
+            palmAngle -
+            lastPalmAngle
+        );
+
+    if (currentTool === "move") {
+
+        object.position.x -= dx * 6;
+
+        object.position.y -= dy * 6;
+
+        object.position.z += dz * 6;
+
+    }
+
+    if (currentTool === "rotate") {
+
+        object.rotation.y -= dx * 7;
+
+        object.rotation.x -= dy * 7;
+
+        object.rotation.z += angleChange * 2;
+
+    }
+
+    if (currentTool === "scale") {
+
+        const factor =
+            1 + distanceChange * 7;
+
+        const safeFactor =
+            THREE.MathUtils.clamp(
+                factor,
+                0.92,
+                1.08
+            );
+
+        object.scale.multiplyScalar(
+            safeFactor
+        );
+
+        object.scale.x =
+            Math.max(
+                0.05,
+                object.scale.x
+            );
+
+        object.scale.y =
+            Math.max(
+                0.05,
+                object.scale.y
+            );
+
+        object.scale.z =
+            Math.max(
+                0.05,
+                object.scale.z
+            );
+
+    }
+
+    updateProperties();
+
+    lastPalmX =
+        palmX;
+
+    lastPalmY =
+        palmY;
+
+    lastPalmZ =
+        palmZ;
+
+    lastPinchDistance =
+        pinchDistance;
+
+    lastPalmAngle =
+        palmAngle;
+
+}
+
+function processTwoHands(
+    hands
+) {
+
+    const handA =
+        hands[0];
+
+    const handB =
+        hands[1];
+
+    const palmA =
+        getPalm(
+            handA
+        );
+
+    const palmB =
+        getPalm(
+            handB
+        );
+
+    const distance =
+        distance3D(
+            palmA,
+            palmB
+        );
+
+    if (
+        currentTool === "scale" &&
+        selectedObject
+    ) {
+
+        if (
+            twoHandPreviousDistance !== null
+        ) {
+
+            const change =
+                distance -
+                twoHandPreviousDistance;
+
+            const factor =
+                1 + change * 2.5;
+
+            const safeFactor =
+                THREE.MathUtils.clamp(
+                    factor,
+                    0.94,
+                    1.06
+                );
+
+            selectedObject.scale.multiplyScalar(
+                safeFactor
+            );
+
+            selectedObject.scale.x =
+                Math.max(
+                    0.05,
+                    selectedObject.scale.x
+                );
+
+            selectedObject.scale.y =
+                Math.max(
+                    0.05,
+                    selectedObject.scale.y
+                );
+
+            selectedObject.scale.z =
+                Math.max(
+                    0.05,
+                    selectedObject.scale.z
+                );
+
+            updateProperties();
+
+        }
+
+    }
+
+    twoHandPreviousDistance =
+        distance;
+
+}
+
+function releaseHand() {
+
+    pinchActive = false;
+
+    handGrabObject =
+        null;
+
+    lastPalmX = null;
+    lastPalmY = null;
+    lastPalmZ = null;
+    lastPinchDistance = null;
+    lastPalmAngle = null;
+
+    handCursor.classList.remove(
+        "pinching"
+    );
+
+}
+
+function resetHandState() {
+
+    releaseHand();
+
+    twoHandPreviousDistance =
+        null;
+
+    handCursor.style.display =
+        "none";
+
+}
+
+function getPalm(hand) {
+
+    const wrist =
+        hand[0];
+
+    const index =
+        hand[5];
+
+    const pinky =
+        hand[17];
+
+    return {
+        x:
+            (wrist.x + index.x + pinky.x) / 3,
+
+        y:
+            (wrist.y + index.y + pinky.y) / 3,
+
+        z:
+            (wrist.z + index.z + pinky.z) / 3
+    };
+
+}
+
+function distance3D(a, b) {
+
+    const dx =
+        a.x - b.x;
+
+    const dy =
+        a.y - b.y;
+
+    const dz =
+        a.z - b.z;
+
+    return Math.sqrt(
+        dx * dx +
+        dy * dy +
+        dz * dz
+    );
+
+}
+
+function normalizeAngle(angle) {
+
+    while (angle > Math.PI) {
+        angle -= Math.PI * 2;
+    }
+
+    while (angle < -Math.PI) {
+        angle += Math.PI * 2;
+    }
+
+    return angle;
+
+}
+
+function objectFromScreen(
+    normalizedX,
+    normalizedY
+) {
+
+    const rect =
+        renderer.domElement.getBoundingClientRect();
+
+    const x =
+        normalizedX * 2 - 1;
+
+    const y =
+        -(normalizedY * 2 - 1);
+
+    raycaster.setFromCamera(
+        new THREE.Vector2(x, y),
         camera
     );
+
+    const hits =
+        raycaster.intersectObjects(
+            objects,
+            false
+        );
+
+    if (hits.length === 0) {
+        return null;
+    }
+
+    return hits[0].object;
+
 }
 
-resize();
-
-createObject("cube");
-
-setTool("select");
-
-animate();
+init();
 
 </script>
 
