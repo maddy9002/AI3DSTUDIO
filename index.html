@@ -3,10 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>AI3DSTUDIO</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #050505;
+            color: white;
+            font-family: Arial, Helvetica, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .topbar {
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            border-bottom: 1px solid #202020;
+            background: rgba(5, 5, 5, 0.95);
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #aaa;
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff8a24;
+            box-shadow: 0 0 12px #ff8a24;
+        }
+
+        .hero {
+            min-height: calc(100vh - 72px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .hero-label {
+            color: #ff8a24;
+            font-size: 13px;
+            letter-spacing: 4px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            font-size: clamp(50px, 9vw, 110px);
+            letter-spacing: 8px;
+            line-height: 1;
+            margin-bottom: 25px;
+        }
+
+        .subtitle {
+            max-width: 700px;
+            color: #999;
+            font-size: 18px;
+            line-height: 1.7;
+            margin-bottom: 40px;
+        }
+
+        .launch-button {
+            padding: 16px 34px;
+            border: 1px solid #ff8a24;
+            border-radius: 8px;
+            background: #ff8a24;
+            color: #050505;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .launch-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(255, 138, 36, 0.35);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(180px, 1fr));
+            gap: 20px;
+            width: min(900px, 100%);
+            margin-top: 80px;
+        }
+
+        .feature {
+            padding: 25px;
+            border: 1px solid #202020;
+            border-radius: 10px;
+            background: #0a0a0a;
+            text-align: left;
+        }
+
+        .feature h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .feature p {
+            color: #777;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 700px) {
+            .topbar {
+                padding: 0 20px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                letter-spacing: 4px;
+            }
+        }
+    </style>
 </head>
+
 <body>
-    <h1>AI3DSTUDIO</h1>
-    <p>AI-powered 3D design platform</p>
+
+    <header class="topbar">
+        <div class="logo">AI3DSTUDIO</div>
+
+        <div class="status">
+            <span class="status-dot"></span>
+            SYSTEM ONLINE
+        </div>
+    </header>
+
+    <main class="hero">
+
+        <div class="hero-label">
+            AI POWERED 3D DESIGN
+        </div>
+
+        <h1>AI3DSTUDIO</h1>
+
+        <p class="subtitle">
+            An intelligent 3D design environment combining AI,
+            natural interaction, real-time modeling and advanced
+            visualization.
+        </p>
+
+        <button class="launch-button" onclick="launchStudio()">
+            LAUNCH STUDIO
+        </button>
+
+        <section class="features">
+
+            <div class="feature">
+                <h2>AI DESIGN</h2>
+                <p>
+                    Create and manipulate 3D objects using
+                    intelligent commands.
+                </p>
+            </div>
+
+            <div class="feature">
+                <h2>3D MODELING</h2>
+                <p>
+                    Work with objects, transformations,
+                    selection and interactive modeling.
+                </p>
+            </div>
+
+            <div class="feature">
+                <h2>NATURAL CONTROL</h2>
+                <p>
+                    Explore interaction through mouse,
+                    keyboard, voice and hand tracking.
+                </p>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        function launchStudio() {
+            alert("AI3DSTUDIO Web Studio is coming next.");
+        }
+    </script>
+
 </body>
 </html>
