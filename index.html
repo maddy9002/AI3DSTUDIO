@@ -2,411 +2,417 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI3DSTUDIO</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI3DSTUDIO Web Studio</title>
 
 <style>
-* {
-    box-sizing: border-box;
+*{box-sizing:border-box}
+
+html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#05070a;
+    color:#e8edf2;
+    font-family:Arial,Helvetica,sans-serif
 }
 
-html,
-body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #05070a;
-    color: #e8edf3;
-    font-family: Arial, Helvetica, sans-serif;
+button,input{
+    font:inherit
 }
 
-button,
-input {
-    font-family: inherit;
+#app{
+    width:100%;
+    height:100%;
+    display:grid;
+    grid-template-columns:210px 1fr 280px;
+    grid-template-rows:68px 1fr 58px
 }
 
-button {
-    cursor: pointer;
+header{
+    grid-column:1/4;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:0 22px;
+    background:#090c10;
+    border-bottom:1px solid #20262d
 }
 
-#app {
-    width: 100vw;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background: #05070a;
+.brand{
+    color:#ff8a24;
+    font-size:22px;
+    font-weight:bold;
+    letter-spacing:2px
 }
 
-.topbar {
-    height: 58px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    border-bottom: 1px solid #1b222b;
-    background: #080b10;
+.subtitle{
+    color:#68737e;
+    font-size:10px;
+    letter-spacing:2px;
+    margin-top:4px
 }
 
-.logo {
-    color: #ff8a24;
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: 2px;
+.status{
+    color:#7d8994;
+    font-size:11px;
+    letter-spacing:1px
 }
 
-.subtitle {
-    margin-left: 14px;
-    color: #68727d;
-    font-size: 10px;
-    letter-spacing: 2px;
+.status span{
+    color:#ff8a24
 }
 
-.system {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    font-size: 10px;
-    letter-spacing: 1.5px;
-    color: #8c98a5;
+#tools{
+    grid-column:1;
+    grid-row:2;
+    padding:14px;
+    background:#080b0f;
+    border-right:1px solid #20262d
 }
 
-.system-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #46d369;
-    box-shadow: 0 0 10px rgba(70,211,105,.7);
+.section-title{
+    color:#68737e;
+    font-size:10px;
+    letter-spacing:2px;
+    margin:8px 4px 10px
 }
 
-.workspace {
-    flex: 1;
-    min-height: 0;
-    display: flex;
+.tool{
+    width:100%;
+    margin:4px 0;
+    padding:10px;
+    border:1px solid #242b33;
+    border-radius:6px;
+    background:#0d1116;
+    color:#b9c1c9;
+    cursor:pointer;
+    text-align:left
 }
 
-.left-panel {
-    width: 180px;
-    flex-shrink: 0;
-    border-right: 1px solid #1b222b;
-    background: #080b10;
-    padding: 14px 12px;
+.tool:hover,
+.tool.active{
+    border-color:#ff8a24;
+    color:#ff9a43;
+    background:#20150d
 }
 
-.panel-title {
-    color: #66717d;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    margin: 6px 5px 10px;
+#viewport{
+    position:relative;
+    grid-column:2;
+    grid-row:2;
+    overflow:hidden;
+    background:#030507
 }
 
-.tool {
-    width: 100%;
-    height: 38px;
-    margin-bottom: 6px;
-    border: 1px solid #202934;
-    border-radius: 5px;
-    background: #0c1117;
-    color: #aeb8c2;
-    text-align: left;
-    padding-left: 12px;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
+#scene{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%
 }
 
-.tool:hover {
-    border-color: #ff8a24;
-    color: #ff8a24;
+#handOverlay{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none
 }
 
-.tool.active {
-    background: rgba(255,138,36,.12);
-    border-color: #ff8a24;
-    color: #ff8a24;
+#cursor{
+    position:absolute;
+    width:24px;
+    height:24px;
+    border:2px solid #ff8a24;
+    border-radius:50%;
+    box-shadow:0 0 18px #ff8a24;
+    transform:translate(-50%,-50%);
+    display:none;
+    pointer-events:none;
+    z-index:20
 }
 
-.viewport-wrap {
-    position: relative;
-    flex: 1;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-    background: #05070a;
+#cursor:after{
+    content:"";
+    position:absolute;
+    width:5px;
+    height:5px;
+    left:7px;
+    top:7px;
+    background:white;
+    border-radius:50%
 }
 
-#viewport {
-    position: absolute;
-    inset: 0;
+#hint{
+    position:absolute;
+    left:16px;
+    bottom:15px;
+    padding:8px 10px;
+    background:rgba(5,7,10,.85);
+    border:1px solid #20262d;
+    border-radius:5px;
+    color:#77828d;
+    font-size:10px;
+    z-index:10
 }
 
-#viewport canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
+#right{
+    grid-column:3;
+    grid-row:2;
+    padding:14px;
+    background:#080b0f;
+    border-left:1px solid #20262d;
+    overflow:auto
 }
 
-.hand-cursor {
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    margin-left: -9px;
-    margin-top: -9px;
-    border: 2px solid #ff8a24;
-    border-radius: 50%;
-    box-shadow: 0 0 14px rgba(255,138,36,.9);
-    pointer-events: none;
-    display: none;
-    z-index: 20;
+.panel{
+    padding:12px;
+    margin-bottom:12px;
+    background:#0b0f14;
+    border:1px solid #20262d;
+    border-radius:7px
 }
 
-.hand-cursor.pinching {
-    width: 25px;
-    height: 25px;
-    margin-left: -12.5px;
-    margin-top: -12.5px;
-    background: rgba(255,138,36,.18);
+.panel h3{
+    margin:0 0 10px;
+    color:#727d88;
+    font-size:10px;
+    letter-spacing:2px
 }
 
-.crosshair {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 1px;
-    height: 1px;
-    pointer-events: none;
+.object-row{
+    padding:8px;
+    margin:2px 0;
+    border-radius:4px;
+    color:#bdc5cd;
+    font-size:12px;
+    cursor:pointer
 }
 
-.axis-label {
-    position: absolute;
-    bottom: 12px;
-    left: 14px;
-    color: #4e5965;
-    font-size: 9px;
-    letter-spacing: 1px;
-    pointer-events: none;
+.object-row.selected{
+    color:#ff9a43;
+    background:#21170f
 }
 
-.right-panel {
-    width: 285px;
-    flex-shrink: 0;
-    border-left: 1px solid #1b222b;
-    background: #080b10;
-    display: flex;
-    flex-direction: column;
+.prop{
+    display:flex;
+    justify-content:space-between;
+    padding:5px 0;
+    color:#89949f;
+    font-size:11px
 }
 
-.section {
-    border-bottom: 1px solid #1b222b;
-    padding: 13px;
+.prop b{
+    color:#dce1e5;
+    font-weight:normal
 }
 
-.hierarchy {
-    max-height: 190px;
-    overflow-y: auto;
+#webcamWrap{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/10;
+    overflow:hidden;
+    background:#020304;
+    border:1px solid #252c34;
+    border-radius:5px
 }
 
-.object-row {
-    height: 32px;
-    display: flex;
-    align-items: center;
-    padding: 0 9px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    color: #929da8;
-    font-size: 11px;
-    margin-bottom: 3px;
-    cursor: pointer;
+#webcam{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    transform:scaleX(-1)
 }
 
-.object-row:hover {
-    background: #0e141b;
+#webcamCanvas{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    pointer-events:none
 }
 
-.object-row.selected {
-    border-color: #ff8a24;
-    background: rgba(255,138,36,.1);
-    color: #ff8a24;
+#cameraButton{
+    width:100%;
+    margin-top:8px;
+    padding:8px;
+    border:1px solid #ff8a24;
+    border-radius:5px;
+    background:#17100a;
+    color:#ff9a43;
+    cursor:pointer
 }
 
-.object-type {
-    margin-left: auto;
-    color: #4f5964;
-    font-size: 8px;
+#cameraStatus{
+    margin-top:7px;
+    color:#7e8994;
+    font-size:10px;
+    line-height:1.4
 }
 
-.property-row {
-    display: flex;
-    justify-content: space-between;
-    margin: 7px 0;
-    font-size: 10px;
+#bottom{
+    grid-column:1/4;
+    grid-row:3;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:8px 14px;
+    background:#090c10;
+    border-top:1px solid #20262d
 }
 
-.property-name {
-    color: #66717d;
+#command{
+    flex:1;
+    padding:10px 12px;
+    background:#0c1015;
+    border:1px solid #252c34;
+    border-radius:5px;
+    color:#e9edf2;
+    outline:none
 }
 
-.property-value {
-    color: #b8c0c9;
-    font-family: monospace;
+#command:focus{
+    border-color:#ff8a24
 }
 
-.webcam-box {
-    position: relative;
-    width: 100%;
-    height: 155px;
-    overflow: hidden;
-    border: 1px solid #202934;
-    border-radius: 5px;
-    background: #030507;
+.bottom-item{
+    color:#7f8a96;
+    font-size:10px;
+    letter-spacing:1px
 }
 
-#webcam {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transform: scaleX(-1);
-    display: none;
-}
-
-.webcam-placeholder {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: #4d5864;
-    font-size: 9px;
-    letter-spacing: 1.5px;
-    text-align: center;
-    padding: 15px;
-}
-
-.webcam-placeholder strong {
-    color: #6c7782;
-    margin-bottom: 7px;
-}
-
-.webcam-status {
-    position: absolute;
-    left: 8px;
-    bottom: 7px;
-    padding: 4px 6px;
-    border-radius: 3px;
-    background: rgba(0,0,0,.65);
-    color: #79848f;
-    font-size: 8px;
-    letter-spacing: 1px;
-}
-
-.webcam-status.active {
-    color: #46d369;
-}
-
-.webcam-status.warning {
-    color: #ffb15c;
-}
-
-.camera-button {
-    width: 100%;
-    height: 31px;
-    margin-top: 8px;
-    border: 1px solid #26303a;
-    background: #0c1117;
-    color: #929da8;
-    border-radius: 4px;
-    font-size: 9px;
-    letter-spacing: 1px;
-}
-
-.camera-button:hover {
-    border-color: #ff8a24;
-    color: #ff8a24;
-}
-
-.ai-input {
-    width: 100%;
-    height: 38px;
-    padding: 0 11px;
-    border: 1px solid #222b35;
-    border-radius: 4px;
-    outline: none;
-    background: #05080c;
-    color: #dbe2e8;
-    font-size: 10px;
-}
-
-.ai-input:focus {
-    border-color: #ff8a24;
-}
-
-.ai-output {
-    height: 80px;
-    overflow-y: auto;
-    margin-top: 8px;
-    padding: 8px;
-    border: 1px solid #1b232c;
-    border-radius: 4px;
-    background: #05080c;
-    color: #68747f;
-    font-size: 9px;
-    line-height: 1.5;
-}
-
-.bottom-bar {
-    height: 36px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 22px;
-    padding: 0 15px;
-    border-top: 1px solid #1b222b;
-    background: #080b10;
-    color: #66717d;
-    font-size: 9px;
-    letter-spacing: 1px;
-}
-
-.status-value {
-    color: #aeb8c2;
-}
-
-.orange {
-    color: #ff8a24;
-}
-
-@media (max-width: 900px) {
-    .left-panel {
-        width: 135px;
-    }
-
-    .right-panel {
-        width: 235px;
-    }
-
-    .subtitle {
-        display: none;
-    }
-}
-
-@media (max-width: 700px) {
-    .left-panel {
-        width: 105px;
-    }
-
-    .right-panel {
-        display: none;
-    }
-
-    .tool {
-        font-size: 8px;
-        padding-left: 7px;
-    }
+.bottom-item span{
+    color:#ff8a24
 }
 </style>
+</head>
+
+<body>
+
+<div id="app">
+
+<header>
+    <div>
+        <div class="brand">AI3D STUDIO</div>
+        <div class="subtitle">AI POWERED 3D DESIGN ENVIRONMENT</div>
+    </div>
+
+    <div class="status">
+        SYSTEM <span id="systemStatus">ONLINE</span>
+        · HAND <span id="handStatus">OFF</span>
+    </div>
+</header>
+
+<div id="tools">
+
+    <div class="section-title">TRANSFORM</div>
+
+    <button class="tool active" data-tool="select">SELECT</button>
+    <button class="tool" data-tool="move">MOVE</button>
+    <button class="tool" data-tool="rotate">ROTATE</button>
+    <button class="tool" data-tool="scale">SCALE</button>
+
+    <div class="section-title">CREATE</div>
+
+    <button class="tool" data-create="Cube">CUBE</button>
+    <button class="tool" data-create="Sphere">SPHERE</button>
+    <button class="tool" data-create="Cylinder">CYLINDER</button>
+    <button class="tool" id="deleteButton">DELETE</button>
+
+    <div class="section-title">PROJECT</div>
+
+    <button class="tool" id="saveButton">SAVE</button>
+    <button class="tool" id="loadButton">LOAD</button>
+    <button class="tool" id="resetButton">RESET</button>
+
+</div>
+
+<div id="viewport">
+
+    <canvas id="scene"></canvas>
+    <canvas id="handOverlay"></canvas>
+
+    <div id="cursor"></div>
+
+    <div id="hint">
+        Mouse: select / orbit / zoom · Q SELECT · W MOVE · E ROTATE · R SCALE
+    </div>
+
+</div>
+
+<div id="right">
+
+    <div class="panel">
+        <h3>HIERARCHY</h3>
+        <div id="hierarchy"></div>
+    </div>
+
+    <div class="panel">
+        <h3>PROPERTIES</h3>
+        <div id="properties"></div>
+    </div>
+
+    <div class="panel">
+
+        <h3>WEBCAM / HAND TRACKING</h3>
+
+        <div id="webcamWrap">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="webcamCanvas"></canvas>
+        </div>
+
+        <button id="cameraButton">
+            ENABLE CAMERA
+        </button>
+
+        <div id="cameraStatus">
+            Camera disabled. Mouse and keyboard remain available.
+        </div>
+
+    </div>
+
+    <div class="panel">
+
+        <h3>AI COMMAND</h3>
+
+        <div style="font-size:11px;color:#77828e;line-height:1.5">
+            Create Cube<br>
+            Create Sphere<br>
+            Move Cube<br>
+            Rotate Cube<br>
+            Scale Cube<br>
+            Delete Cube
+        </div>
+
+    </div>
+
+</div>
+
+<div id="bottom">
+
+    <input id="command" placeholder="AI Command...">
+
+    <div class="bottom-item">
+        ENGINE <span>READY</span>
+    </div>
+
+    <div class="bottom-item">
+        MODE <span id="modeLabel">SELECT</span>
+    </div>
+
+    <div class="bottom-item">
+        OBJECTS <span id="objectCount">0</span>
+    </div>
+
+    <div class="bottom-item">
+        TRACKER <span id="trackerLabel">OFF</span>
+    </div>
+
+</div>
+
+</div>
 
 <script type="importmap">
 {
@@ -416,2007 +422,1213 @@ button {
     }
 }
 </script>
-</head>
-
-<body>
-
-<div id="app">
-
-    <div class="topbar">
-        <div>
-            <span class="logo">AI3DSTUDIO</span>
-            <span class="subtitle">AI POWERED 3D DESIGN ENVIRONMENT</span>
-        </div>
-
-        <div class="system">
-            <span class="system-dot"></span>
-            <span id="systemStatus">SYSTEM ONLINE</span>
-        </div>
-    </div>
-
-    <div class="workspace">
-
-        <aside class="left-panel">
-
-            <div class="panel-title">TOOLS</div>
-
-            <button class="tool active" data-tool="select">SELECT</button>
-            <button class="tool" data-tool="move">MOVE</button>
-            <button class="tool" data-tool="rotate">ROTATE</button>
-            <button class="tool" data-tool="scale">SCALE</button>
-
-            <div class="panel-title" style="margin-top:20px;">CREATE</div>
-
-            <button class="tool" id="cubeButton">CUBE</button>
-            <button class="tool" id="sphereButton">SPHERE</button>
-            <button class="tool" id="cylinderButton">CYLINDER</button>
-
-            <div class="panel-title" style="margin-top:20px;">SCENE</div>
-
-            <button class="tool" id="deleteButton">DELETE</button>
-            <button class="tool" id="duplicateButton">DUPLICATE</button>
-            <button class="tool" id="saveButton">SAVE</button>
-            <button class="tool" id="loadButton">LOAD</button>
-
-        </aside>
-
-        <main class="viewport-wrap">
-
-            <div id="viewport"></div>
-
-            <div id="handCursor" class="hand-cursor"></div>
-
-            <div class="axis-label">
-                X / Y / Z AXES ACTIVE
-            </div>
-
-        </main>
-
-        <aside class="right-panel">
-
-            <div class="section">
-                <div class="panel-title">HIERARCHY</div>
-                <div id="hierarchy" class="hierarchy"></div>
-            </div>
-
-            <div class="section">
-                <div class="panel-title">PROPERTIES</div>
-                <div id="properties">
-                    <div class="property-row">
-                        <span class="property-name">OBJECT</span>
-                        <span class="property-value">NONE</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="panel-title">WEBCAM / HAND CONTROL</div>
-
-                <div class="webcam-box">
-                    <video id="webcam" autoplay muted playsinline></video>
-
-                    <div id="webcamPlaceholder" class="webcam-placeholder">
-                        <strong>WEBCAM STANDBY</strong>
-                        <span>Mouse + keyboard controls remain active</span>
-                    </div>
-
-                    <div id="webcamStatus" class="webcam-status">
-                        CAMERA OFF
-                    </div>
-                </div>
-
-                <button id="cameraButton" class="camera-button">
-                    ENABLE HAND CONTROL
-                </button>
-            </div>
-
-            <div class="section">
-                <div class="panel-title">AI COMMAND</div>
-
-                <input
-                    id="aiCommand"
-                    class="ai-input"
-                    type="text"
-                    placeholder="Create Cube / Move Cube / Delete"
-                >
-
-                <div id="aiOutput" class="ai-output">
-                    AI ENGINE READY
-                </div>
-            </div>
-
-        </aside>
-
-    </div>
-
-    <div class="bottom-bar">
-        <span>AI ENGINE <span class="status-value orange">READY</span></span>
-        <span>MODE <span id="modeStatus" class="status-value">SELECT</span></span>
-        <span>INPUT <span id="inputStatus" class="status-value">MOUSE + KEYBOARD</span></span>
-        <span>HAND <span id="handStatus" class="status-value">OFF</span></span>
-        <span>OBJECTS <span id="objectCount" class="status-value">0</span></span>
-    </div>
-
-</div>
 
 <script type="module">
 
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { TransformControls } from "three/addons/controls/TransformControls.js";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
 
-let scene;
-let camera;
-let renderer;
-let orbit;
-let transform;
-let raycaster;
-let mouse;
+const canvas=document.getElementById("scene");
+const overlay=document.getElementById("handOverlay");
+const viewport=document.getElementById("viewport");
 
-let selectedObject = null;
-let currentTool = "select";
+const cursor=document.getElementById("cursor");
 
-let objects = [];
-let history = [];
-let historyIndex = -1;
+const video=document.getElementById("webcam");
+const webcamCanvas=document.getElementById("webcamCanvas");
 
-let webcamStream = null;
-let handLandmarker = null;
-let handAnimationFrame = null;
-let handControlEnabled = false;
-let cameraStarting = false;
+const cameraButton=document.getElementById("cameraButton");
+const cameraStatus=document.getElementById("cameraStatus");
 
-let lastHandTime = 0;
-let lastPalmX = null;
-let lastPalmY = null;
-let lastPalmZ = null;
-let lastPinchDistance = null;
-let lastPalmAngle = null;
-let pinchActive = false;
-let handGrabObject = null;
+const handStatus=document.getElementById("handStatus");
+const trackerLabel=document.getElementById("trackerLabel");
+const systemStatus=document.getElementById("systemStatus");
 
-let twoHandPreviousDistance = null;
+const hierarchy=document.getElementById("hierarchy");
+const properties=document.getElementById("properties");
 
-const viewport = document.getElementById("viewport");
-const webcam = document.getElementById("webcam");
-const webcamPlaceholder = document.getElementById("webcamPlaceholder");
-const webcamStatus = document.getElementById("webcamStatus");
-const cameraButton = document.getElementById("cameraButton");
-const handCursor = document.getElementById("handCursor");
+const command=document.getElementById("command");
+const modeLabel=document.getElementById("modeLabel");
+const objectCount=document.getElementById("objectCount");
 
-const hierarchy = document.getElementById("hierarchy");
-const properties = document.getElementById("properties");
+const renderer=new THREE.WebGLRenderer({
+    canvas:canvas,
+    antialias:true
+});
 
-const modeStatus = document.getElementById("modeStatus");
-const inputStatus = document.getElementById("inputStatus");
-const handStatus = document.getElementById("handStatus");
-const objectCount = document.getElementById("objectCount");
+renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio,1.5)
+);
 
-const aiCommand = document.getElementById("aiCommand");
-const aiOutput = document.getElementById("aiOutput");
+renderer.setSize(
+    viewport.clientWidth,
+    viewport.clientHeight,
+    false
+);
 
-const systemStatus = document.getElementById("systemStatus");
+renderer.setClearColor(0x030507,1);
 
-const clock = new THREE.Clock();
+const scene=new THREE.Scene();
 
-function init() {
+const camera=new THREE.PerspectiveCamera(
+    45,
+    viewport.clientWidth/viewport.clientHeight,
+    0.1,
+    1000
+);
 
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x05070a);
+camera.position.set(6,4.5,7);
 
-    camera = new THREE.PerspectiveCamera(
-        50,
-        viewport.clientWidth / viewport.clientHeight,
-        0.01,
-        1000
-    );
+const controls=new OrbitControls(
+    camera,
+    renderer.domElement
+);
 
-    camera.position.set(6, 5, 7);
+controls.enableDamping=true;
+controls.dampingFactor=0.08;
+controls.target.set(0,0,0);
 
-    renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        powerPreference: "high-performance"
-    });
+scene.add(
+    new THREE.HemisphereLight(
+        0xffffff,
+        0x20242a,
+        2.2
+    )
+);
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const light=new THREE.DirectionalLight(
+    0xffffff,
+    2.5
+);
+
+light.position.set(5,8,6);
+scene.add(light);
+
+scene.add(
+    new THREE.GridHelper(
+        20,
+        20,
+        0x30363d,
+        0x171b20
+    )
+);
+
+scene.add(
+    new THREE.AxesHelper(2)
+);
+
+const raycaster=new THREE.Raycaster();
+
+const pointer=new THREE.Vector2();
+
+const objects=[];
+
+let selected=null;
+let currentTool="select";
+
+let stream=null;
+
+let handLandmarker=null;
+let handLoopRunning=false;
+
+let lastVideoTime=-1;
+let lastDetectionTime=0;
+
+let grabState=null;
+
+function resize(){
+
+    const width=viewport.clientWidth;
+    const height=viewport.clientHeight;
 
     renderer.setSize(
-        viewport.clientWidth,
-        viewport.clientHeight
-    );
-
-    viewport.appendChild(renderer.domElement);
-
-    orbit = new OrbitControls(camera, renderer.domElement);
-    orbit.enableDamping = true;
-    orbit.dampingFactor = 0.08;
-    orbit.target.set(0, 0, 0);
-
-    raycaster = new THREE.Raycaster();
-    mouse = new THREE.Vector2();
-
-    const ambient = new THREE.HemisphereLight(
-        0xffffff,
-        0x222222,
-        2.2
-    );
-
-    scene.add(ambient);
-
-    const directional = new THREE.DirectionalLight(
-        0xffffff,
-        2
-    );
-
-    directional.position.set(5, 8, 5);
-    scene.add(directional);
-
-    const grid = new THREE.GridHelper(
-        20,
-        20,
-        0x303842,
-        0x171d24
-    );
-
-    scene.add(grid);
-
-    const axes = new THREE.AxesHelper(3);
-    scene.add(axes);
-
-    transform = new TransformControls(
-        camera,
-        renderer.domElement
-    );
-
-    transform.setSize(0.9);
-
-    transform.addEventListener("dragging-changed", event => {
-        orbit.enabled = !event.value;
-    });
-
-    transform.addEventListener("objectChange", () => {
-        updateProperties();
-    });
-
-    scene.add(transform.getHelper());
-
-    renderer.domElement.addEventListener(
-        "pointerdown",
-        onViewportPointerDown
-    );
-
-    renderer.domElement.addEventListener(
-        "pointermove",
-        onViewportPointerMove
-    );
-
-    renderer.domElement.addEventListener(
-        "wheel",
-        () => {
-            inputStatus.textContent = "MOUSE + KEYBOARD";
-        }
-    );
-
-    window.addEventListener("resize", resize);
-
-    setupTools();
-    setupButtons();
-    setupKeyboard();
-
-    animate();
-
-    addCube();
-}
-
-function resize() {
-
-    if (!camera || !renderer) {
-        return;
-    }
-
-    const width = viewport.clientWidth;
-    const height = viewport.clientHeight;
-
-    if (height <= 0) {
-        return;
-    }
-
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(width, height);
-}
-
-function animate() {
-
-    requestAnimationFrame(animate);
-
-    orbit.update();
-
-    renderer.render(scene, camera);
-}
-
-function setupTools() {
-
-    document.querySelectorAll(".tool[data-tool]").forEach(button => {
-
-        button.addEventListener("click", () => {
-
-            setTool(button.dataset.tool);
-
-        });
-
-    });
-}
-
-function setTool(tool) {
-
-    currentTool = tool;
-
-    document.querySelectorAll(".tool[data-tool]").forEach(button => {
-
-        button.classList.toggle(
-            "active",
-            button.dataset.tool === tool
-        );
-
-    });
-
-    modeStatus.textContent = tool.toUpperCase();
-
-    if (transform && selectedObject) {
-
-        if (tool === "move") {
-            transform.setMode("translate");
-            transform.attach(selectedObject);
-        }
-
-        if (tool === "rotate") {
-            transform.setMode("rotate");
-            transform.attach(selectedObject);
-        }
-
-        if (tool === "scale") {
-            transform.setMode("scale");
-            transform.attach(selectedObject);
-        }
-
-        if (tool === "select") {
-            transform.detach();
-        }
-    }
-}
-
-function setupButtons() {
-
-    document.getElementById("cubeButton").addEventListener(
-        "click",
-        () => addCube()
-    );
-
-    document.getElementById("sphereButton").addEventListener(
-        "click",
-        () => addSphere()
-    );
-
-    document.getElementById("cylinderButton").addEventListener(
-        "click",
-        () => addCylinder()
-    );
-
-    document.getElementById("deleteButton").addEventListener(
-        "click",
-        deleteSelected
-    );
-
-    document.getElementById("duplicateButton").addEventListener(
-        "click",
-        duplicateSelected
-    );
-
-    document.getElementById("saveButton").addEventListener(
-        "click",
-        saveScene
-    );
-
-    document.getElementById("loadButton").addEventListener(
-        "click",
-        loadScene
-    );
-
-    cameraButton.addEventListener(
-        "click",
-        toggleCamera
-    );
-
-    aiCommand.addEventListener(
-        "keydown",
-        event => {
-
-            if (event.key === "Enter") {
-
-                executeAICommand(
-                    aiCommand.value.trim()
-                );
-
-                aiCommand.value = "";
-
-            }
-
-        }
-    );
-}
-
-function setupKeyboard() {
-
-    window.addEventListener("keydown", event => {
-
-        if (
-            document.activeElement === aiCommand
-        ) {
-            return;
-        }
-
-        const key = event.key.toLowerCase();
-
-        if (key === "q") {
-            setTool("select");
-        }
-
-        if (key === "w") {
-            setTool("move");
-        }
-
-        if (key === "e") {
-            setTool("rotate");
-        }
-
-        if (key === "r") {
-            setTool("scale");
-        }
-
-        if (key === "delete" || key === "backspace") {
-            deleteSelected();
-        }
-
-        if (
-            (event.ctrlKey || event.metaKey) &&
-            key === "d"
-        ) {
-            event.preventDefault();
-            duplicateSelected();
-        }
-
-        if (
-            (event.ctrlKey || event.metaKey) &&
-            key === "s"
-        ) {
-            event.preventDefault();
-            saveScene();
-        }
-
-        if (
-            (event.ctrlKey || event.metaKey) &&
-            key === "o"
-        ) {
-            event.preventDefault();
-            loadScene();
-        }
-
-        if (
-            (event.ctrlKey || event.metaKey) &&
-            key === "z"
-        ) {
-            event.preventDefault();
-            undo();
-        }
-
-        if (
-            (event.ctrlKey || event.metaKey) &&
-            key === "y"
-        ) {
-            event.preventDefault();
-            redo();
-        }
-
-        if (key === "escape") {
-            transform.detach();
-            selectedObject = null;
-            updateHierarchy();
-            updateProperties();
-        }
-
-    });
-}
-
-function onViewportPointerMove(event) {
-
-    inputStatus.textContent = "MOUSE + KEYBOARD";
-
-}
-
-function onViewportPointerDown(event) {
-
-    inputStatus.textContent = "MOUSE + KEYBOARD";
-
-    const rect = renderer.domElement.getBoundingClientRect();
-
-    mouse.x =
-        ((event.clientX - rect.left) / rect.width) * 2 - 1;
-
-    mouse.y =
-        -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-    raycaster.setFromCamera(mouse, camera);
-
-    const hits = raycaster.intersectObjects(
-        objects,
+        width,
+        height,
         false
     );
 
-    if (hits.length > 0) {
+    camera.aspect=width/height;
+    camera.updateProjectionMatrix();
 
-        selectObject(hits[0].object);
+    overlay.width=Math.floor(
+        width*devicePixelRatio
+    );
 
-    } else {
+    overlay.height=Math.floor(
+        height*devicePixelRatio
+    );
 
-        selectObject(null);
+    overlay.style.width=width+"px";
+    overlay.style.height=height+"px";
 
-    }
+    webcamCanvas.width=640;
+    webcamCanvas.height=400;
 }
 
-function selectObject(object) {
+window.addEventListener(
+    "resize",
+    resize
+);
 
-    selectedObject = object;
+resize();
 
-    if (object) {
-
-        object.material.emissiveIntensity = 0.5;
-
-        if (currentTool === "move") {
-            transform.setMode("translate");
-            transform.attach(object);
-        }
-
-        if (currentTool === "rotate") {
-            transform.setMode("rotate");
-            transform.attach(object);
-        }
-
-        if (currentTool === "scale") {
-            transform.setMode("scale");
-            transform.attach(object);
-        }
-
-    } else {
-
-        transform.detach();
-
-    }
-
-    updateHierarchy();
-    updateProperties();
-}
-
-function makeMaterial() {
+function material(){
 
     return new THREE.MeshStandardMaterial({
-        color: 0x8b98a6,
-        metalness: 0.35,
-        roughness: 0.55
+        color:0xff8a24,
+        metalness:0.15,
+        roughness:0.5
     });
-
 }
 
-function addCube() {
+function geometry(type){
 
-    const geometry = new THREE.BoxGeometry(
+    if(type==="Cube"){
+        return new THREE.BoxGeometry(
+            1.6,
+            1.6,
+            1.6
+        );
+    }
+
+    if(type==="Sphere"){
+        return new THREE.SphereGeometry(
+            1,
+            32,
+            20
+        );
+    }
+
+    return new THREE.CylinderGeometry(
         1,
         1,
-        1
-    );
-
-    const mesh = new THREE.Mesh(
-        geometry,
-        makeMaterial()
-    );
-
-    mesh.name = "Cube";
-
-    mesh.position.set(
-        (objects.length % 4) * 1.6 - 2.4,
-        0.5,
-        Math.floor(objects.length / 4) * 1.6
-    );
-
-    scene.add(mesh);
-    objects.push(mesh);
-
-    selectObject(mesh);
-    recordHistory();
-    refreshScene();
-
-}
-
-function addSphere() {
-
-    const geometry = new THREE.SphereGeometry(
-        0.65,
-        32,
-        20
-    );
-
-    const mesh = new THREE.Mesh(
-        geometry,
-        makeMaterial()
-    );
-
-    mesh.name = "Sphere";
-
-    mesh.position.set(
-        (objects.length % 4) * 1.6 - 2.4,
-        0.65,
-        Math.floor(objects.length / 4) * 1.6
-    );
-
-    scene.add(mesh);
-    objects.push(mesh);
-
-    selectObject(mesh);
-    recordHistory();
-    refreshScene();
-
-}
-
-function addCylinder() {
-
-    const geometry = new THREE.CylinderGeometry(
-        0.6,
-        0.6,
-        1.2,
+        1.8,
         32
     );
-
-    const mesh = new THREE.Mesh(
-        geometry,
-        makeMaterial()
-    );
-
-    mesh.name = "Cylinder";
-
-    mesh.position.set(
-        (objects.length % 4) * 1.6 - 2.4,
-        0.6,
-        Math.floor(objects.length / 4) * 1.6
-    );
-
-    scene.add(mesh);
-    objects.push(mesh);
-
-    selectObject(mesh);
-    recordHistory();
-    refreshScene();
-
 }
 
-function deleteSelected() {
+function addObject(type){
 
-    if (!selectedObject) {
+    const object=new THREE.Mesh(
+        geometry(type),
+        material()
+    );
+
+    const count=
+        objects.filter(
+            object=>object.userData.type===type
+        ).length+1;
+
+    object.name=
+        type+" "+count;
+
+    object.userData.type=type;
+
+    object.position.set(
+        (objects.length%3-1)*2.2,
+        0,
+        Math.floor(objects.length/3)*2.2
+    );
+
+    scene.add(object);
+
+    objects.push(object);
+
+    selectObject(object);
+}
+
+function selectObject(object){
+
+    selected=object||null;
+
+    objects.forEach(item=>{
+
+        if(item===selected){
+
+            item.material.emissive.set(
+                0x542000
+            );
+
+            item.material.emissiveIntensity=0.8;
+
+        }else{
+
+            item.material.emissive.set(
+                0x000000
+            );
+
+            item.material.emissiveIntensity=0;
+        }
+
+    });
+
+    updateUI();
+}
+
+function deleteSelected(){
+
+    if(!selected){
         return;
     }
 
-    const object = selectedObject;
+    const index=objects.indexOf(
+        selected
+    );
 
-    transform.detach();
-
-    scene.remove(object);
-
-    const index = objects.indexOf(object);
-
-    if (index !== -1) {
-        objects.splice(index, 1);
+    if(index>=0){
+        objects.splice(index,1);
     }
 
-    object.geometry.dispose();
+    scene.remove(selected);
 
-    if (object.material) {
-        object.material.dispose();
-    }
+    selected.geometry.dispose();
+    selected.material.dispose();
 
-    selectedObject = null;
+    selected=null;
 
-    recordHistory();
-    refreshScene();
-
+    updateUI();
 }
 
-function duplicateSelected() {
+function updateUI(){
 
-    if (!selectedObject) {
-        return;
-    }
+    hierarchy.innerHTML="";
 
-    const copy = selectedObject.clone();
+    objects.forEach(object=>{
 
-    copy.name =
-        selectedObject.name + "_Copy";
-
-    copy.position.x += 1;
-
-    scene.add(copy);
-    objects.push(copy);
-
-    selectObject(copy);
-
-    recordHistory();
-    refreshScene();
-
-}
-
-function refreshScene() {
-
-    objectCount.textContent =
-        objects.length.toString();
-
-    updateHierarchy();
-    updateProperties();
-
-}
-
-function updateHierarchy() {
-
-    hierarchy.innerHTML = "";
-
-    objects.forEach(object => {
-
-        const row =
+        const row=
             document.createElement("div");
 
-        row.className = "object-row";
+        row.className=
+            "object-row"+
+            (object===selected?
+            " selected":
+            "");
 
-        if (object === selectedObject) {
-            row.classList.add("selected");
-        }
+        row.textContent=
+            object.name;
 
-        row.innerHTML =
-            `<span>${object.name}</span>
-             <span class="object-type">${object.geometry.type}</span>`;
-
-        row.addEventListener(
-            "click",
-            () => selectObject(object)
-        );
+        row.onclick=()=>{
+            selectObject(object);
+        };
 
         hierarchy.appendChild(row);
-
     });
 
-}
+    objectCount.textContent=
+        objects.length;
 
-function updateProperties() {
+    modeLabel.textContent=
+        currentTool.toUpperCase();
 
-    if (!selectedObject) {
+    if(!selected){
 
-        properties.innerHTML = `
-            <div class="property-row">
-                <span class="property-name">OBJECT</span>
-                <span class="property-value">NONE</span>
-            </div>
-        `;
+        properties.innerHTML=
+            '<div class="prop">'+
+            '<span>Object</span>'+
+            '<b>None</b>'+
+            '</div>';
 
         return;
     }
 
-    const p = selectedObject.position;
-    const r = selectedObject.rotation;
-    const s = selectedObject.scale;
-
-    properties.innerHTML = `
-        <div class="property-row">
-            <span class="property-name">OBJECT</span>
-            <span class="property-value">${selectedObject.name}</span>
-        </div>
-
-        <div class="property-row">
-            <span class="property-name">POSITION</span>
-            <span class="property-value">
-                ${p.x.toFixed(2)},
-                ${p.y.toFixed(2)},
-                ${p.z.toFixed(2)}
-            </span>
-        </div>
-
-        <div class="property-row">
-            <span class="property-name">ROTATION</span>
-            <span class="property-value">
-                ${THREE.MathUtils.radToDeg(r.x).toFixed(1)},
-                ${THREE.MathUtils.radToDeg(r.y).toFixed(1)},
-                ${THREE.MathUtils.radToDeg(r.z).toFixed(1)}
-            </span>
-        </div>
-
-        <div class="property-row">
-            <span class="property-name">SCALE</span>
-            <span class="property-value">
-                ${s.x.toFixed(2)},
-                ${s.y.toFixed(2)},
-                ${s.z.toFixed(2)}
-            </span>
-        </div>
-    `;
-
+    properties.innerHTML=
+        '<div class="prop">'+
+        '<span>Name</span>'+
+        '<b>'+selected.name+'</b>'+
+        '</div>'+
+        '<div class="prop">'+
+        '<span>Type</span>'+
+        '<b>'+selected.userData.type+'</b>'+
+        '</div>'+
+        '<div class="prop">'+
+        '<span>Position</span>'+
+        '<b>'+
+        selected.position.x.toFixed(2)+
+        ', '+
+        selected.position.y.toFixed(2)+
+        ', '+
+        selected.position.z.toFixed(2)+
+        '</b>'+
+        '</div>'+
+        '<div class="prop">'+
+        '<span>Scale</span>'+
+        '<b>'+
+        selected.scale.x.toFixed(2)+
+        ', '+
+        selected.scale.y.toFixed(2)+
+        ', '+
+        selected.scale.z.toFixed(2)+
+        '</b>'+
+        '</div>';
 }
 
-function recordHistory() {
+function setTool(tool){
 
-    const state = objects.map(object => ({
-        name: object.name,
-        type: object.geometry.type,
-        position: object.position.toArray(),
-        rotation: [
-            object.rotation.x,
-            object.rotation.y,
-            object.rotation.z
-        ],
-        scale: object.scale.toArray()
-    }));
+    currentTool=tool;
 
-    history =
-        history.slice(0, historyIndex + 1);
+    document
+        .querySelectorAll(
+            ".tool[data-tool]"
+        )
+        .forEach(button=>{
+            button.classList.toggle(
+                "active",
+                button.dataset.tool===tool
+            );
+        });
 
-    history.push(
-        JSON.stringify(state)
-    );
-
-    historyIndex =
-        history.length - 1;
-
+    modeLabel.textContent=
+        tool.toUpperCase();
 }
 
-function restoreHistory(index) {
+document
+    .querySelectorAll(
+        ".tool[data-tool]"
+    )
+    .forEach(button=>{
+        button.onclick=()=>{
+            setTool(
+                button.dataset.tool
+            );
+        };
+    });
 
-    if (
-        index < 0 ||
-        index >= history.length
-    ) {
-        return;
-    }
+document
+    .querySelectorAll(
+        ".tool[data-create]"
+    )
+    .forEach(button=>{
+        button.onclick=()=>{
+            addObject(
+                button.dataset.create
+            );
+        };
+    });
 
-    const state =
-        JSON.parse(history[index]);
+document
+    .getElementById("deleteButton")
+    .onclick=deleteSelected;
 
-    objects.forEach(object => {
-
-        scene.remove(object);
-
-        if (object.geometry) {
+document
+    .getElementById("resetButton")
+    .onclick=()=>{
+        objects.slice().forEach(object=>{
+            scene.remove(object);
             object.geometry.dispose();
-        }
-
-        if (object.material) {
             object.material.dispose();
-        }
+        });
 
-    });
+        objects.length=0;
+        selected=null;
 
-    objects = [];
-    selectedObject = null;
-    transform.detach();
+        updateUI();
+    };
 
-    state.forEach(data => {
+document
+    .getElementById("saveButton")
+    .onclick=saveScene;
 
-        let geometry;
+document
+    .getElementById("loadButton")
+    .onclick=loadScene;
 
-        if (data.type === "BoxGeometry") {
-            geometry = new THREE.BoxGeometry(1, 1, 1);
-        }
+renderer.domElement.addEventListener(
+    "pointerdown",
+    event=>{
 
-        if (data.type === "SphereGeometry") {
-            geometry = new THREE.SphereGeometry(
-                0.65,
-                32,
-                20
-            );
-        }
+        const rect=
+            renderer.domElement.getBoundingClientRect();
 
-        if (data.type === "CylinderGeometry") {
-            geometry = new THREE.CylinderGeometry(
-                0.6,
-                0.6,
-                1.2,
-                32
-            );
-        }
+        pointer.x=
+            ((event.clientX-rect.left)/
+            rect.width)*2-1;
 
-        if (!geometry) {
-            geometry = new THREE.BoxGeometry(1, 1, 1);
-        }
+        pointer.y=
+            -((event.clientY-rect.top)/
+            rect.height)*2+1;
 
-        const mesh = new THREE.Mesh(
-            geometry,
-            makeMaterial()
+        raycaster.setFromCamera(
+            pointer,
+            camera
         );
 
-        mesh.name = data.name;
+        const hit=
+            raycaster.intersectObjects(
+                objects,
+                false
+            )[0];
 
-        mesh.position.fromArray(
-            data.position
-        );
-
-        mesh.rotation.set(
-            data.rotation[0],
-            data.rotation[1],
-            data.rotation[2]
-        );
-
-        mesh.scale.fromArray(
-            data.scale
-        );
-
-        scene.add(mesh);
-        objects.push(mesh);
-
-    });
-
-    historyIndex = index;
-
-    refreshScene();
-
-}
-
-function undo() {
-
-    if (historyIndex <= 0) {
-        return;
+        if(hit){
+            selectObject(hit.object);
+        }
     }
+);
 
-    restoreHistory(
-        historyIndex - 1
+function saveScene(){
+
+    const data=objects.map(
+        object=>({
+            name:object.name,
+            type:object.userData.type,
+            position:object.position.toArray(),
+            rotation:object.rotation.toArray(),
+            scale:object.scale.toArray()
+        })
     );
-
-}
-
-function redo() {
-
-    if (
-        historyIndex >= history.length - 1
-    ) {
-        return;
-    }
-
-    restoreHistory(
-        historyIndex + 1
-    );
-
-}
-
-function saveScene() {
-
-    const data = objects.map(object => ({
-        name: object.name,
-        type: object.geometry.type,
-        position: object.position.toArray(),
-        rotation: [
-            object.rotation.x,
-            object.rotation.y,
-            object.rotation.z
-        ],
-        scale: object.scale.toArray()
-    }));
 
     localStorage.setItem(
-        "ai3dstudio_scene",
+        "ai3dstudio-web-scene",
         JSON.stringify(data)
     );
-
-    aiOutput.textContent =
-        "Scene saved locally.";
-
 }
 
-function loadScene() {
+function loadScene(){
 
-    const stored =
+    const raw=
         localStorage.getItem(
-            "ai3dstudio_scene"
+            "ai3dstudio-web-scene"
         );
 
-    if (!stored) {
-
-        aiOutput.textContent =
-            "No saved scene found.";
-
+    if(!raw){
         return;
     }
 
-    const state =
-        JSON.parse(stored);
-
-    objects.forEach(object => {
-
+    objects.slice().forEach(object=>{
         scene.remove(object);
-
-        if (object.geometry) {
-            object.geometry.dispose();
-        }
-
-        if (object.material) {
-            object.material.dispose();
-        }
-
+        object.geometry.dispose();
+        object.material.dispose();
     });
 
-    objects = [];
-    selectedObject = null;
-    transform.detach();
+    objects.length=0;
 
-    state.forEach(data => {
+    JSON.parse(raw).forEach(data=>{
 
-        let geometry;
-
-        if (data.type === "BoxGeometry") {
-            geometry = new THREE.BoxGeometry(1, 1, 1);
-        } else if (data.type === "SphereGeometry") {
-            geometry = new THREE.SphereGeometry(
-                0.65,
-                32,
-                20
-            );
-        } else if (data.type === "CylinderGeometry") {
-            geometry = new THREE.CylinderGeometry(
-                0.6,
-                0.6,
-                1.2,
-                32
-            );
-        } else {
-            geometry = new THREE.BoxGeometry(1, 1, 1);
-        }
-
-        const mesh = new THREE.Mesh(
-            geometry,
-            makeMaterial()
+        const object=new THREE.Mesh(
+            geometry(data.type),
+            material()
         );
 
-        mesh.name = data.name;
+        object.name=data.name;
+        object.userData.type=data.type;
 
-        mesh.position.fromArray(
+        object.position.fromArray(
             data.position
         );
 
-        mesh.rotation.set(
-            data.rotation[0],
-            data.rotation[1],
-            data.rotation[2]
+        object.rotation.fromArray(
+            data.rotation
         );
 
-        mesh.scale.fromArray(
+        object.scale.fromArray(
             data.scale
         );
 
-        scene.add(mesh);
-        objects.push(mesh);
-
+        scene.add(object);
+        objects.push(object);
     });
 
-    refreshScene();
-
-    aiOutput.textContent =
-        "Scene loaded.";
-
+    selectObject(
+        objects[0]||null
+    );
 }
 
-function executeAICommand(command) {
+function runCommand(text){
 
-    if (!command) {
-        return;
+    const value=
+        text.toLowerCase().trim();
+
+    if(value.includes("create cube")){
+        addObject("Cube");
     }
-
-    const text =
-        command.toLowerCase();
-
-    if (
-        text.includes("create cube") ||
-        text === "cube"
-    ) {
-
-        addCube();
-
-        aiOutput.textContent =
-            "AI: Cube created.";
-
-        return;
+    else if(value.includes("create sphere")){
+        addObject("Sphere");
     }
-
-    if (
-        text.includes("create sphere") ||
-        text === "sphere"
-    ) {
-
-        addSphere();
-
-        aiOutput.textContent =
-            "AI: Sphere created.";
-
-        return;
+    else if(value.includes("create cylinder")){
+        addObject("Cylinder");
     }
-
-    if (
-        text.includes("create cylinder") ||
-        text === "cylinder"
-    ) {
-
-        addCylinder();
-
-        aiOutput.textContent =
-            "AI: Cylinder created.";
-
-        return;
-    }
-
-    if (text.includes("delete")) {
-
+    else if(value.includes("delete")){
         deleteSelected();
-
-        aiOutput.textContent =
-            "AI: Selected object deleted.";
-
-        return;
     }
-
-    if (text.includes("duplicate")) {
-
-        duplicateSelected();
-
-        aiOutput.textContent =
-            "AI: Object duplicated.";
-
-        return;
-    }
-
-    if (text.includes("move")) {
-
+    else if(value.includes("move")){
         setTool("move");
-
-        aiOutput.textContent =
-            "AI: Move mode activated.";
-
-        return;
     }
-
-    if (text.includes("rotate")) {
-
+    else if(value.includes("rotate")){
         setTool("rotate");
-
-        aiOutput.textContent =
-            "AI: Rotate mode activated.";
-
-        return;
     }
-
-    if (text.includes("scale")) {
-
+    else if(value.includes("scale")){
         setTool("scale");
-
-        aiOutput.textContent =
-            "AI: Scale mode activated.";
-
-        return;
     }
-
-    if (text.includes("select")) {
-
+    else if(value.includes("select")){
         setTool("select");
-
-        aiOutput.textContent =
-            "AI: Select mode activated.";
-
-        return;
     }
 
-    aiOutput.textContent =
-        "AI: Command not recognized.";
-
+    command.value="";
 }
 
-async function toggleCamera() {
-
-    if (cameraStarting) {
-        return;
+command.addEventListener(
+    "keydown",
+    event=>{
+        if(event.key==="Enter"){
+            runCommand(command.value);
+        }
     }
+);
 
-    if (handControlEnabled) {
+window.addEventListener(
+    "keydown",
+    event=>{
 
-        stopCamera();
-
-        return;
-    }
-
-    await startCamera();
-
-}
-
-async function startCamera() {
-
-    cameraStarting = true;
-
-    cameraButton.textContent =
-        "STARTING CAMERA...";
-
-    webcamStatus.textContent =
-        "STARTING";
-
-    webcamStatus.className =
-        "webcam-status";
-
-    try {
-
-        if (
-            !navigator.mediaDevices ||
-            !navigator.mediaDevices.getUserMedia
-        ) {
-            throw new Error(
-                "Camera API unavailable"
-            );
+        if(event.target===command){
+            return;
         }
 
-        webcamStream =
-            await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: {
-                        ideal: 640
-                    },
-                    height: {
-                        ideal: 480
-                    },
-                    facingMode: "user"
-                },
-                audio: false
-            });
+        if(event.key.toLowerCase()==="q"){
+            setTool("select");
+        }
 
-        webcam.srcObject =
-            webcamStream;
+        if(event.key.toLowerCase()==="w"){
+            setTool("move");
+        }
 
-        await webcam.play();
+        if(event.key.toLowerCase()==="e"){
+            setTool("rotate");
+        }
 
-        webcam.style.display =
-            "block";
+        if(event.key.toLowerCase()==="r"){
+            setTool("scale");
+        }
 
-        webcamPlaceholder.style.display =
-            "none";
-
-        handControlEnabled = true;
-
-        webcamStatus.textContent =
-            "HAND CONTROL ACTIVE";
-
-        webcamStatus.className =
-            "webcam-status active";
-
-        handStatus.textContent =
-            "ACTIVE";
-
-        inputStatus.textContent =
-            "HAND + MOUSE + KEYBOARD";
-
-        cameraButton.textContent =
-            "DISABLE HAND CONTROL";
-
-        systemStatus.textContent =
-            "SYSTEM ONLINE";
-
-        await initializeHandTracker();
-
-        startHandLoop();
-
-    } catch (error) {
-
-        stopCamera();
-
-        webcamStatus.textContent =
-            "CAMERA UNAVAILABLE";
-
-        webcamStatus.className =
-            "webcam-status warning";
-
-        cameraButton.textContent =
-            "ENABLE HAND CONTROL";
-
-        handStatus.textContent =
-            "OFF";
-
-        inputStatus.textContent =
-            "MOUSE + KEYBOARD";
-
-        aiOutput.textContent =
-            "Hand control unavailable. Mouse and keyboard controls remain active.";
-
-    } finally {
-
-        cameraStarting = false;
-
+        if(event.key==="Delete"){
+            deleteSelected();
+        }
     }
+);
 
-}
+async function initializeHandTracker(){
 
-function stopCamera() {
+    handStatus.textContent="LOADING";
+    trackerLabel.textContent="LOADING";
+    systemStatus.textContent="TRACKER";
 
-    handControlEnabled = false;
+    try{
 
-    if (handAnimationFrame) {
-
-        cancelAnimationFrame(
-            handAnimationFrame
-        );
-
-        handAnimationFrame = null;
-
-    }
-
-    if (webcamStream) {
-
-        webcamStream
-            .getTracks()
-            .forEach(track => track.stop());
-
-        webcamStream = null;
-
-    }
-
-    webcam.srcObject = null;
-
-    webcam.style.display =
-        "none";
-
-    webcamPlaceholder.style.display =
-        "flex";
-
-    webcamStatus.textContent =
-        "CAMERA OFF";
-
-    webcamStatus.className =
-        "webcam-status";
-
-    handStatus.textContent =
-        "OFF";
-
-    inputStatus.textContent =
-        "MOUSE + KEYBOARD";
-
-    cameraButton.textContent =
-        "ENABLE HAND CONTROL";
-
-    pinchActive = false;
-    handGrabObject = null;
-
-    resetHandState();
-
-}
-
-async function initializeHandTracker() {
-
-    if (handLandmarker) {
-        return;
-    }
-
-    try {
-
-        const visionModule =
+        const vision=
             await import(
-                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs"
+                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22"
             );
 
-        const {
-            FilesetResolver,
-            HandLandmarker
-        } = visionModule;
-
-        const fileset =
-            await FilesetResolver.forVisionTasks(
+        const fileset=
+            await vision.FilesetResolver
+            .forVisionTasks(
                 "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm"
             );
 
-        handLandmarker =
-            await HandLandmarker.createFromOptions(
+        handLandmarker=
+            await vision.HandLandmarker
+            .createFromOptions(
                 fileset,
                 {
-                    baseOptions: {
+                    baseOptions:{
                         modelAssetPath:
                             "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
                     },
 
-                    runningMode: "VIDEO",
+                    runningMode:"VIDEO",
 
-                    numHands: 2,
+                    numHands:2,
 
-                    minHandDetectionConfidence: 0.5,
+                    minHandDetectionConfidence:0.5,
 
-                    minHandPresenceConfidence: 0.5,
+                    minHandPresenceConfidence:0.5,
 
-                    minTrackingConfidence: 0.5
+                    minTrackingConfidence:0.5
                 }
             );
 
-    } catch (error) {
+        handStatus.textContent="READY";
+        trackerLabel.textContent="READY";
+        systemStatus.textContent="ONLINE";
 
-        handLandmarker = null;
+        cameraStatus.textContent=
+            "Hand tracker ready. Show your hand.";
 
-        aiOutput.textContent =
-            "Hand tracking could not be loaded. Mouse and keyboard controls remain active.";
+    }catch(error){
 
-    }
-
-}
-
-function startHandLoop() {
-
-    if (!handControlEnabled) {
-        return;
-    }
-
-    if (
-        !handLandmarker ||
-        webcam.readyState < 2
-    ) {
-
-        handAnimationFrame =
-            requestAnimationFrame(
-                startHandLoop
-            );
-
-        return;
-
-    }
-
-    const now =
-        performance.now();
-
-    try {
-
-        const result =
-            handLandmarker.detectForVideo(
-                webcam,
-                now
-            );
-
-        processHandResult(result);
-
-    } catch (error) {
-
-        resetHandState();
-
-    }
-
-    handAnimationFrame =
-        requestAnimationFrame(
-            startHandLoop
+        console.error(
+            "HAND TRACKER ERROR",
+            error
         );
 
+        handLandmarker=null;
+
+        handStatus.textContent="ERROR";
+        trackerLabel.textContent="ERROR";
+        systemStatus.textContent="ERROR";
+
+        cameraStatus.textContent=
+            "Camera works, but MediaPipe failed to load. Mouse and keyboard remain active.";
+    }
 }
 
-function processHandResult(result) {
+async function startCamera(){
 
-    if (
-        !result ||
-        !result.landmarks ||
-        result.landmarks.length === 0
-    ) {
+    if(stream){
+        return;
+    }
 
-        handStatus.textContent =
+    if(!navigator.mediaDevices||
+       !navigator.mediaDevices.getUserMedia){
+
+        cameraStatus.textContent=
+            "Camera API unavailable. Use the deployed HTTPS site.";
+
+        return;
+    }
+
+    try{
+
+        stream=
+            await navigator.mediaDevices
+            .getUserMedia({
+                video:{
+                    width:{ideal:640},
+                    height:{ideal:400},
+                    facingMode:"user"
+                },
+                audio:false
+            });
+
+        video.srcObject=stream;
+
+        await video.play();
+
+        cameraButton.textContent=
+            "CAMERA ACTIVE";
+
+        cameraStatus.textContent=
+            "Camera active. Loading hand tracker...";
+
+        await initializeHandTracker();
+
+        if(!handLoopRunning){
+
+            handLoopRunning=true;
+
+            requestAnimationFrame(
+                handLoop
+            );
+        }
+
+    }catch(error){
+
+        console.error(
+            "CAMERA ERROR",
+            error
+        );
+
+        cameraStatus.textContent=
+            "Camera permission failed. Mouse and keyboard remain active.";
+
+        handStatus.textContent="OFF";
+    }
+}
+
+cameraButton.onclick=startCamera;
+
+function handLoop(time){
+
+    requestAnimationFrame(
+        handLoop
+    );
+
+    if(!handLandmarker){
+        return;
+    }
+
+    if(video.readyState<2){
+        return;
+    }
+
+    if(video.currentTime===lastVideoTime){
+        return;
+    }
+
+    if(time-lastDetectionTime<35){
+        return;
+    }
+
+    lastDetectionTime=time;
+    lastVideoTime=video.currentTime;
+
+    try{
+
+        const result=
+            handLandmarker.detectForVideo(
+                video,
+                performance.now()
+            );
+
+        processHands(result);
+
+    }catch(error){
+
+        console.error(
+            "DETECTION ERROR",
+            error
+        );
+
+        handStatus.textContent=
+            "ERROR";
+    }
+}
+
+function processHands(result){
+
+    drawHands(result);
+
+    if(
+        !result||
+        !result.landmarks||
+        result.landmarks.length===0
+    ){
+
+        handStatus.textContent=
             "NO HAND";
 
-        handCursor.style.display =
-            "none";
+        cursor.style.display="none";
 
-        releaseHand();
+        grabState=null;
 
         return;
     }
 
-    handStatus.textContent =
-        result.landmarks.length === 2
-            ? "2 HANDS"
-            : "1 HAND";
+    handStatus.textContent=
+        result.landmarks.length===2?
+        "2 HANDS":
+        "1 HAND";
 
-    const hand =
+    const hand=
         result.landmarks[0];
 
-    const index =
+    const index=
         hand[8];
 
-    const thumb =
+    const thumb=
         hand[4];
 
-    const wrist =
-        hand[0];
+    const palm=
+        getPalm(hand);
 
-    const indexBase =
-        hand[5];
+    const x=
+        1-index.x;
 
-    const pinkyBase =
-        hand[17];
-
-    const indexTipX =
-        1 - index.x;
-
-    const indexTipY =
+    const y=
         index.y;
 
-    updateHandCursor(
-        indexTipX,
-        indexTipY
+    moveCursor(
+        x,
+        y
     );
 
-    const pinchDistance =
+    const pinch=
         distance3D(
-            thumb,
-            index
-        );
+            index,
+            thumb
+        )<0.075;
 
-    const palmX =
-        (
-            wrist.x +
-            indexBase.x +
-            pinkyBase.x
-        ) / 3;
+    if(
+        result.landmarks.length===2
+    ){
 
-    const palmY =
-        (
-            wrist.y +
-            indexBase.y +
-            pinkyBase.y
-        ) / 3;
+        const hand2=
+            result.landmarks[1];
 
-    const palmZ =
-        (
-            wrist.z +
-            indexBase.z +
-            pinkyBase.z
-        ) / 3;
+        const palm2=
+            getPalm(hand2);
 
-    const palmAngle =
-        Math.atan2(
-            indexBase.y - pinkyBase.y,
-            indexBase.x - pinkyBase.x
-        );
-
-    const isPinching =
-        pinchDistance < 0.065;
-
-    if (isPinching && !pinchActive) {
-
-        pinchActive = true;
-
-        handleHandGrab(
-            indexTipX,
-            indexTipY
-        );
-
-        lastPalmX = palmX;
-        lastPalmY = palmY;
-        lastPalmZ = palmZ;
-        lastPinchDistance = pinchDistance;
-        lastPalmAngle = palmAngle;
-
-    }
-
-    if (isPinching && pinchActive) {
-
-        handleHandManipulation(
-            palmX,
-            palmY,
-            palmZ,
-            pinchDistance,
-            palmAngle
-        );
-
-    }
-
-    if (!isPinching && pinchActive) {
-
-        releaseHand();
-
-    }
-
-    if (
-        result.landmarks.length === 2
-    ) {
-
-        processTwoHands(
-            result.landmarks
-        );
-
-    } else {
-
-        twoHandPreviousDistance =
-            null;
-
-    }
-
-    lastHandTime =
-        performance.now();
-
-}
-
-function updateHandCursor(
-    normalizedX,
-    normalizedY
-) {
-
-    const rect =
-        viewport.getBoundingClientRect();
-
-    const x =
-        Math.max(
-            0,
-            Math.min(
-                rect.width,
-                normalizedX * rect.width
-            )
-        );
-
-    const y =
-        Math.max(
-            0,
-            Math.min(
-                rect.height,
-                normalizedY * rect.height
-            )
-        );
-
-    handCursor.style.left =
-        `${x}px`;
-
-    handCursor.style.top =
-        `${y}px`;
-
-    handCursor.style.display =
-        "block";
-
-    handCursor.classList.toggle(
-        "pinching",
-        pinchActive
-    );
-
-}
-
-function handleHandGrab(
-    x,
-    y
-) {
-
-    if (!selectedObject) {
-
-        const object =
-            objectFromScreen(
-                x,
-                y
+        const twoHandDistance=
+            distance3D(
+                palm,
+                palm2
             );
 
-        if (object) {
-            selectObject(object);
+        if(
+            pinch&&
+            !grabState
+        ){
+
+            if(selected){
+
+                grabState={
+                    type:"two",
+                    distance:twoHandDistance,
+                    scale:selected.scale.clone()
+                };
+            }
         }
 
+        if(
+            grabState&&
+            grabState.type==="two"
+        ){
+
+            if(selected){
+
+                const factor=
+                    THREE.MathUtils.clamp(
+                        twoHandDistance/
+                        grabState.distance,
+                        0.3,
+                        3
+                    );
+
+                selected.scale.set(
+                    grabState.scale.x*factor,
+                    grabState.scale.y*factor,
+                    grabState.scale.z*factor
+                );
+
+                updateUI();
+            }
+
+            if(!pinch){
+                grabState=null;
+            }
+
+            return;
+        }
     }
 
-    handGrabObject =
-        selectedObject;
+    if(pinch){
 
+        if(!grabState){
+
+            let target=
+                selected;
+
+            if(!target){
+                target=
+                    pickAtHand(
+                        x,
+                        y
+                    );
+            }
+
+            if(target){
+
+                selectObject(
+                    target
+                );
+
+                grabState={
+                    type:"one",
+                    x:x,
+                    y:y,
+                    position:
+                        target.position.clone(),
+                    rotation:
+                        target.rotation.clone(),
+                    scale:
+                        target.scale.clone()
+                };
+            }
+        }
+
+        if(
+            grabState&&
+            selected
+        ){
+
+            manipulateHand(
+                x,
+                y,
+                palm
+            );
+        }
+
+    }else{
+
+        if(grabState){
+
+            grabState=null;
+        }
+    }
 }
 
-function handleHandManipulation(
-    palmX,
-    palmY,
-    palmZ,
-    pinchDistance,
-    palmAngle
-) {
+function manipulateHand(
+    x,
+    y,
+    palm
+){
 
-    if (!handGrabObject) {
+    if(!selected||
+       !grabState){
         return;
     }
 
-    const object =
-        handGrabObject;
+    const dx=
+        x-grabState.x;
 
-    const dx =
-        palmX - lastPalmX;
+    const dy=
+        y-grabState.y;
 
-    const dy =
-        palmY - lastPalmY;
+    if(currentTool==="select"){
 
-    const dz =
-        palmZ - lastPalmZ;
+        return;
+    }
 
-    const distanceChange =
-        pinchDistance -
-        lastPinchDistance;
+    if(currentTool==="move"){
 
-    const angleChange =
-        normalizeAngle(
-            palmAngle -
-            lastPalmAngle
+        const right=
+            new THREE.Vector3()
+            .setFromMatrixColumn(
+                camera.matrixWorld,
+                0
+            )
+            .normalize();
+
+        const up=
+            new THREE.Vector3()
+            .setFromMatrixColumn(
+                camera.matrixWorld,
+                1
+            )
+            .normalize();
+
+        selected.position.copy(
+            grabState.position
         );
 
-    if (currentTool === "move") {
+        selected.position.addScaledVector(
+            right,
+            dx*5
+        );
 
-        object.position.x -= dx * 6;
-
-        object.position.y -= dy * 6;
-
-        object.position.z += dz * 6;
-
+        selected.position.addScaledVector(
+            up,
+            -dy*5
+        );
     }
 
-    if (currentTool === "rotate") {
+    if(currentTool==="rotate"){
 
-        object.rotation.y -= dx * 7;
+        selected.rotation.x=
+            grabState.rotation.x+
+            dy*4;
 
-        object.rotation.x -= dy * 7;
-
-        object.rotation.z += angleChange * 2;
-
+        selected.rotation.y=
+            grabState.rotation.y+
+            dx*4;
     }
 
-    if (currentTool === "scale") {
+    if(currentTool==="scale"){
 
-        const factor =
-            1 + distanceChange * 7;
+        const pinchDistance=
+            distance3D(
+                handFromLastResult()[4],
+                handFromLastResult()[8]
+            );
 
-        const safeFactor =
+        const factor=
             THREE.MathUtils.clamp(
-                factor,
-                0.92,
-                1.08
+                pinchDistance/0.075,
+                0.35,
+                3
             );
 
-        object.scale.multiplyScalar(
-            safeFactor
+        selected.scale.copy(
+            grabState.scale
         );
 
-        object.scale.x =
-            Math.max(
-                0.05,
-                object.scale.x
-            );
-
-        object.scale.y =
-            Math.max(
-                0.05,
-                object.scale.y
-            );
-
-        object.scale.z =
-            Math.max(
-                0.05,
-                object.scale.z
-            );
-
+        selected.scale.multiplyScalar(
+            factor
+        );
     }
 
-    updateProperties();
-
-    lastPalmX =
-        palmX;
-
-    lastPalmY =
-        palmY;
-
-    lastPalmZ =
-        palmZ;
-
-    lastPinchDistance =
-        pinchDistance;
-
-    lastPalmAngle =
-        palmAngle;
-
+    updateUI();
 }
 
-function processTwoHands(
-    hands
-) {
+let currentHand=null;
 
-    const handA =
-        hands[0];
+function handFromLastResult(){
 
-    const handB =
-        hands[1];
-
-    const palmA =
-        getPalm(
-            handA
-        );
-
-    const palmB =
-        getPalm(
-            handB
-        );
-
-    const distance =
-        distance3D(
-            palmA,
-            palmB
-        );
-
-    if (
-        currentTool === "scale" &&
-        selectedObject
-    ) {
-
-        if (
-            twoHandPreviousDistance !== null
-        ) {
-
-            const change =
-                distance -
-                twoHandPreviousDistance;
-
-            const factor =
-                1 + change * 2.5;
-
-            const safeFactor =
-                THREE.MathUtils.clamp(
-                    factor,
-                    0.94,
-                    1.06
-                );
-
-            selectedObject.scale.multiplyScalar(
-                safeFactor
-            );
-
-            selectedObject.scale.x =
-                Math.max(
-                    0.05,
-                    selectedObject.scale.x
-                );
-
-            selectedObject.scale.y =
-                Math.max(
-                    0.05,
-                    selectedObject.scale.y
-                );
-
-            selectedObject.scale.z =
-                Math.max(
-                    0.05,
-                    selectedObject.scale.z
-                );
-
-            updateProperties();
-
-        }
-
-    }
-
-    twoHandPreviousDistance =
-        distance;
-
+    return currentHand||
+        [
+            {x:0,y:0,z:0},
+            {x:0,y:0,z:0},
+            {x:0,y:0,z:0},
+            {x:0,y:0,z:0},
+            {x:0,y:0,z:0}
+        ];
 }
 
-function releaseHand() {
-
-    pinchActive = false;
-
-    handGrabObject =
-        null;
-
-    lastPalmX = null;
-    lastPalmY = null;
-    lastPalmZ = null;
-    lastPinchDistance = null;
-    lastPalmAngle = null;
-
-    handCursor.classList.remove(
-        "pinching"
-    );
-
-}
-
-function resetHandState() {
-
-    releaseHand();
-
-    twoHandPreviousDistance =
-        null;
-
-    handCursor.style.display =
-        "none";
-
-}
-
-function getPalm(hand) {
-
-    const wrist =
-        hand[0];
-
-    const index =
-        hand[5];
-
-    const pinky =
-        hand[17];
+function getPalm(hand){
 
     return {
-        x:
-            (wrist.x + index.x + pinky.x) / 3,
+        x:(hand[0].x+
+           hand[5].x+
+           hand[17].x)/3,
 
-        y:
-            (wrist.y + index.y + pinky.y) / 3,
+        y:(hand[0].y+
+           hand[5].y+
+           hand[17].y)/3,
 
-        z:
-            (wrist.z + index.z + pinky.z) / 3
+        z:(hand[0].z+
+           hand[5].z+
+           hand[17].z)/3
     };
-
 }
 
-function distance3D(a, b) {
-
-    const dx =
-        a.x - b.x;
-
-    const dy =
-        a.y - b.y;
-
-    const dz =
-        a.z - b.z;
+function distance3D(a,b){
 
     return Math.sqrt(
-        dx * dx +
-        dy * dy +
-        dz * dz
+        Math.pow(a.x-b.x,2)+
+        Math.pow(a.y-b.y,2)+
+        Math.pow(a.z-b.z,2)
+    );
+}
+
+function pickAtHand(x,y){
+
+    pointer.set(
+        x*2-1,
+        -y*2+1
     );
 
-}
-
-function normalizeAngle(angle) {
-
-    while (angle > Math.PI) {
-        angle -= Math.PI * 2;
-    }
-
-    while (angle < -Math.PI) {
-        angle += Math.PI * 2;
-    }
-
-    return angle;
-
-}
-
-function objectFromScreen(
-    normalizedX,
-    normalizedY
-) {
-
-    const rect =
-        renderer.domElement.getBoundingClientRect();
-
-    const x =
-        normalizedX * 2 - 1;
-
-    const y =
-        -(normalizedY * 2 - 1);
-
     raycaster.setFromCamera(
-        new THREE.Vector2(x, y),
+        pointer,
         camera
     );
 
-    const hits =
+    const hits=
         raycaster.intersectObjects(
             objects,
             false
         );
 
-    if (hits.length === 0) {
-        return null;
+    if(hits.length){
+        return hits[0].object;
     }
 
-    return hits[0].object;
-
+    return null;
 }
 
-init();
+function moveCursor(x,y){
+
+    const rect=
+        viewport.getBoundingClientRect();
+
+    cursor.style.left=
+        x*rect.width+"px";
+
+    cursor.style.top=
+        y*rect.height+"px";
+
+    cursor.style.display=
+        "block";
+}
+
+function drawHands(result){
+
+    const ctx=
+        webcamCanvas.getContext(
+            "2d"
+        );
+
+    ctx.clearRect(
+        0,
+        0,
+        webcamCanvas.width,
+        webcamCanvas.height
+    );
+
+    if(
+        !result||
+        !result.landmarks
+    ){
+        return;
+    }
+
+    const links=[
+        [0,1],[1,2],[2,3],[3,4],
+        [0,5],[5,6],[6,7],[7,8],
+        [5,9],[9,10],[10,11],[11,12],
+        [9,13],[13,14],[14,15],[15,16],
+        [13,17],[17,18],[18,19],[19,20],
+        [0,17]
+    ];
+
+    ctx.lineWidth=2;
+    ctx.strokeStyle="#ff8a24";
+    ctx.fillStyle="#ffffff";
+
+    result.landmarks.forEach(
+        hand=>{
+
+            currentHand=hand;
+
+            links.forEach(
+                link=>{
+
+                    const a=
+                        hand[link[0]];
+
+                    const b=
+                        hand[link[1]];
+
+                    ctx.beginPath();
+
+                    ctx.moveTo(
+                        a.x*640,
+                        a.y*400
+                    );
+
+                    ctx.lineTo(
+                        b.x*640,
+                        b.y*400
+                    );
+
+                    ctx.stroke();
+                }
+            );
+
+            hand.forEach(
+                point=>{
+
+                    ctx.beginPath();
+
+                    ctx.arc(
+                        point.x*640,
+                        point.y*400,
+                        3,
+                        0,
+                        Math.PI*2
+                    );
+
+                    ctx.fill();
+                }
+            );
+        }
+    );
+}
+
+function render(){
+
+    controls.update();
+
+    renderer.render(
+        scene,
+        camera
+    );
+
+    requestAnimationFrame(
+        render
+    );
+}
+
+updateUI();
+
+render();
 
 </script>
 
