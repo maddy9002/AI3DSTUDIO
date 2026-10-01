@@ -6,8 +6,6 @@ from OpenGL.GLU import *
 from scene.ray_builder import RayBuilder
 from PySide6.QtGui import QImage
 from PySide6.QtGui import QPainter
-from PySide6.QtGui import QColor
-from PySide6.QtGui import QPen
 import cv2
 from camera.camera import Camera
 from scene.ray import Ray
@@ -54,9 +52,11 @@ class Viewport(QOpenGLWidget):
 
         self.cursor_x = 0.0
         self.cursor_y = 0.0
+
         self.hand_cursor_x = None
         self.hand_cursor_y = None
         self.hand_cursor_visible = False
+        self.hand_hovered_object = None
 
         # ---------------------------------
         # Viewport Focus
@@ -1038,8 +1038,7 @@ class Viewport(QOpenGLWidget):
         # -------------------------
         # Cursor
         # -------------------------
-        if not self.hand_cursor_visible:
-            self.draw_cursor()
+        self.draw_cursor()
 
         # -------------------------
         # Gizmos
@@ -1067,6 +1066,12 @@ class Viewport(QOpenGLWidget):
         # -------------------------
         self.upload_webcam_texture()
         self.draw_webcam_texture()
+
+
+    def paintEvent(self, event):
+
+        super().paintEvent(event)
+
         self.draw_hand_cursor_overlay()
 
     def draw_cube(self):
@@ -1234,42 +1239,87 @@ class Viewport(QOpenGLWidget):
             y - self.cursor_y
         ) * smooth
 
-        width = max(1, self.width())
-        height = max(1, self.height())
-
-        self.hand_cursor_x = (
-            (x + 1.0) * 0.5 * width
-        )
-
-        self.hand_cursor_y = (
-            (1.0 - y) * 0.5 * height
-        )
-
-        self.hand_cursor_visible = True
-
         self.update()
 
     def update_hand_cursor_screen(self, x, y):
 
-        self.hand_cursor_x = max(
-            0.0,
-            min(float(x), float(self.width()))
-        )
+        smooth = 0.25
 
-        self.hand_cursor_y = max(
-            0.0,
-            min(float(y), float(self.height()))
-        )
+        if self.hand_cursor_x is None:
+            self.hand_cursor_x = x
+            self.hand_cursor_y = y
+        else:
+            self.hand_cursor_x += (
+                x - self.hand_cursor_x
+            ) * smooth
+
+            self.hand_cursor_y += (
+                y - self.hand_cursor_y
+            ) * smooth
 
         self.hand_cursor_visible = True
 
-        self.update()
-
-    def hide_hand_cursor(self):
-
-        self.hand_cursor_visible = False
+        self.mouse_x = self.hand_cursor_x
+        self.mouse_y = self.hand_cursor_y
 
         self.update()
+
+    def pick_object_at_hand_cursor(self):
+
+        if not self.hand_cursor_visible:
+            return None
+
+        if self.hand_cursor_x is None:
+            return None
+
+        if self.hand_cursor_y is None:
+            return None
+
+        if not self.scene_objects:
+            return None
+
+        if self.main_window is not None:
+
+            interaction = getattr(
+                self.main_window,
+                "interaction",
+                None
+            )
+
+            if interaction is not None and getattr(
+                interaction,
+                "is_holding",
+                False
+            ):
+                return self.selected_object
+
+        ray = RayBuilder.build_ray(
+            self.hand_cursor_x,
+            self.hand_cursor_y,
+            self,
+            self.camera
+        )
+
+        picked = self.raycaster.cast(
+            ray,
+            self.scene_objects
+        )
+
+        if picked is not self.hand_hovered_object:
+
+            self.hand_hovered_object = picked
+
+            if picked is not None:
+                self.set_selected_object(picked)
+                print(
+                    "HAND PICKED OBJECT:",
+                    picked.name
+                )
+            else:
+                self.selection_manager.deselect()
+                print("HAND PICKED OBJECT: None")
+
+        return picked
 
     def draw_hand_cursor_overlay(self):
 
@@ -1285,47 +1335,22 @@ class Viewport(QOpenGLWidget):
         painter = QPainter(self)
 
         painter.setRenderHint(
-            QPainter.Antialiasing,
-            True
-        )
-
-        x = int(self.hand_cursor_x)
-        y = int(self.hand_cursor_y)
-
-        painter.setPen(
-            QPen(
-                QColor(0, 255, 255),
-                3
-            )
-        )
-
-        painter.setBrush(
-            QColor(0, 255, 255, 90)
-        )
-
-        painter.drawEllipse(
-            x - 10,
-            y - 10,
-            20,
-            20
+            QPainter.Antialiasing
         )
 
         painter.setPen(
-            QPen(
-                QColor(255, 255, 255),
-                2
-            )
+            Qt.cyan
         )
 
         painter.setBrush(
-            QColor(255, 255, 255)
+            Qt.NoBrush
         )
 
         painter.drawEllipse(
-            x - 3,
-            y - 3,
-            6,
-            6
+            int(self.hand_cursor_x) - 9,
+            int(self.hand_cursor_y) - 9,
+            18,
+            18
         )
 
         painter.end()
@@ -4442,7 +4467,7 @@ class Viewport(QOpenGLWidget):
 
         nearest = None
 
-        nearest_distance = 0.12
+        nearest_distance = 0.05
 
         origin = np.array(ray.origin)
 
@@ -4714,3 +4739,4 @@ class Viewport(QOpenGLWidget):
         self.selected_edges.clear()
 
         self.update()
+

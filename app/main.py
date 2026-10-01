@@ -36,6 +36,7 @@ from app.scene.scene_manager import SceneManager
 from app.scene.tool_manager import ToolManager
 from app.scene.ray import Ray
 from app.scene.raycast import RayCaster
+from app.scene.ray_builder import RayBuilder
 
 from app.mode_manager import ModeManager
 from app.scene_object import SceneObject
@@ -147,6 +148,8 @@ class AI3DStudio(QMainWindow):
         self.gesture_mode_start_time = None
         self.gesture_mode_activated = False
         self.last_gesture_mode = None
+
+        self._hand_edit_pinch_active = False
 
         self.cap = cv2.VideoCapture(0)
 
@@ -1404,6 +1407,19 @@ class AI3DStudio(QMainWindow):
                 world_y
             )
 
+            screen_x = (
+                x * self.viewport.width()
+            )
+
+            screen_y = (
+                y * self.viewport.height()
+            )
+
+            self.viewport.update_hand_cursor_screen(
+                screen_x,
+                screen_y
+            )
+
         gesture = self.tracker.get_gesture()
 
         print(
@@ -1515,6 +1531,70 @@ class AI3DStudio(QMainWindow):
 
             self.fist_start_time = None
             self.edit_mode_activated = False
+
+        # --------------------------------------------------------
+        # HAND PINCH - EDIT MODE VERTEX SELECTION
+        # --------------------------------------------------------
+
+        if gesture == "PINCH" and edit_mode:
+
+            if not self._hand_edit_pinch_active:
+
+                obj = self.viewport.selected_object
+
+                if obj is not None:
+
+                    if (
+                        self.viewport.hand_cursor_visible
+                        and self.viewport.hand_cursor_x is not None
+                        and self.viewport.hand_cursor_y is not None
+                    ):
+
+                        ray = RayBuilder.build_ray(
+                            self.viewport.hand_cursor_x,
+                            self.viewport.hand_cursor_y,
+                            self.viewport,
+                            self.viewport.camera
+                        )
+
+                        if self.viewport.vertex_mode:
+
+                            vertex = self.viewport.pick_vertex(
+                                obj,
+                                ray
+                            )
+
+                            if vertex is not None:
+
+                                self.viewport.selected_vertices = {
+                                    vertex
+                                }
+
+                                self.viewport.selected_vertex = vertex
+                                self.viewport.selected_edge = None
+                                self.viewport.selected_edges.clear()
+                                self.viewport.selected_face = None
+                                self.viewport.selected_faces.clear()
+
+                                print(
+                                    "HAND SELECTED VERTEX:",
+                                    vertex
+                                )
+
+                                self.viewport.update()
+
+                            else:
+
+                                print(
+                                    "HAND VERTEX PICK: NONE"
+                                )
+
+            self._hand_edit_pinch_active = True
+            return
+
+        if self._hand_edit_pinch_active:
+
+            self._hand_edit_pinch_active = False
 
         if gesture == "TWO_HAND_PINCH":
 
