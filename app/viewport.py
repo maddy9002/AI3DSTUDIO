@@ -6,6 +6,8 @@ from OpenGL.GLU import *
 from scene.ray_builder import RayBuilder
 from PySide6.QtGui import QImage
 from PySide6.QtGui import QPainter
+from PySide6.QtGui import QColor
+from PySide6.QtGui import QPen
 import cv2
 from camera.camera import Camera
 from scene.ray import Ray
@@ -52,6 +54,9 @@ class Viewport(QOpenGLWidget):
 
         self.cursor_x = 0.0
         self.cursor_y = 0.0
+        self.hand_cursor_x = None
+        self.hand_cursor_y = None
+        self.hand_cursor_visible = False
 
         # ---------------------------------
         # Viewport Focus
@@ -1033,7 +1038,8 @@ class Viewport(QOpenGLWidget):
         # -------------------------
         # Cursor
         # -------------------------
-        self.draw_cursor()
+        if not self.hand_cursor_visible:
+            self.draw_cursor()
 
         # -------------------------
         # Gizmos
@@ -1061,6 +1067,7 @@ class Viewport(QOpenGLWidget):
         # -------------------------
         self.upload_webcam_texture()
         self.draw_webcam_texture()
+        self.draw_hand_cursor_overlay()
 
     def draw_cube(self):
 
@@ -1227,7 +1234,101 @@ class Viewport(QOpenGLWidget):
             y - self.cursor_y
         ) * smooth
 
+        width = max(1, self.width())
+        height = max(1, self.height())
+
+        self.hand_cursor_x = (
+            (x + 1.0) * 0.5 * width
+        )
+
+        self.hand_cursor_y = (
+            (1.0 - y) * 0.5 * height
+        )
+
+        self.hand_cursor_visible = True
+
         self.update()
+
+    def update_hand_cursor_screen(self, x, y):
+
+        self.hand_cursor_x = max(
+            0.0,
+            min(float(x), float(self.width()))
+        )
+
+        self.hand_cursor_y = max(
+            0.0,
+            min(float(y), float(self.height()))
+        )
+
+        self.hand_cursor_visible = True
+
+        self.update()
+
+    def hide_hand_cursor(self):
+
+        self.hand_cursor_visible = False
+
+        self.update()
+
+    def draw_hand_cursor_overlay(self):
+
+        if not self.hand_cursor_visible:
+            return
+
+        if self.hand_cursor_x is None:
+            return
+
+        if self.hand_cursor_y is None:
+            return
+
+        painter = QPainter(self)
+
+        painter.setRenderHint(
+            QPainter.Antialiasing,
+            True
+        )
+
+        x = int(self.hand_cursor_x)
+        y = int(self.hand_cursor_y)
+
+        painter.setPen(
+            QPen(
+                QColor(0, 255, 255),
+                3
+            )
+        )
+
+        painter.setBrush(
+            QColor(0, 255, 255, 90)
+        )
+
+        painter.drawEllipse(
+            x - 10,
+            y - 10,
+            20,
+            20
+        )
+
+        painter.setPen(
+            QPen(
+                QColor(255, 255, 255),
+                2
+            )
+        )
+
+        painter.setBrush(
+            QColor(255, 255, 255)
+        )
+
+        painter.drawEllipse(
+            x - 3,
+            y - 3,
+            6,
+            6
+        )
+
+        painter.end()
 
     def update_scene(self, scene_objects):
 
@@ -4613,4 +4714,3 @@ class Viewport(QOpenGLWidget):
         self.selected_edges.clear()
 
         self.update()
-
