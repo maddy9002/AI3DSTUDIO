@@ -527,6 +527,178 @@ class Viewport(QOpenGLWidget):
 
         glPopAttrib()
 
+    def inset_selected_face(self, inset_ratio=0.20):
+        """
+        Inset the active face by scaling its vertices toward the face
+        centroid and creating a new inner face surrounded by side faces.
+
+        This first implementation intentionally operates on one selected
+        face. The resulting inner face becomes the active selection so it
+        can immediately be extruded.
+        """
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("INSET: Requires EDIT mode")
+                return False
+
+        if not self.face_mode:
+            print("INSET: Requires FACE mode")
+            return False
+
+        if self.selected_object is None:
+            print("INSET: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("INSET: Selected object has no mesh")
+            return False
+
+        face_index = self.selected_face
+
+        if face_index is None:
+            print("INSET: No selected face")
+            return False
+
+        if face_index < 0 or face_index >= len(mesh.faces):
+            print("INSET: Invalid selected face")
+            return False
+
+        original_face = list(mesh.faces[face_index])
+
+        if len(original_face) < 3:
+            print("INSET: Face has fewer than 3 vertices")
+            return False
+
+        try:
+            inset_ratio = float(inset_ratio)
+        except (TypeError, ValueError):
+            print("INSET: Invalid inset amount")
+            return False
+
+        if inset_ratio <= 0.0 or inset_ratio >= 1.0:
+            print("INSET: Amount must be between 0 and 1")
+            return False
+
+        # Validate all original vertex indices before changing the mesh.
+        for vertex_index in original_face:
+            if vertex_index < 0 or vertex_index >= len(mesh.vertices):
+                print("INSET: Invalid vertex index:", vertex_index)
+                return False
+
+        # Save one undo state for the complete inset operation.
+        if self.history_manager is not None:
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+        # ---------------------------------
+        # Face centroid
+        # ---------------------------------
+
+        positions = np.array(
+            [mesh.vertices[index] for index in original_face],
+            dtype=np.float32
+        )
+
+        center = np.mean(
+            positions,
+            axis=0
+        )
+
+        # inset_ratio is the amount removed from the outside.
+        # Example: 0.20 keeps 80% of the distance to the centroid.
+        scale = 1.0 - inset_ratio
+
+        new_vertices = []
+
+        for vertex in positions:
+            new_vertex = center + (vertex - center) * scale
+
+            mesh.vertices.append([
+                float(new_vertex[0]),
+                float(new_vertex[1]),
+                float(new_vertex[2])
+            ])
+
+            new_vertices.append(
+                len(mesh.vertices) - 1
+            )
+
+        # ---------------------------------
+        # Build the inset ring
+        # ---------------------------------
+
+        ring_faces = []
+        count = len(original_face)
+
+        for i in range(count):
+            outer_a = original_face[i]
+            outer_b = original_face[(i + 1) % count]
+            inner_b = new_vertices[(i + 1) % count]
+            inner_a = new_vertices[i]
+
+            ring_faces.append(
+                (outer_a, outer_b, inner_b, inner_a)
+            )
+
+        # The inner face keeps the original winding order.
+        inner_face = tuple(new_vertices)
+
+        # Replace the original face with the ring and append the inner face.
+        mesh.faces[face_index:face_index + 1] = ring_faces
+
+        inner_face_index = len(mesh.faces)
+        mesh.faces.append(inner_face)
+
+        # ---------------------------------
+        # Rebuild topology
+        # ---------------------------------
+
+        mesh.build_edges()
+
+        # ---------------------------------
+        # Keep the new inner face selected
+        # ---------------------------------
+
+        self.selected_face = inner_face_index
+        self.selected_faces = {
+            inner_face_index
+        }
+
+        mesh.selected_face = inner_face_index
+
+        self.selected_vertex = None
+        self.selected_vertices.clear()
+        self.selected_edge = None
+        self.selected_edges.clear()
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+        self.dragging_object = False
+
+        self.update()
+
+        print(
+            "INSET COMPLETE | Face:",
+            face_index,
+            "-> Inner Face:",
+            inner_face_index
+        )
+        print(
+            "Vertices :",
+            len(mesh.vertices),
+            "| Faces:",
+            len(mesh.faces),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
+
     def extrude_selected_face(self):
 
         if self.selected_object is None:
@@ -1066,7 +1238,6 @@ class Viewport(QOpenGLWidget):
         # -------------------------
         self.upload_webcam_texture()
         self.draw_webcam_texture()
-
 
     def paintEvent(self, event):
 
@@ -4405,6 +4576,19 @@ class Viewport(QOpenGLWidget):
             # ---------------------------------
 
             self.update()
+
+            return
+
+        # ---------------------------------
+        # INSET
+        # ---------------------------------
+        elif event.key() == Qt.Key_I:
+
+            print("INSET")
+
+            self.inset_selected_face(
+                0.20
+            )
 
             return
 
