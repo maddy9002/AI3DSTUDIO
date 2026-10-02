@@ -149,6 +149,12 @@ class AI3DStudio(QMainWindow):
         self.gesture_mode_activated = False
         self.last_gesture_mode = None
 
+        # Hand Edit Mode selection is changed only by a WAVE gesture.
+        self.hand_wave_mode = "VERTEX"
+        self.hand_wave_last_state = False
+
+        # Prevent one pinch from selecting repeatedly while the
+        # hand remains pinched.
         self._hand_edit_pinch_active = False
 
         self.cap = cv2.VideoCapture(0)
@@ -1407,18 +1413,18 @@ class AI3DStudio(QMainWindow):
                 world_y
             )
 
-            screen_x = (
-                x * self.viewport.width()
-            )
-
-            screen_y = (
-                y * self.viewport.height()
-            )
+            # Hand cursor used for precise screen-space picking.
+            screen_x = x * self.viewport.width()
+            screen_y = y * self.viewport.height()
 
             self.viewport.update_hand_cursor_screen(
                 screen_x,
                 screen_y
             )
+
+            # Keep the hand cursor visible while hand tracking is active.
+            # Wave detection must never hide or disable the cyan cursor.
+            self.viewport.hand_cursor_visible = True
 
         gesture = self.tracker.get_gesture()
 
@@ -1434,56 +1440,175 @@ class AI3DStudio(QMainWindow):
             == "EDIT"
         )
 
-        if edit_mode and gesture in (
-            "ONE_FINGER",
-            "TWO_FINGERS",
-            "THREE_FINGERS"
-        ):
+        # --------------------------------------------------------
+        # WAVE - CYCLE EDIT SELECTION MODE
+        # --------------------------------------------------------
+        #
+        # Edit selection mode is no longer changed by finger count.
+        # A wave cycles: Vertex -> Edge -> Face -> Vertex.
+        # Pinch is therefore free to select the element under the
+        # hand cursor without accidentally changing the mode.
 
-            if self.last_gesture_mode != gesture:
+        if edit_mode and gesture == "OPEN_HAND" and palm is not None:
 
-                self.gesture_mode_start_time = time.time()
-                self.gesture_mode_activated = False
-                self.last_gesture_mode = gesture
+            wave_detected = self.gesture.update_wave(palm[0])
 
-            elif (
-                time.time()
-                - self.gesture_mode_start_time
-                >= 1.0
-                and not self.gesture_mode_activated
-            ):
+            if wave_detected and not self.hand_wave_last_state:
 
-                if gesture == "ONE_FINGER":
-
-                    self.viewport.set_vertex_mode()
-
-                    self.ai_console.append(
-                        "HAND GESTURE: Vertex Mode"
-                    )
-
-                elif gesture == "TWO_FINGERS":
+                if self.hand_wave_mode == "VERTEX":
 
                     self.viewport.set_edge_mode()
+                    self.hand_wave_mode = "EDGE"
 
                     self.ai_console.append(
-                        "HAND GESTURE: Edge Mode"
+                        "HAND WAVE: Edge Mode"
                     )
 
-                elif gesture == "THREE_FINGERS":
+                elif self.hand_wave_mode == "EDGE":
 
                     self.viewport.set_face_mode()
+                    self.hand_wave_mode = "FACE"
 
                     self.ai_console.append(
-                        "HAND GESTURE: Face Mode"
+                        "HAND WAVE: Face Mode"
                     )
 
-                self.gesture_mode_activated = True
+                else:
+
+                    self.viewport.set_vertex_mode()
+                    self.hand_wave_mode = "VERTEX"
+
+                    self.ai_console.append(
+                        "HAND WAVE: Vertex Mode"
+                    )
+
+                self.viewport.update()
+
+                print(
+                    "HAND WAVE MODE:",
+                    self.hand_wave_mode
+                )
+
+            self.hand_wave_last_state = wave_detected
 
         else:
 
-            self.gesture_mode_start_time = None
-            self.gesture_mode_activated = False
-            self.last_gesture_mode = None
+            self.gesture.reset_wave()
+            self.hand_wave_last_state = False
+
+        self.gesture_mode_start_time = None
+        self.gesture_mode_activated = False
+        self.last_gesture_mode = None
+
+        # --------------------------------------------------------
+        # HAND PINCH - EDIT ELEMENT SELECTION
+        # --------------------------------------------------------
+        #
+        # The WAVE gesture chooses Vertex / Edge / Face mode.
+        # A PINCH only selects the element currently under the
+        # screen-space hand cursor.
+
+        if edit_mode:
+
+            if gesture == "PINCH":
+
+                if not self._hand_edit_pinch_active:
+
+                    obj = self.viewport.selected_object
+
+                    if (
+                        obj is not None
+                        and self.viewport.hand_cursor_visible
+                        and self.viewport.hand_cursor_x is not None
+                        and self.viewport.hand_cursor_y is not None
+                    ):
+
+                        ray = RayBuilder.build_ray(
+                            self.viewport.hand_cursor_x,
+                            self.viewport.hand_cursor_y,
+                            self.viewport,
+                            self.viewport.camera
+                        )
+
+                        picked = None
+
+                        if self.hand_wave_mode == "VERTEX":
+
+                            picked = self.viewport.pick_vertex(
+                                obj,
+                                ray
+                            )
+
+                            if picked is not None:
+
+                                self.viewport.selected_vertices = {
+                                    picked
+                                }
+                                self.viewport.selected_vertex = picked
+                                self.viewport.selected_edge = None
+                                self.viewport.selected_edges.clear()
+                                self.viewport.selected_face = None
+                                self.viewport.selected_faces.clear()
+
+                                print(
+                                    "HAND SELECTED VERTEX:",
+                                    picked
+                                )
+
+                        elif self.hand_wave_mode == "EDGE":
+
+                            picked = self.viewport.pick_edge(
+                                obj,
+                                ray
+                            )
+
+                            if picked is not None:
+
+                                self.viewport.selected_edge = picked
+                                self.viewport.selected_edges = {
+                                    picked
+                                }
+                                self.viewport.selected_vertex = None
+                                self.viewport.selected_vertices.clear()
+                                self.viewport.selected_face = None
+                                self.viewport.selected_faces.clear()
+
+                                print(
+                                    "HAND SELECTED EDGE:",
+                                    picked
+                                )
+
+                        elif self.hand_wave_mode == "FACE":
+
+                            picked = self.viewport.pick_face(
+                                obj,
+                                ray
+                            )
+
+                            if picked is not None:
+
+                                self.viewport.selected_face = picked
+                                self.viewport.selected_faces = {
+                                    picked
+                                }
+                                self.viewport.selected_vertex = None
+                                self.viewport.selected_vertices.clear()
+                                self.viewport.selected_edge = None
+                                self.viewport.selected_edges.clear()
+
+                                print(
+                                    "HAND SELECTED FACE:",
+                                    picked
+                                )
+
+                        if picked is not None:
+                            self.viewport.update()
+
+                self._hand_edit_pinch_active = True
+
+            else:
+
+                self._hand_edit_pinch_active = False
 
         if gesture == "FIST":
 
@@ -1531,70 +1656,6 @@ class AI3DStudio(QMainWindow):
 
             self.fist_start_time = None
             self.edit_mode_activated = False
-
-        # --------------------------------------------------------
-        # HAND PINCH - EDIT MODE VERTEX SELECTION
-        # --------------------------------------------------------
-
-        if gesture == "PINCH" and edit_mode:
-
-            if not self._hand_edit_pinch_active:
-
-                obj = self.viewport.selected_object
-
-                if obj is not None:
-
-                    if (
-                        self.viewport.hand_cursor_visible
-                        and self.viewport.hand_cursor_x is not None
-                        and self.viewport.hand_cursor_y is not None
-                    ):
-
-                        ray = RayBuilder.build_ray(
-                            self.viewport.hand_cursor_x,
-                            self.viewport.hand_cursor_y,
-                            self.viewport,
-                            self.viewport.camera
-                        )
-
-                        if self.viewport.vertex_mode:
-
-                            vertex = self.viewport.pick_vertex(
-                                obj,
-                                ray
-                            )
-
-                            if vertex is not None:
-
-                                self.viewport.selected_vertices = {
-                                    vertex
-                                }
-
-                                self.viewport.selected_vertex = vertex
-                                self.viewport.selected_edge = None
-                                self.viewport.selected_edges.clear()
-                                self.viewport.selected_face = None
-                                self.viewport.selected_faces.clear()
-
-                                print(
-                                    "HAND SELECTED VERTEX:",
-                                    vertex
-                                )
-
-                                self.viewport.update()
-
-                            else:
-
-                                print(
-                                    "HAND VERTEX PICK: NONE"
-                                )
-
-            self._hand_edit_pinch_active = True
-            return
-
-        if self._hand_edit_pinch_active:
-
-            self._hand_edit_pinch_active = False
 
         if gesture == "TWO_HAND_PINCH":
 

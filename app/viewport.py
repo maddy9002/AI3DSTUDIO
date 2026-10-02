@@ -4467,7 +4467,7 @@ class Viewport(QOpenGLWidget):
 
         nearest = None
 
-        nearest_distance = 0.05
+        nearest_distance = 0.12
 
         origin = np.array(ray.origin)
 
@@ -4518,7 +4518,7 @@ class Viewport(QOpenGLWidget):
         if not hasattr(obj.mesh, "edges"):
             return None
 
-        threshold = 0.10
+        threshold = 0.18
 
         closest_edge = None
         closest_distance = 999999.0
