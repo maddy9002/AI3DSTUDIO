@@ -1239,6 +1239,7 @@ class Viewport(QOpenGLWidget):
         self.upload_webcam_texture()
         self.draw_webcam_texture()
 
+
     def paintEvent(self, event):
 
         super().paintEvent(event)
@@ -3776,6 +3777,347 @@ class Viewport(QOpenGLWidget):
 
         return deleted
 
+    def loop_cut_selected_edge(self):
+
+        """
+        Insert one centered loop cut through the selected edge loop.
+
+        The current mesh topology is face-authoritative, so the loop is
+        discovered from quad faces and the derived edge list is rebuilt
+        after the operation. Non-quad faces are left untouched.
+        """
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("LOOP CUT: Requires EDIT mode")
+                return False
+
+        if not self.edge_mode:
+            print("LOOP CUT: Requires EDGE mode")
+            return False
+
+        if self.selected_object is None:
+            print("LOOP CUT: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("LOOP CUT: Selected object has no mesh")
+            return False
+
+        edge_index = self.selected_edge
+
+        if edge_index is None:
+            print("LOOP CUT: No selected edge")
+            return False
+
+        if edge_index < 0 or edge_index >= len(mesh.edges):
+            print("LOOP CUT: Invalid selected edge")
+            return False
+
+        selected_edge = tuple(mesh.edges[edge_index])
+
+        if len(selected_edge) != 2:
+            print("LOOP CUT: Invalid edge")
+            return False
+
+        start_edge = (
+            int(selected_edge[0]),
+            int(selected_edge[1])
+        )
+
+        # Work from a stable copy of the original topology.
+        original_faces = [
+            tuple(int(index) for index in face)
+            for face in mesh.faces
+            if face is not None
+        ]
+
+        # A loop cut is currently defined for quad topology.
+        if not any(
+            len(face) == 4 and
+            start_edge[0] in face and
+            start_edge[1] in face
+            for face in original_faces
+        ):
+            print("LOOP CUT: Selected edge is not part of a quad face")
+            return False
+
+        # ---------------------------------
+        # Find the complete edge loop
+        # ---------------------------------
+
+        def canonical(edge):
+            a, b = int(edge[0]), int(edge[1])
+            return (a, b) if a < b else (b, a)
+
+        def edge_in_face(face, edge):
+            a, b = edge
+            count = len(face)
+            for i in range(count):
+                x = face[i]
+                y = face[(i + 1) % count]
+                if (x == a and y == b) or (x == b and y == a):
+                    return True
+            return False
+
+        def opposite_edge(face, edge):
+            if len(face) != 4:
+                return None
+
+            a, b = edge
+
+            for i in range(4):
+                x = face[i]
+                y = face[(i + 1) % 4]
+
+                if (x == a and y == b) or (x == b and y == a):
+                    return (
+                        face[(i + 2) % 4],
+                        face[(i + 3) % 4]
+                    )
+
+            return None
+
+        loop_edges = set()
+        queue = [canonical(start_edge)]
+
+        while queue:
+            current = queue.pop(0)
+
+            if current in loop_edges:
+                continue
+
+            loop_edges.add(current)
+
+            for face in original_faces:
+                if len(face) != 4:
+                    continue
+
+                if not edge_in_face(face, current):
+                    continue
+
+                opposite = opposite_edge(face, current)
+
+                if opposite is None:
+                    continue
+
+                opposite = canonical(opposite)
+
+                if opposite not in loop_edges:
+                    queue.append(opposite)
+
+        if not loop_edges:
+            print("LOOP CUT: Could not build loop")
+            return False
+
+        # Every loop edge must belong to at least one quad. This prevents
+        # modifying a partial/non-manifold topology accidentally.
+        for edge in loop_edges:
+            if not any(
+                len(face) == 4 and edge_in_face(face, edge)
+                for face in original_faces
+            ):
+                print("LOOP CUT: Incomplete quad loop")
+                return False
+
+        # ---------------------------------
+        # Save undo state
+        # ---------------------------------
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+        # ---------------------------------
+        # Create one midpoint vertex per loop edge
+        # ---------------------------------
+
+        midpoint_indices = {}
+
+        for edge in loop_edges:
+            a, b = edge
+
+            if (
+                a < 0 or
+                b < 0 or
+                a >= len(mesh.vertices) or
+                b >= len(mesh.vertices)
+            ):
+                print("LOOP CUT: Invalid loop vertex")
+                return False
+
+            va = np.array(
+                mesh.vertices[a],
+                dtype=np.float32
+            )
+
+            vb = np.array(
+                mesh.vertices[b],
+                dtype=np.float32
+            )
+
+            midpoint = (va + vb) * 0.5
+
+            mesh.vertices.append([
+                float(midpoint[0]),
+                float(midpoint[1]),
+                float(midpoint[2])
+            ])
+
+            midpoint_indices[edge] = len(mesh.vertices) - 1
+
+        # ---------------------------------
+        # Split every crossed quad
+        # ---------------------------------
+
+        new_faces = []
+        new_loop_edge_pairs = set()
+        cut_faces = 0
+
+        for face in original_faces:
+
+            if len(face) != 4:
+                new_faces.append(face)
+                continue
+
+            crossed_edges = []
+
+            for i in range(4):
+                edge = canonical((
+                    face[i],
+                    face[(i + 1) % 4]
+                ))
+
+                if edge in midpoint_indices:
+                    crossed_edges.append(edge)
+
+            # A valid loop-cut face has exactly two opposite cut edges.
+            if len(crossed_edges) != 2:
+                new_faces.append(face)
+                continue
+
+            edge_a, edge_b = crossed_edges
+
+            # Find the positions of the two cut edges in the quad.
+            cut_positions = []
+
+            for i in range(4):
+                edge = canonical((
+                    face[i],
+                    face[(i + 1) % 4]
+                ))
+
+                if edge == edge_a or edge == edge_b:
+                    cut_positions.append(i)
+
+            if len(cut_positions) != 2:
+                new_faces.append(face)
+                continue
+
+            i0, i1 = sorted(cut_positions)
+
+            # Opposite edges in a quad are separated by two positions.
+            if (i1 - i0) not in (2,):
+                new_faces.append(face)
+                continue
+
+            m0 = midpoint_indices[
+                canonical((
+                    face[i0],
+                    face[(i0 + 1) % 4]
+                ))
+            ]
+
+            m1 = midpoint_indices[
+                canonical((
+                    face[i1],
+                    face[(i1 + 1) % 4]
+                ))
+            ]
+
+            # Rotate the face so the first cut edge is (v0,v1).
+            rotated = [
+                face[(i0 + offset) % 4]
+                for offset in range(4)
+            ]
+
+            v0, v1, v2, v3 = rotated
+
+            # m0 lies between v0-v1 and m1 between v2-v3.
+            new_loop_edge_pairs.add(
+                canonical((m0, m1))
+            )
+
+            new_faces.append((
+                v0,
+                m0,
+                m1,
+                v3
+            ))
+
+            new_faces.append((
+                m0,
+                v1,
+                v2,
+                m1
+            ))
+
+            cut_faces += 1
+
+        if cut_faces == 0:
+            print("LOOP CUT: No quad faces were split")
+            return False
+
+        mesh.faces = new_faces
+        mesh.build_edges()
+
+        # Select the newly created loop edges.
+        new_selected_edges = set()
+
+        for i, edge in enumerate(mesh.edges):
+            if canonical(edge) in new_loop_edge_pairs:
+                new_selected_edges.add(i)
+
+        self.selected_edges = new_selected_edges
+
+        if self.selected_edges:
+            self.selected_edge = next(
+                iter(self.selected_edges)
+            )
+        else:
+            self.selected_edge = None
+
+        self.selected_vertex = None
+        self.selected_vertices.clear()
+        self.selected_face = None
+        self.selected_faces.clear()
+
+        mesh.selected_face = None
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+
+        self.update()
+
+        print(
+            "LOOP CUT COMPLETE | Edges:",
+            len(loop_edges),
+            "| Faces Split:",
+            cut_faces,
+            "| Vertices:",
+            len(mesh.vertices),
+            "| Faces:",
+            len(mesh.faces),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
+
     def keyPressEvent(self, event):
 
         print("VIEWPORT KEY:", event.key())
@@ -4201,6 +4543,20 @@ class Viewport(QOpenGLWidget):
             )
 
             self.update()
+
+            return
+
+        # ---------------------------------
+        # LOOP CUT
+        # ---------------------------------
+        elif (
+            event.key() == Qt.Key_R
+            and event.modifiers() & Qt.ControlModifier
+        ):
+
+            print("LOOP CUT")
+
+            self.loop_cut_selected_edge()
 
             return
 
