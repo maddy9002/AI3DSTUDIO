@@ -3469,6 +3469,176 @@ class Viewport(QOpenGLWidget):
 
         return True
 
+    def dissolve_selected_edge(self):
+        """
+        Dissolve the active selected manifold edge by removing the edge and
+        joining its two incident faces into one polygon.
+
+        The edge must belong to exactly two faces. The two faces are replaced
+        by the boundary that remains after their shared edge is removed.
+        """
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("DISSOLVE EDGE: Requires EDIT mode")
+                return False
+
+        if not self.edge_mode:
+            print("DISSOLVE EDGE: Requires EDGE mode")
+            return False
+
+        if self.selected_object is None:
+            print("DISSOLVE EDGE: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("DISSOLVE EDGE: Selected object has no mesh")
+            return False
+
+        edge_index = self.selected_edge
+
+        if edge_index is None and self.selected_edges:
+            edge_index = next(iter(self.selected_edges))
+
+        if edge_index is None:
+            print("DISSOLVE EDGE: No selected edge")
+            return False
+
+        if edge_index < 0 or edge_index >= len(mesh.edges):
+            print("DISSOLVE EDGE: Invalid selected edge")
+            return False
+
+        edge = tuple(int(v) for v in mesh.edges[edge_index])
+        if len(edge) != 2 or edge[0] == edge[1]:
+            print("DISSOLVE EDGE: Invalid edge data")
+            return False
+
+        a, b = edge
+        target = {a, b}
+
+        incident = []
+        for face_index, face in enumerate(mesh.faces):
+            if face is None or len(face) < 3:
+                continue
+            found = False
+            for i in range(len(face)):
+                u = int(face[i])
+                v = int(face[(i + 1) % len(face)])
+                if {u, v} == target:
+                    found = True
+                    break
+            if found:
+                incident.append(face_index)
+
+        if len(incident) != 2:
+            print("DISSOLVE EDGE: Edge must have exactly two incident faces")
+            return False
+
+        face_a = [int(v) for v in mesh.faces[incident[0]]]
+        face_b = [int(v) for v in mesh.faces[incident[1]]]
+
+        def boundary_path(face, start, end):
+            """Return the path start -> end around face excluding start/end edge."""
+            n = len(face)
+            try:
+                si = face.index(start)
+                ei = face.index(end)
+            except ValueError:
+                return None
+
+            # Walk forward around the face. The direct start->end edge must
+            # not be used, so reject the path when they are adjacent forward.
+            path = [start]
+            i = si
+            while True:
+                i = (i + 1) % n
+                path.append(face[i])
+                if face[i] == end:
+                    break
+                if len(path) > n + 1:
+                    return None
+
+            if len(path) == 2:
+                # Direct shared edge; use the other direction instead.
+                path = [start]
+                i = si
+                while True:
+                    i = (i - 1) % n
+                    path.append(face[i])
+                    if face[i] == end:
+                        break
+                    if len(path) > n + 1:
+                        return None
+
+            return path
+
+        # Choose the non-shared boundary path on each face. One face runs
+        # from a to b; the other runs from b to a.
+        path_a = boundary_path(face_a, a, b)
+        path_b = boundary_path(face_b, b, a)
+
+        if path_a is None or path_b is None:
+            print("DISSOLVE EDGE: Could not construct merged boundary")
+            return False
+
+        merged_face = path_a[:-1] + path_b[:-1]
+
+        # Remove accidental repeated vertices while preserving boundary order.
+        cleaned = []
+        for vertex in merged_face:
+            if not cleaned or cleaned[-1] != vertex:
+                cleaned.append(vertex)
+
+        if len(cleaned) > 1 and cleaned[0] == cleaned[-1]:
+            cleaned.pop()
+
+        if len(cleaned) < 3 or len(set(cleaned)) < 3:
+            print("DISSOLVE EDGE: Resulting face would be degenerate")
+            return False
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(self.selected_object)
+
+        new_faces = []
+        for face_index, face in enumerate(mesh.faces):
+            if face_index in incident:
+                continue
+            new_faces.append(tuple(int(v) for v in face))
+
+        new_faces.append(tuple(cleaned))
+        mesh.faces = new_faces
+        mesh.build_edges()
+
+        # The dissolved edge no longer exists. Keep the resulting face active.
+        self.selected_edge = None
+        self.selected_edges.clear()
+        self.selected_face = len(mesh.faces) - 1
+        self.selected_faces = {self.selected_face}
+
+        self.selected_vertex = None
+        self.selected_vertices.clear()
+
+        mesh.selected_edge = None
+        mesh.selected_face = self.selected_face
+        mesh.selected_vertex = None
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+
+        self.update()
+
+        print(
+            "DISSOLVE EDGE COMPLETE | Faces:",
+            len(mesh.faces),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
+
     def dissolve_selected_vertex(self):
         """
         Dissolve the currently selected vertex without deleting the surface
@@ -5867,6 +6037,19 @@ class Viewport(QOpenGLWidget):
 
                 return
 
+            if (
+                event.key() == Qt.Key_X
+                and self.main_window.mode_manager.get_mode()
+                == "EDIT"
+                and self.edge_mode
+            ):
+
+                print("DISSOLVE EDGE")
+
+                self.dissolve_selected_edge()
+
+                return
+
             print(
                 "DELETE EDIT ELEMENT"
             )
@@ -6700,3 +6883,4 @@ class Viewport(QOpenGLWidget):
         self.selected_edges.clear()
 
         self.update()
+
