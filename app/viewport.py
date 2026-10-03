@@ -4916,6 +4916,267 @@ class Viewport(QOpenGLWidget):
         )
 
         return True
+    def merge_selected_vertices(self):
+        """
+        Merge all currently selected vertices into their average position.
+
+        The selected vertices are replaced by one vertex. Face references are
+        redirected to that vertex, degenerate faces are removed, unused
+        vertices are compacted, and the derived edge list is rebuilt.
+        """
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("MERGE: Requires EDIT mode")
+                return False
+
+        if not self.vertex_mode:
+            print("MERGE: Requires VERTEX mode")
+            return False
+
+        if self.selected_object is None:
+            print("MERGE: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("MERGE: Selected object has no mesh")
+            return False
+
+        selected = sorted(
+            int(index)
+            for index in self.selected_vertices
+            if index is not None
+        )
+
+        selected = [
+            index
+            for index in selected
+            if 0 <= index < len(mesh.vertices)
+        ]
+
+        selected = sorted(set(selected))
+
+        # Support the single selected vertex state as well.
+        if self.selected_vertex is not None:
+            if 0 <= self.selected_vertex < len(mesh.vertices):
+                if self.selected_vertex not in selected:
+                    selected.append(
+                        int(self.selected_vertex)
+                    )
+                    selected.sort()
+
+        if len(selected) < 2:
+            print("MERGE: Select at least two vertices")
+            return False
+
+        # ---------------------------------
+        # Save undo state
+        # ---------------------------------
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+        # ---------------------------------
+        # Calculate merge position
+        # ---------------------------------
+
+        positions = np.array(
+            [mesh.vertices[index] for index in selected],
+            dtype=np.float32
+        )
+
+        merged_position = np.mean(
+            positions,
+            axis=0
+        )
+
+        target_vertex = selected[0]
+        selected_set = set(selected)
+
+        mesh.vertices[target_vertex] = [
+            float(merged_position[0]),
+            float(merged_position[1]),
+            float(merged_position[2])
+        ]
+
+        # ---------------------------------
+        # Redirect faces to the merge vertex
+        # ---------------------------------
+
+        merged_faces = []
+
+        for face in mesh.faces:
+
+            if face is None:
+                continue
+
+            redirected = []
+
+            for vertex_index in face:
+
+                vertex_index = int(vertex_index)
+
+                if vertex_index in selected_set:
+                    vertex_index = target_vertex
+
+                # Remove repeated consecutive indices immediately.
+                if not redirected or redirected[-1] != vertex_index:
+                    redirected.append(vertex_index)
+
+            # Remove a repeated closing index.
+            if (
+                len(redirected) > 1
+                and redirected[0] == redirected[-1]
+            ):
+                redirected.pop()
+
+            if len(redirected) < 3:
+                continue
+
+            if len(set(redirected)) < 3:
+                continue
+
+            merged_faces.append(
+                tuple(redirected)
+            )
+
+        mesh.faces = merged_faces
+
+        # ---------------------------------
+        # Remove duplicate faces created by the merge
+        # ---------------------------------
+
+        unique_faces = []
+        seen_faces = set()
+
+        for face in mesh.faces:
+
+            # Face winding is retained. Only exact duplicate faces are
+            # removed here so normal/orientation information is preserved.
+            key = tuple(face)
+
+            if key in seen_faces:
+                continue
+
+            seen_faces.add(key)
+            unique_faces.append(face)
+
+        mesh.faces = unique_faces
+
+        # ---------------------------------
+        # Compact unused vertices and rebuild topology
+        # ---------------------------------
+
+        used_vertices = set()
+
+        for face in mesh.faces:
+            for vertex_index in face:
+                used_vertices.add(
+                    int(vertex_index)
+                )
+
+        vertex_remap = {}
+        new_vertices = []
+
+        for old_index, vertex in enumerate(mesh.vertices):
+
+            if old_index not in used_vertices:
+                continue
+
+            vertex_remap[old_index] = len(
+                new_vertices
+            )
+
+            new_vertices.append([
+                float(vertex[0]),
+                float(vertex[1]),
+                float(vertex[2])
+            ])
+
+        remapped_faces = []
+
+        for face in mesh.faces:
+
+            remapped = []
+            valid = True
+
+            for vertex_index in face:
+
+                if vertex_index not in vertex_remap:
+                    valid = False
+                    break
+
+                remapped.append(
+                    vertex_remap[vertex_index]
+                )
+
+            if not valid:
+                continue
+
+            if len(remapped) < 3:
+                continue
+
+            if len(set(remapped)) < 3:
+                continue
+
+            remapped_faces.append(
+                tuple(remapped)
+            )
+
+        mesh.vertices = new_vertices
+        mesh.faces = remapped_faces
+        mesh.build_edges()
+
+        # ---------------------------------
+        # Restore selection on merged vertex
+        # ---------------------------------
+
+        new_target = vertex_remap.get(
+            target_vertex
+        )
+
+        self.selected_vertices.clear()
+        self.selected_vertex = new_target
+
+        if new_target is not None:
+            self.selected_vertices.add(
+                new_target
+            )
+
+        self.selected_edge = None
+        self.selected_edges.clear()
+        self.selected_face = None
+        self.selected_faces.clear()
+
+        mesh.selected_vertex = new_target
+        mesh.selected_edge = None
+        mesh.selected_face = None
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+
+        self.update()
+
+        print(
+            "MERGE COMPLETE | Merged:",
+            len(selected),
+            "vertices | Remaining Vertices:",
+            len(mesh.vertices),
+            "| Faces:",
+            len(mesh.faces),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
+
+
+
     def keyPressEvent(self, event):
 
         print("VIEWPORT KEY:", event.key())
@@ -5369,6 +5630,17 @@ class Viewport(QOpenGLWidget):
             print("BEVEL")
 
             self.bevel_selected_edge()
+
+            return
+
+        # ---------------------------------
+        # MERGE / WELD VERTICES
+        # ---------------------------------
+        elif event.key() == Qt.Key_M:
+
+            print("MERGE VERTICES")
+
+            self.merge_selected_vertices()
 
             return
 
