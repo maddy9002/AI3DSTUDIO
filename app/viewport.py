@@ -3639,6 +3639,99 @@ class Viewport(QOpenGLWidget):
 
         return True
 
+    def dissolve_selected_face(self):
+        """
+        Dissolve the currently selected face or selected face group.
+
+        The selected face records are removed while vertices that are still
+        referenced by surrounding faces are preserved. The derived edge list
+        is rebuilt from the remaining faces, leaving an open boundary where
+        the dissolved face was.
+        """
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("DISSOLVE FACE: Requires EDIT mode")
+                return False
+
+        if not self.face_mode:
+            print("DISSOLVE FACE: Requires FACE mode")
+            return False
+
+        if self.selected_object is None:
+            print("DISSOLVE FACE: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("DISSOLVE FACE: Selected object has no mesh")
+            return False
+
+        selected = set(
+            int(index)
+            for index in self.selected_faces
+            if index is not None
+        )
+
+        if self.selected_face is not None:
+            selected.add(int(self.selected_face))
+
+        selected = {
+            index
+            for index in selected
+            if 0 <= index < len(mesh.faces)
+        }
+
+        if not selected:
+            print("DISSOLVE FACE: No selected face")
+            return False
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+        print(
+            "DISSOLVE FACE:",
+            sorted(selected)
+        )
+
+        # Remove only the selected faces. Vertices are not deleted here;
+        # surrounding faces may still reference them and therefore preserve
+        # the boundary of the opened surface.
+        mesh.faces = [
+            tuple(int(vertex) for vertex in face)
+            for index, face in enumerate(mesh.faces)
+            if index not in selected
+        ]
+
+        # Repair invalid/unused topology and rebuild derived edges.
+        self._cleanup_mesh_after_deletion(mesh)
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+
+        self.edge_vertex_a = None
+        self.edge_vertex_b = None
+
+        self.vertex_original = None
+        self.face_original_vertices = None
+
+        self.update()
+
+        print(
+            "DISSOLVE FACE COMPLETE | Faces:",
+            len(mesh.faces),
+            "| Vertices:",
+            len(mesh.vertices),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
+
     def dissolve_selected_vertex(self):
         """
         Dissolve the currently selected vertex without deleting the surface
@@ -6047,6 +6140,19 @@ class Viewport(QOpenGLWidget):
                 print("DISSOLVE EDGE")
 
                 self.dissolve_selected_edge()
+
+                return
+
+            if (
+                event.key() == Qt.Key_X
+                and self.main_window.mode_manager.get_mode()
+                == "EDIT"
+                and self.face_mode
+            ):
+
+                print("DISSOLVE FACE")
+
+                self.dissolve_selected_face()
 
                 return
 
