@@ -4118,6 +4118,804 @@ class Viewport(QOpenGLWidget):
 
         return True
 
+
+    def bevel_selected_edge(self, bevel_ratio=0.20):
+
+        """
+        Bevel the active selected edge.
+
+        This implementation is intentionally limited to one manifold edge
+        shared by exactly two quad faces. The selected edge is removed,
+        four cut vertices are created on the four edges that leave the
+        selected edge, and a new quad is created between the two faces.
+
+        The two original faces are shortened so that they terminate at
+        the new bevel face. The surrounding faces are split at the cut
+        points and two corner triangles close the topology at the original
+        edge endpoints.
+        """
+
+        # ---------------------------------
+        # Validate editing state
+        # ---------------------------------
+
+        if self.main_window is not None:
+
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+
+                print(
+                    "BEVEL: Requires EDIT mode"
+                )
+
+                return False
+
+        if not self.edge_mode:
+
+            print(
+                "BEVEL: Requires EDGE mode"
+            )
+
+            return False
+
+        if self.selected_object is None:
+
+            print(
+                "BEVEL: No selected object"
+            )
+
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+
+            print(
+                "BEVEL: Selected object has no mesh"
+            )
+
+            return False
+
+        edge_index = self.selected_edge
+
+        if edge_index is None:
+
+            print(
+                "BEVEL: No selected edge"
+            )
+
+            return False
+
+        if (
+            edge_index < 0
+            or edge_index >= len(mesh.edges)
+        ):
+
+            print(
+                "BEVEL: Invalid selected edge"
+            )
+
+            return False
+
+        try:
+
+            bevel_ratio = float(
+                bevel_ratio
+            )
+
+        except (
+            TypeError,
+            ValueError
+        ):
+
+            print(
+                "BEVEL: Invalid bevel amount"
+            )
+
+            return False
+
+        if (
+            bevel_ratio <= 0.0
+            or bevel_ratio >= 0.5
+        ):
+
+            print(
+                "BEVEL: Amount must be between 0 and 0.5"
+            )
+
+            return False
+
+        # ---------------------------------
+        # Helpers
+        # ---------------------------------
+
+        def canonical(edge):
+
+            a = int(edge[0])
+            b = int(edge[1])
+
+            if a < b:
+                return (
+                    a,
+                    b
+                )
+
+            return (
+                b,
+                a
+            )
+
+        def find_edge_in_face(face, target):
+
+            count = len(face)
+
+            for i in range(count):
+
+                a = int(
+                    face[i]
+                )
+
+                b = int(
+                    face[(i + 1) % count]
+                )
+
+                if canonical((a, b)) == target:
+
+                    return i
+
+            return None
+
+        selected_edge = tuple(
+            int(index)
+            for index in mesh.edges[edge_index]
+        )
+
+        if len(selected_edge) != 2:
+
+            print(
+                "BEVEL: Invalid edge data"
+            )
+
+            return False
+
+        vertex_a = selected_edge[0]
+        vertex_b = selected_edge[1]
+
+        target_edge = canonical(
+            (
+                vertex_a,
+                vertex_b
+            )
+        )
+
+        # ---------------------------------
+        # Snapshot original topology
+        # ---------------------------------
+
+        original_faces = [
+            tuple(
+                int(index)
+                for index in face
+            )
+            for face in mesh.faces
+            if face is not None
+        ]
+
+        if not original_faces:
+
+            print(
+                "BEVEL: Mesh has no faces"
+            )
+
+            return False
+
+        # ---------------------------------
+        # Find the two faces sharing the
+        # selected edge.
+        # ---------------------------------
+
+        incident_faces = []
+
+        for face_index, face in enumerate(
+            original_faces
+        ):
+
+            if len(face) != 4:
+                continue
+
+            if find_edge_in_face(
+                face,
+                target_edge
+            ) is not None:
+
+                incident_faces.append(
+                    face_index
+                )
+
+        if len(incident_faces) != 2:
+
+            print(
+                "BEVEL: Selected edge must have exactly two quad faces"
+            )
+
+            return False
+
+        # ---------------------------------
+        # Determine the two edges leaving
+        # each endpoint of the selected edge
+        # on each incident face.
+        # ---------------------------------
+
+        face_data = {}
+
+        affected_edges = set()
+
+        for face_index in incident_faces:
+
+            face = original_faces[
+                face_index
+            ]
+
+            edge_position = find_edge_in_face(
+                face,
+                target_edge
+            )
+
+            if edge_position is None:
+
+                print(
+                    "BEVEL: Could not determine selected edge position"
+                )
+
+                return False
+
+            x = int(
+                face[edge_position]
+            )
+
+            y = int(
+                face[
+                    (edge_position + 1) % 4
+                ]
+            )
+
+            # Normalize the selected edge to A -> B
+            # while preserving the face's winding.
+            if (
+                x == vertex_a
+                and y == vertex_b
+            ):
+
+                neighbor_a = int(
+                    face[
+                        (edge_position - 1) % 4
+                    ]
+                )
+
+                neighbor_b = int(
+                    face[
+                        (edge_position + 2) % 4
+                    ]
+                )
+
+                orientation = "AB"
+
+            elif (
+                x == vertex_b
+                and y == vertex_a
+            ):
+
+                neighbor_b = int(
+                    face[
+                        (edge_position - 1) % 4
+                    ]
+                )
+
+                neighbor_a = int(
+                    face[
+                        (edge_position + 2) % 4
+                    ]
+                )
+
+                orientation = "BA"
+
+            else:
+
+                print(
+                    "BEVEL: Invalid selected edge topology"
+                )
+
+                return False
+
+            edge_from_a = canonical(
+                (
+                    vertex_a,
+                    neighbor_a
+                )
+            )
+
+            edge_from_b = canonical(
+                (
+                    vertex_b,
+                    neighbor_b
+                )
+            )
+
+            if (
+                edge_from_a == target_edge
+                or edge_from_b == target_edge
+            ):
+
+                print(
+                    "BEVEL: Invalid adjacent topology"
+                )
+
+                return False
+
+            face_data[
+                face_index
+            ] = {
+                "neighbor_a": neighbor_a,
+                "neighbor_b": neighbor_b,
+                "orientation": orientation,
+                "edge_from_a": edge_from_a,
+                "edge_from_b": edge_from_b
+            }
+
+            affected_edges.add(
+                edge_from_a
+            )
+
+            affected_edges.add(
+                edge_from_b
+            )
+
+        # A proper single-edge bevel needs four different outgoing edges.
+        if len(affected_edges) != 4:
+
+            print(
+                "BEVEL: Selected edge does not have four valid adjacent edges"
+            )
+
+            return False
+
+        # ---------------------------------
+        # Validate all affected edges.
+        # ---------------------------------
+
+        for edge in affected_edges:
+
+            a, b = edge
+
+            if (
+                a < 0
+                or b < 0
+                or a >= len(mesh.vertices)
+                or b >= len(mesh.vertices)
+            ):
+
+                print(
+                    "BEVEL: Invalid adjacent vertex"
+                )
+
+                return False
+
+            if not any(
+                canonical(
+                    (
+                        face[i],
+                        face[
+                            (i + 1) % len(face)
+                        ]
+                    )
+                ) == edge
+                for face in original_faces
+                for i in range(len(face))
+            ):
+
+                print(
+                    "BEVEL: Adjacent edge is not part of the mesh"
+                )
+
+                return False
+
+        # ---------------------------------
+        # Save undo state only after every
+        # topology validation has succeeded.
+        # ---------------------------------
+
+        if self.history_manager is not None:
+
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+        # ---------------------------------
+        # Create the four cut vertices.
+        #
+        # Each cut point is keyed by the
+        # actual edge being shortened.
+        # ---------------------------------
+
+        split_points = {}
+
+        for edge in sorted(
+            affected_edges
+        ):
+
+            a, b = edge
+
+            va = np.array(
+                mesh.vertices[a],
+                dtype=np.float32
+            )
+
+            vb = np.array(
+                mesh.vertices[b],
+                dtype=np.float32
+            )
+
+            # Determine which endpoint of the
+            # selected edge this adjacent edge
+            # belongs to.
+            if vertex_a in edge:
+
+                start = np.array(
+                    mesh.vertices[
+                        vertex_a
+                    ],
+                    dtype=np.float32
+                )
+
+                other_index = (
+                    b
+                    if a == vertex_a
+                    else a
+                )
+
+            elif vertex_b in edge:
+
+                start = np.array(
+                    mesh.vertices[
+                        vertex_b
+                    ],
+                    dtype=np.float32
+                )
+
+                other_index = (
+                    b
+                    if a == vertex_b
+                    else a
+                )
+
+            else:
+
+                print(
+                    "BEVEL: Adjacent edge has no selected-edge endpoint"
+                )
+
+                return False
+
+            other = np.array(
+                mesh.vertices[
+                    other_index
+                ],
+                dtype=np.float32
+            )
+
+            cut_point = (
+                start
+                + (
+                    other - start
+                ) * bevel_ratio
+            )
+
+            mesh.vertices.append(
+                [
+                    float(cut_point[0]),
+                    float(cut_point[1]),
+                    float(cut_point[2])
+                ]
+            )
+
+            split_points[
+                edge
+            ] = len(
+                mesh.vertices
+            ) - 1
+
+        # ---------------------------------
+        # Rebuild faces.
+        #
+        # The two incident faces become
+        # shortened faces. Every other face
+        # crossing a cut edge gets that edge
+        # split at the new vertex.
+        # ---------------------------------
+
+        new_faces = []
+
+        incident_set = set(
+            incident_faces
+        )
+
+        for face_index, face in enumerate(
+            original_faces
+        ):
+
+            # ---------------------------------
+            # The two faces touching the
+            # selected edge are shortened.
+            # ---------------------------------
+
+            if face_index in incident_set:
+
+                data = face_data[
+                    face_index
+                ]
+
+                cut_a = split_points[
+                    data["edge_from_a"]
+                ]
+
+                cut_b = split_points[
+                    data["edge_from_b"]
+                ]
+
+                neighbor_a = data[
+                    "neighbor_a"
+                ]
+
+                neighbor_b = data[
+                    "neighbor_b"
+                ]
+
+                if data[
+                    "orientation"
+                ] == "AB":
+
+                    shortened_face = (
+                        cut_a,
+                        cut_b,
+                        neighbor_b,
+                        neighbor_a
+                    )
+
+                else:
+
+                    shortened_face = (
+                        cut_b,
+                        cut_a,
+                        neighbor_a,
+                        neighbor_b
+                    )
+
+                new_faces.append(
+                    shortened_face
+                )
+
+                continue
+
+            # ---------------------------------
+            # All other faces keep their
+            # topology but receive the new
+            # cut vertex wherever one of
+            # their edges was shortened.
+            # ---------------------------------
+
+            rebuilt_face = []
+
+            count = len(
+                face
+            )
+
+            for i in range(count):
+
+                current = int(
+                    face[i]
+                )
+
+                next_vertex = int(
+                    face[
+                        (i + 1) % count
+                    ]
+                )
+
+                rebuilt_face.append(
+                    current
+                )
+
+                split_index = split_points.get(
+                    canonical(
+                        (
+                            current,
+                            next_vertex
+                        )
+                    )
+                )
+
+                if split_index is not None:
+
+                    rebuilt_face.append(
+                        split_index
+                    )
+
+            # Avoid accidentally keeping a
+            # degenerate face.
+            if len(
+                set(rebuilt_face)
+            ) >= 3:
+
+                new_faces.append(
+                    tuple(
+                        rebuilt_face
+                    )
+                )
+
+        # ---------------------------------
+        # Create the new bevel face.
+        #
+        # It connects the cut point on the
+        # first incident face to the cut
+        # point on the second incident face.
+        # ---------------------------------
+
+        first_data = face_data[
+            incident_faces[0]
+        ]
+
+        second_data = face_data[
+            incident_faces[1]
+        ]
+
+        first_cut_a = split_points[
+            first_data[
+                "edge_from_a"
+            ]
+        ]
+
+        first_cut_b = split_points[
+            first_data[
+                "edge_from_b"
+            ]
+        ]
+
+        second_cut_a = split_points[
+            second_data[
+                "edge_from_a"
+            ]
+        ]
+
+        second_cut_b = split_points[
+            second_data[
+                "edge_from_b"
+            ]
+        ]
+
+        if first_data[
+            "orientation"
+        ] == "AB":
+
+            bevel_face = (
+                first_cut_a,
+                first_cut_b,
+                second_cut_b,
+                second_cut_a
+            )
+
+        else:
+
+            bevel_face = (
+                first_cut_b,
+                first_cut_a,
+                second_cut_a,
+                second_cut_b
+            )
+
+        new_faces.append(
+            bevel_face
+        )
+
+        # ---------------------------------
+        # Close the two original corners.
+        #
+        # These triangles attach the two
+        # side faces to the new bevel surface
+        # instead of leaving an open corner.
+        # ---------------------------------
+
+        corner_a = (
+            vertex_a,
+            first_cut_a,
+            second_cut_a
+        )
+
+        corner_b = (
+            vertex_b,
+            second_cut_b,
+            first_cut_b
+        )
+
+        new_faces.append(
+            corner_a
+        )
+
+        new_faces.append(
+            corner_b
+        )
+
+        # ---------------------------------
+        # Commit the rebuilt topology.
+        # ---------------------------------
+
+        mesh.faces = new_faces
+
+        mesh.build_edges()
+
+        # ---------------------------------
+        # Select the new bevel edge.
+        # ---------------------------------
+
+        bevel_edge_key = canonical(
+            (
+                first_cut_a,
+                first_cut_b
+            )
+        )
+
+        self.selected_edge = None
+        self.selected_edges.clear()
+
+        for new_edge_index, edge in enumerate(
+            mesh.edges
+        ):
+
+            if canonical(
+                edge
+            ) == bevel_edge_key:
+
+                self.selected_edge = (
+                    new_edge_index
+                )
+
+                self.selected_edges.add(
+                    new_edge_index
+                )
+
+                break
+
+        # ---------------------------------
+        # Clear incompatible edit selections.
+        # ---------------------------------
+
+        self.selected_vertex = None
+        self.selected_vertices.clear()
+
+        self.selected_face = None
+        self.selected_faces.clear()
+
+        mesh.selected_face = None
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+        self.dragging_object = False
+
+        self.update()
+
+        print(
+            "BEVEL COMPLETE | Edge:",
+            edge_index,
+            "| Ratio:",
+            bevel_ratio,
+            "| Vertices:",
+            len(mesh.vertices),
+            "| Faces:",
+            len(mesh.faces),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
     def keyPressEvent(self, event):
 
         print("VIEWPORT KEY:", event.key())
@@ -4557,6 +5355,20 @@ class Viewport(QOpenGLWidget):
             print("LOOP CUT")
 
             self.loop_cut_selected_edge()
+
+            return
+
+        # ---------------------------------
+        # BEVEL
+        # ---------------------------------
+        elif (
+            event.key() == Qt.Key_B
+            and event.modifiers() & Qt.ControlModifier
+        ):
+
+            print("BEVEL")
+
+            self.bevel_selected_edge()
 
             return
 
