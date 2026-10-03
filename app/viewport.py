@@ -3469,6 +3469,327 @@ class Viewport(QOpenGLWidget):
 
         return True
 
+    def dissolve_selected_vertex(self):
+        """
+        Dissolve the currently selected vertex without deleting the surface
+        around it when the surrounding topology forms a valid manifold link.
+
+        The faces incident to the vertex are removed and replaced by one
+        polygon made from the surrounding neighboring vertices. This keeps
+        the surface filled instead of creating the open hole produced by a
+        normal vertex deletion.
+        """
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("DISSOLVE VERTEX: Requires EDIT mode")
+                return False
+
+        if not self.vertex_mode:
+            print("DISSOLVE VERTEX: Requires VERTEX mode")
+            return False
+
+        if self.selected_object is None:
+            print("DISSOLVE VERTEX: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("DISSOLVE VERTEX: Selected object has no mesh")
+            return False
+
+        vertex_index = self.selected_vertex
+
+        if vertex_index is None and self.selected_vertices:
+            vertex_index = sorted(self.selected_vertices)[0]
+
+        if vertex_index is None:
+            print("DISSOLVE VERTEX: No selected vertex")
+            return False
+
+        if (
+            vertex_index < 0
+            or vertex_index >= len(mesh.vertices)
+        ):
+            print("DISSOLVE VERTEX: Invalid vertex")
+            return False
+
+        # ---------------------------------
+        # Find all faces connected to the vertex
+        # ---------------------------------
+
+        incident_faces = []
+
+        for face_index, face in enumerate(mesh.faces):
+            if vertex_index in face:
+                incident_faces.append(face_index)
+
+        if len(incident_faces) < 3:
+            print(
+                "DISSOLVE VERTEX: Vertex needs at least 3 incident faces"
+            )
+            return False
+
+        # ---------------------------------
+        # Build the vertex-link graph.
+        # Each incident face contributes an edge between the two vertices
+        # directly adjacent to the selected vertex.
+        # ---------------------------------
+
+        link_edges = set()
+        neighbors = set()
+
+        for face_index in incident_faces:
+
+            face = list(mesh.faces[face_index])
+            local_index = face.index(vertex_index)
+            face_length = len(face)
+
+            previous_vertex = int(
+                face[(local_index - 1) % face_length]
+            )
+            next_vertex = int(
+                face[(local_index + 1) % face_length]
+            )
+
+            if previous_vertex == vertex_index or next_vertex == vertex_index:
+                print(
+                    "DISSOLVE VERTEX: Invalid face topology"
+                )
+                return False
+
+            neighbors.add(previous_vertex)
+            neighbors.add(next_vertex)
+
+            if previous_vertex != next_vertex:
+                link_edges.add(
+                    tuple(sorted((previous_vertex, next_vertex)))
+                )
+
+        if len(neighbors) < 3:
+            print(
+                "DISSOLVE VERTEX: Surrounding topology is degenerate"
+            )
+            return False
+
+        # A manifold interior vertex has a closed link where every neighbor
+        # has exactly two link connections.
+        adjacency = {
+            vertex: set()
+            for vertex in neighbors
+        }
+
+        for a, b in link_edges:
+            adjacency[a].add(b)
+            adjacency[b].add(a)
+
+        if any(
+            len(adjacency[vertex]) != 2
+            for vertex in neighbors
+        ):
+            print(
+                "DISSOLVE VERTEX: Requires a closed manifold vertex"
+            )
+            return False
+
+        # ---------------------------------
+        # Walk the closed vertex link into polygon order
+        # ---------------------------------
+
+        start = min(neighbors)
+        polygon_vertices = [start]
+        previous = None
+        current = start
+
+        while True:
+
+            candidates = [
+                neighbor
+                for neighbor in adjacency[current]
+                if neighbor != previous
+            ]
+
+            if not candidates:
+                print(
+                    "DISSOLVE VERTEX: Could not build surrounding polygon"
+                )
+                return False
+
+            next_vertex = min(candidates)
+
+            if next_vertex == start:
+                break
+
+            if next_vertex in polygon_vertices:
+                print(
+                    "DISSOLVE VERTEX: Invalid surrounding topology"
+                )
+                return False
+
+            polygon_vertices.append(next_vertex)
+            previous = current
+            current = next_vertex
+
+            if len(polygon_vertices) > len(neighbors):
+                print(
+                    "DISSOLVE VERTEX: Could not close surrounding polygon"
+                )
+                return False
+
+        if len(polygon_vertices) != len(neighbors):
+            print(
+                "DISSOLVE VERTEX: Incomplete surrounding polygon"
+            )
+            return False
+
+        # ---------------------------------
+        # Save undo state
+        # ---------------------------------
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+        # ---------------------------------
+        # Preserve the approximate original surface orientation.
+        # ---------------------------------
+
+        average_normal = np.zeros(3, dtype=np.float32)
+
+        for face_index in incident_faces:
+
+            face = mesh.faces[face_index]
+
+            if len(face) < 3:
+                continue
+
+            a = np.array(
+                mesh.vertices[face[0]],
+                dtype=np.float32
+            )
+            b = np.array(
+                mesh.vertices[face[1]],
+                dtype=np.float32
+            )
+            c = np.array(
+                mesh.vertices[face[2]],
+                dtype=np.float32
+            )
+
+            average_normal += np.cross(
+                b - a,
+                c - a
+            )
+
+        if np.linalg.norm(average_normal) > 1e-8:
+            average_normal = (
+                average_normal
+                / np.linalg.norm(average_normal)
+            )
+
+            p0 = np.array(
+                mesh.vertices[polygon_vertices[0]],
+                dtype=np.float32
+            )
+            p1 = np.array(
+                mesh.vertices[polygon_vertices[1]],
+                dtype=np.float32
+            )
+            p2 = np.array(
+                mesh.vertices[polygon_vertices[2]],
+                dtype=np.float32
+            )
+
+            polygon_normal = np.cross(
+                p1 - p0,
+                p2 - p0
+            )
+
+            if (
+                np.linalg.norm(polygon_normal) > 1e-8
+                and np.dot(polygon_normal, average_normal) < 0.0
+            ):
+                polygon_vertices.reverse()
+
+        # ---------------------------------
+        # Replace the incident faces with the dissolved polygon
+        # ---------------------------------
+
+        incident_set = set(incident_faces)
+
+        new_faces = [
+            tuple(face)
+            for face_index, face in enumerate(mesh.faces)
+            if face_index not in incident_set
+        ]
+
+        new_faces.append(
+            tuple(polygon_vertices)
+        )
+
+        mesh.faces = new_faces
+
+        # ---------------------------------
+        # Remove the dissolved vertex and remap indices
+        # ---------------------------------
+
+        mesh.vertices.pop(vertex_index)
+
+        remapped_faces = []
+
+        for face in mesh.faces:
+
+            remapped = []
+
+            for index in face:
+                if index > vertex_index:
+                    index -= 1
+                remapped.append(index)
+
+            if len(remapped) >= 3 and len(set(remapped)) >= 3:
+                remapped_faces.append(tuple(remapped))
+
+        mesh.faces = remapped_faces
+        mesh.build_edges()
+
+        # ---------------------------------
+        # Clear edit selections
+        # ---------------------------------
+
+        self.selected_vertices.clear()
+        self.selected_vertex = None
+
+        self.selected_edge = None
+        self.selected_edges.clear()
+
+        self.selected_face = None
+        self.selected_faces.clear()
+
+        mesh.selected_vertex = None
+        mesh.selected_edge = None
+        mesh.selected_face = None
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+
+        self.update()
+
+        print(
+            "DISSOLVE VERTEX COMPLETE | Removed Vertex:",
+            vertex_index,
+            "| Remaining Vertices:",
+            len(mesh.vertices),
+            "| Faces:",
+            len(mesh.faces),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
+
     def _delete_selected_edge(self):
         """
         Delete the faces connected to one or more selected edges.
@@ -5530,6 +5851,22 @@ class Viewport(QOpenGLWidget):
             or event.key() == Qt.Key_Delete
         ):
 
+            # X in Vertex Mode performs a vertex dissolve, preserving the
+            # surrounding surface. Delete keeps the existing destructive
+            # vertex deletion behavior.
+            if (
+                event.key() == Qt.Key_X
+                and self.main_window.mode_manager.get_mode()
+                == "EDIT"
+                and self.vertex_mode
+            ):
+
+                print("DISSOLVE VERTEX")
+
+                self.dissolve_selected_vertex()
+
+                return
+
             print(
                 "DELETE EDIT ELEMENT"
             )
@@ -6363,4 +6700,3 @@ class Viewport(QOpenGLWidget):
         self.selected_edges.clear()
 
         self.update()
-
