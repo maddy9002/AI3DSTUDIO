@@ -6647,6 +6647,159 @@ class Viewport(QOpenGLWidget):
 
 
 
+    def fill_selected_boundary(self):
+        """Fill one selected closed boundary edge loop with a new face."""
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("FILL: Requires EDIT mode")
+                return False
+
+        if not self.edge_mode:
+            print("FILL: Requires EDGE mode")
+            return False
+
+        if self.selected_object is None or self.selected_object.mesh is None:
+            print("FILL: No selected mesh")
+            return False
+
+        mesh = self.selected_object.mesh
+        selected = set(self.selected_edges)
+
+        if self.selected_edge is not None:
+            selected.add(self.selected_edge)
+
+        selected = {
+            int(index) for index in selected
+            if 0 <= int(index) < len(mesh.edges)
+        }
+
+        if len(selected) < 3:
+            print("FILL: Select a closed boundary edge loop")
+            return False
+
+        # Build an undirected graph from the selected edges.
+        adjacency = {}
+        edge_pairs = []
+
+        for edge_index in selected:
+            edge = mesh.edges[edge_index]
+            if len(edge) != 2:
+                print("FILL: Invalid edge")
+                return False
+
+            a = int(edge[0])
+            b = int(edge[1])
+
+            if a == b:
+                print("FILL: Degenerate edge")
+                return False
+
+            if a < 0 or b < 0 or a >= len(mesh.vertices) or b >= len(mesh.vertices):
+                print("FILL: Invalid vertex index")
+                return False
+
+            adjacency.setdefault(a, []).append(b)
+            adjacency.setdefault(b, []).append(a)
+            edge_pairs.append((a, b))
+
+        # A closed loop has exactly two selected neighbors at every vertex.
+        if any(len(neighbors) != 2 for neighbors in adjacency.values()):
+            print("FILL: Selected edges must form one closed loop")
+            return False
+
+        # Follow the loop in edge order.
+        start = next(iter(adjacency))
+        ordered = [start]
+        previous = None
+        current = start
+
+        while True:
+            neighbors = adjacency[current]
+            if previous is None:
+                next_vertex = neighbors[0]
+            else:
+                next_vertex = neighbors[0] if neighbors[0] != previous else neighbors[1]
+
+            if next_vertex == start:
+                break
+
+            if next_vertex in ordered:
+                print("FILL: Selected edges do not form one simple loop")
+                return False
+
+            ordered.append(next_vertex)
+            previous, current = current, next_vertex
+
+            if len(ordered) > len(adjacency):
+                print("FILL: Invalid loop")
+                return False
+
+        if len(ordered) != len(adjacency) or len(ordered) < 3:
+            print("FILL: Selected edges must form one closed loop")
+            return False
+
+        # Confirm every selected edge belongs to the discovered loop.
+        loop_edges = set()
+        for i, vertex_a in enumerate(ordered):
+            vertex_b = ordered[(i + 1) % len(ordered)]
+            loop_edges.add(frozenset((vertex_a, vertex_b)))
+
+        selected_edge_pairs = {
+            frozenset(pair) for pair in edge_pairs
+        }
+        if loop_edges != selected_edge_pairs:
+            print("FILL: Selected edges must form one closed loop")
+            return False
+
+        # Reject loops that are already completely bounded by an existing face.
+        ordered_edge_set = set(loop_edges)
+        for face in mesh.faces:
+            if len(face) != len(ordered):
+                continue
+            face_edges = set()
+            for i, vertex_a in enumerate(face):
+                vertex_b = face[(i + 1) % len(face)]
+                face_edges.add(frozenset((vertex_a, vertex_b)))
+            if face_edges == ordered_edge_set:
+                print("FILL: Boundary already has a face")
+                return False
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(self.selected_object)
+
+        # Use the selected loop order as the polygon winding.
+        new_face = tuple(ordered)
+        mesh.faces.append(new_face)
+        new_face_index = len(mesh.faces) - 1
+        mesh.build_edges()
+
+        self.selected_faces = {new_face_index}
+        self.selected_face = new_face_index
+        self.selected_edges.clear()
+        self.selected_edge = None
+        self.selected_vertices.clear()
+        self.selected_vertex = None
+
+        mesh.selected_face = new_face_index
+        mesh.selected_edge = None
+        mesh.selected_vertex = None
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+        self.loop_cut_dragging = False
+
+        self.update()
+
+        print(
+            "FILL COMPLETE | Face:",
+            new_face_index,
+            "| Vertices:",
+            ordered
+        )
+        return True
+
     def keyPressEvent(self, event):
 
         print("VIEWPORT KEY:", event.key())
@@ -7542,6 +7695,17 @@ class Viewport(QOpenGLWidget):
             # ---------------------------------
 
             self.update()
+
+            return
+
+        # ---------------------------------
+        # FILL
+        # ---------------------------------
+        elif event.key() == Qt.Key_F:
+
+            print("FILL")
+
+            self.fill_selected_boundary()
 
             return
 
