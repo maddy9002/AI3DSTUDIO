@@ -6794,6 +6794,454 @@ class Viewport(QOpenGLWidget):
         )
         return True
 
+
+    def split_selected_edit_element(self):
+        """
+        Split selected Edit Mode geometry by disconnecting its topology.
+
+        Vertex Mode:
+            The selected vertex is duplicated for every additional incident
+            face, leaving the first incident face on the original vertex.
+
+        Edge Mode:
+            The selected edge is disconnected from every additional incident
+            face by duplicating its two endpoints.
+
+        Face Mode:
+            The selected face receives its own copy of every vertex, making
+            that face independently movable without pulling its neighbors.
+        """
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("SPLIT: Requires EDIT mode")
+                return False
+
+        if self.selected_object is None:
+            print("SPLIT: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("SPLIT: Selected object has no mesh")
+            return False
+
+        # ------------------------------------------------------------
+        # Resolve the active selection before touching the mesh.
+        # ------------------------------------------------------------
+
+        mode = None
+        selected = set()
+
+        if self.vertex_mode:
+            mode = "VERTEX"
+            selected = {
+                int(index)
+                for index in self.selected_vertices
+                if isinstance(index, (int, float))
+                and 0 <= int(index) < len(mesh.vertices)
+            }
+
+            if self.selected_vertex is not None:
+                try:
+                    index = int(self.selected_vertex)
+                    if 0 <= index < len(mesh.vertices):
+                        selected.add(index)
+                except (TypeError, ValueError):
+                    pass
+
+        elif self.edge_mode:
+            mode = "EDGE"
+            selected = {
+                int(index)
+                for index in self.selected_edges
+                if isinstance(index, (int, float))
+                and 0 <= int(index) < len(mesh.edges)
+            }
+
+            if self.selected_edge is not None:
+                try:
+                    index = int(self.selected_edge)
+                    if 0 <= index < len(mesh.edges):
+                        selected.add(index)
+                except (TypeError, ValueError):
+                    pass
+
+        elif self.face_mode:
+            mode = "FACE"
+            selected = {
+                int(index)
+                for index in self.selected_faces
+                if isinstance(index, (int, float))
+                and 0 <= int(index) < len(mesh.faces)
+                and len(mesh.faces[int(index)]) >= 3
+            }
+
+            if self.selected_face is not None:
+                try:
+                    index = int(self.selected_face)
+                    if (
+                        0 <= index < len(mesh.faces)
+                        and len(mesh.faces[index]) >= 3
+                    ):
+                        selected.add(index)
+                except (TypeError, ValueError):
+                    pass
+
+        if mode is None:
+            print("SPLIT: No active selection mode")
+            return False
+
+        if not selected:
+            print("SPLIT: Nothing selected")
+            return False
+
+        # ------------------------------------------------------------
+        # Save a small rollback copy. This prevents a failed split from
+        # leaving the mesh partially modified.
+        # ------------------------------------------------------------
+
+        old_vertices = [
+            list(vertex)
+            for vertex in mesh.vertices
+        ]
+
+        old_faces = [
+            tuple(face)
+            for face in mesh.faces
+        ]
+
+        old_edges = [
+            tuple(edge)
+            for edge in mesh.edges
+        ]
+
+        try:
+
+            # --------------------------------------------------------
+            # Save the normal undo state only after selection validation.
+            # --------------------------------------------------------
+
+            if self.history_manager is not None:
+                self.history_manager.save_state(
+                    self.selected_object
+                )
+
+            changed = False
+
+            # ========================================================
+            # VERTEX SPLIT
+            # ========================================================
+
+            if mode == "VERTEX":
+
+                for vertex_index in sorted(selected):
+
+                    incident_faces = [
+                        face_index
+                        for face_index, face in enumerate(mesh.faces)
+                        if vertex_index in face
+                    ]
+
+                    if len(incident_faces) <= 1:
+                        continue
+
+                    # The first face keeps the original vertex.
+                    for face_index in incident_faces[1:]:
+
+                        new_vertex_index = len(mesh.vertices)
+
+                        mesh.vertices.append(
+                            [
+                                float(mesh.vertices[vertex_index][0]),
+                                float(mesh.vertices[vertex_index][1]),
+                                float(mesh.vertices[vertex_index][2])
+                            ]
+                        )
+
+                        mesh.faces[face_index] = tuple(
+                            new_vertex_index
+                            if int(vertex) == vertex_index
+                            else int(vertex)
+                            for vertex in mesh.faces[face_index]
+                        )
+
+                        changed = True
+
+                if not changed:
+                    print(
+                        "SPLIT: Vertex is already disconnected"
+                    )
+                    return False
+
+                print("SPLIT: Vertex separated")
+
+            # ========================================================
+            # EDGE SPLIT
+            # ========================================================
+
+            elif mode == "EDGE":
+
+                for edge_index in sorted(selected):
+
+                    if (
+                        edge_index < 0
+                        or edge_index >= len(mesh.edges)
+                    ):
+                        continue
+
+                    edge = mesh.edges[edge_index]
+
+                    if len(edge) != 2:
+                        continue
+
+                    vertex_a = int(edge[0])
+                    vertex_b = int(edge[1])
+
+                    target = {
+                        vertex_a,
+                        vertex_b
+                    }
+
+                    incident_faces = []
+
+                    for face_index, face in enumerate(mesh.faces):
+
+                        face_vertices = [
+                            int(vertex)
+                            for vertex in face
+                        ]
+
+                        for i in range(
+                            len(face_vertices)
+                        ):
+
+                            a = face_vertices[i]
+                            b = face_vertices[
+                                (i + 1) % len(face_vertices)
+                            ]
+
+                            if {a, b} == target:
+                                incident_faces.append(
+                                    face_index
+                                )
+                                break
+
+                    if len(incident_faces) <= 1:
+                        continue
+
+                    # The first incident face keeps the original edge.
+                    for face_index in incident_faces[1:]:
+
+                        new_a = len(mesh.vertices)
+
+                        mesh.vertices.append(
+                            [
+                                float(mesh.vertices[vertex_a][0]),
+                                float(mesh.vertices[vertex_a][1]),
+                                float(mesh.vertices[vertex_a][2])
+                            ]
+                        )
+
+                        new_b = len(mesh.vertices)
+
+                        mesh.vertices.append(
+                            [
+                                float(mesh.vertices[vertex_b][0]),
+                                float(mesh.vertices[vertex_b][1]),
+                                float(mesh.vertices[vertex_b][2])
+                            ]
+                        )
+
+                        mesh.faces[face_index] = tuple(
+                            new_a
+                            if int(vertex) == vertex_a
+                            else new_b
+                            if int(vertex) == vertex_b
+                            else int(vertex)
+                            for vertex in mesh.faces[face_index]
+                        )
+
+                        changed = True
+
+                if not changed:
+                    print(
+                        "SPLIT: Edge is already disconnected"
+                    )
+                    return False
+
+                print("SPLIT: Edge separated")
+
+            # ========================================================
+            # FACE SPLIT
+            # ========================================================
+
+            elif mode == "FACE":
+
+                for face_index in sorted(selected):
+
+                    original_face = tuple(
+                        int(vertex)
+                        for vertex in mesh.faces[face_index]
+                    )
+
+                    if len(original_face) < 3:
+                        continue
+
+                    remap = {}
+
+                    for vertex_index in original_face:
+
+                        if vertex_index in remap:
+                            continue
+
+                        new_vertex_index = len(mesh.vertices)
+
+                        mesh.vertices.append(
+                            [
+                                float(mesh.vertices[vertex_index][0]),
+                                float(mesh.vertices[vertex_index][1]),
+                                float(mesh.vertices[vertex_index][2])
+                            ]
+                        )
+
+                        remap[vertex_index] = (
+                            new_vertex_index
+                        )
+
+                    mesh.faces[face_index] = tuple(
+                        remap[vertex]
+                        for vertex in original_face
+                    )
+
+                    changed = True
+
+                if not changed:
+                    print(
+                        "SPLIT: Face could not be separated"
+                    )
+                    return False
+
+                print("SPLIT: Face separated")
+
+            # --------------------------------------------------------
+            # Validate topology before rebuilding derived edges.
+            # --------------------------------------------------------
+
+            for face in mesh.faces:
+
+                if face is None:
+                    raise ValueError(
+                        "SPLIT created an invalid face"
+                    )
+
+                if len(face) < 3:
+                    raise ValueError(
+                        "SPLIT created a degenerate face"
+                    )
+
+                if len(set(int(v) for v in face)) < 3:
+                    raise ValueError(
+                        "SPLIT created repeated face vertices"
+                    )
+
+                for vertex_index in face:
+
+                    if (
+                        int(vertex_index) < 0
+                        or int(vertex_index) >= len(mesh.vertices)
+                    ):
+                        raise ValueError(
+                            "SPLIT created an invalid vertex reference"
+                        )
+
+            # --------------------------------------------------------
+            # Rebuild derived topology.
+            # --------------------------------------------------------
+
+            mesh.build_edges()
+
+            # --------------------------------------------------------
+            # Keep the original selection mode and valid selection.
+            # Face selection is especially important here because the
+            # selected face should be movable after splitting.
+            # --------------------------------------------------------
+
+            if mode == "FACE":
+
+                self.selected_faces = set(selected)
+
+                if self.selected_face is not None:
+                    self.selected_face = int(
+                        self.selected_face
+                    )
+                else:
+                    self.selected_face = min(selected)
+
+                mesh.selected_face = (
+                    self.selected_face
+                )
+
+            elif mode == "VERTEX":
+
+                self.selected_vertices = set(selected)
+
+                if self.selected_vertex is not None:
+                    self.selected_vertex = int(
+                        self.selected_vertex
+                    )
+
+                mesh.selected_vertex = (
+                    self.selected_vertex
+                )
+
+            elif mode == "EDGE":
+
+                # Rebuild the selected edge index from its endpoint pair
+                # because mesh.build_edges() may reorder derived edges.
+                self.selected_edges.clear()
+                self.selected_edge = None
+
+            self.vertex_dragging = False
+            self.edge_dragging = False
+            self.face_dragging = False
+            self.loop_cut_dragging = False
+
+            self.update()
+
+            print(
+                "SPLIT COMPLETE | Mode:",
+                mode,
+                "| Vertices:",
+                len(mesh.vertices),
+                "| Faces:",
+                len(mesh.faces),
+                "| Edges:",
+                len(mesh.edges)
+            )
+
+            return True
+
+        except Exception as error:
+
+            # --------------------------------------------------------
+            # Roll back every mesh mutation if anything fails.
+            # --------------------------------------------------------
+
+            mesh.vertices = old_vertices
+            mesh.faces = old_faces
+            mesh.edges = old_edges
+
+            print(
+                "SPLIT FAILED - MESH RESTORED:",
+                repr(error)
+            )
+
+            self.update()
+
+            return False
+
     def fill_selected_boundary(self):
         """Fill one selected closed boundary edge loop with a new face."""
 
@@ -7478,6 +7926,17 @@ class Viewport(QOpenGLWidget):
             print("CONNECT VERTICES")
 
             self.connect_selected_vertices()
+
+            return
+
+        # ---------------------------------
+        # SPLIT
+        # ---------------------------------
+        elif event.key() == Qt.Key_Y:
+
+            print("SPLIT")
+
+            self.split_selected_edit_element()
 
             return
 
