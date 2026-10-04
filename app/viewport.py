@@ -112,6 +112,21 @@ class Viewport(QOpenGLWidget):
         self.edge_vertex_b = None
 
         # ---------------------------------
+        # Loop Cut Sliding
+        # ---------------------------------
+
+        # Maps each newly-created loop-cut vertex to the original edge
+        # it was created on. This allows the loop to slide along the
+        # original topology instead of translating the loop off the mesh.
+        self.loop_cut_vertex_sources = {}
+
+        self.loop_cut_dragging = False
+        self.loop_cut_original_positions = {}
+        self.loop_cut_start_parameters = {}
+        self.loop_cut_start_mouse_x = 0
+        self.loop_cut_start_mouse_y = 0
+
+        # ---------------------------------
         # Face Dragging
         # ---------------------------------
 
@@ -1970,6 +1985,123 @@ class Viewport(QOpenGLWidget):
                                 self.selected_vertex = None
                                 self.selected_face = None
 
+                                # If the selected edge belongs to the loop
+                                # created by Loop Cut, drag the entire loop
+                                # using constrained edge sliding.
+                                selected_loop_vertices = set()
+
+                                for selected_edge_index in (
+                                    self.selected_edges
+                                ):
+
+                                    if (
+                                        selected_edge_index < 0
+                                        or selected_edge_index >= len(
+                                            obj.mesh.edges
+                                        )
+                                    ):
+                                        continue
+
+                                    selected_mesh_edge = (
+                                        obj.mesh.edges[
+                                            selected_edge_index
+                                        ]
+                                    )
+
+                                    if len(selected_mesh_edge) != 2:
+                                        continue
+
+                                    selected_loop_vertices.add(
+                                        int(selected_mesh_edge[0])
+                                    )
+                                    selected_loop_vertices.add(
+                                        int(selected_mesh_edge[1])
+                                    )
+
+                                loop_vertices = {
+                                    vertex_index
+                                    for vertex_index in selected_loop_vertices
+                                    if vertex_index in
+                                    self.loop_cut_vertex_sources
+                                }
+
+                                if (
+                                    loop_vertices
+                                    and loop_vertices == selected_loop_vertices
+                                ):
+
+                                    self.loop_cut_dragging = True
+
+                                    self.loop_cut_original_positions = {}
+                                    self.loop_cut_start_parameters = {}
+
+                                    for vertex_index in loop_vertices:
+
+                                        original_position = np.array(
+                                            obj.mesh.vertices[
+                                                vertex_index
+                                            ],
+                                            dtype=np.float64
+                                        )
+
+                                        self.loop_cut_original_positions[
+                                            vertex_index
+                                        ] = original_position.copy()
+
+                                        a, b = (
+                                            self.loop_cut_vertex_sources[
+                                                vertex_index
+                                            ]
+                                        )
+
+                                        if (
+                                            a >= 0
+                                            and b >= 0
+                                            and a < len(obj.mesh.vertices)
+                                            and b < len(obj.mesh.vertices)
+                                        ):
+
+                                            va = np.array(
+                                                obj.mesh.vertices[a],
+                                                dtype=np.float64
+                                            )
+
+                                            vb = np.array(
+                                                obj.mesh.vertices[b],
+                                                dtype=np.float64
+                                            )
+
+                                            edge_vector = vb - va
+                                            length_squared = float(
+                                                np.dot(
+                                                    edge_vector,
+                                                    edge_vector
+                                                )
+                                            )
+
+                                            if length_squared > 1e-12:
+
+                                                parameter = float(
+                                                    np.dot(
+                                                        original_position - va,
+                                                        edge_vector
+                                                    )
+                                                    / length_squared
+                                                )
+
+                                                self.loop_cut_start_parameters[
+                                                    vertex_index
+                                                ] = parameter
+
+                                    self.loop_cut_start_mouse_x = event.x()
+                                    self.loop_cut_start_mouse_y = event.y()
+
+                                else:
+
+                                    self.loop_cut_dragging = False
+                                    self.loop_cut_original_positions = {}
+                                    self.loop_cut_start_parameters = {}
+
                                 edge_vertices = (
                                     obj.mesh.edges[edge]
                                 )
@@ -2342,6 +2474,10 @@ class Viewport(QOpenGLWidget):
             # ---------------------------------
 
             self.edge_dragging = False
+
+            self.loop_cut_dragging = False
+            self.loop_cut_original_positions = {}
+            self.loop_cut_start_parameters = {}
 
             self.edge_vertex_a = None
             self.edge_vertex_b = None
@@ -2784,6 +2920,315 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
+        # LOOP CUT SLIDE
+        # ---------------------------------
+
+        if (
+            self.loop_cut_dragging
+            and self.selected_object is not None
+            and self.main_window.mode_manager.get_mode() == "EDIT"
+        ):
+
+            mesh = self.selected_object.mesh
+
+            if mesh is None:
+                return
+
+            # -------------------------------------------------------------
+            # LOOP SLIDE
+            # -------------------------------------------------------------
+            # The old implementation used only screen X movement. That
+            # makes the loop appear to rotate when the supporting edges are
+            # vertical or diagonal on screen.
+            #
+            # Instead, project each original supporting edge into screen
+            # space and measure the mouse movement along that projected
+            # edge. The resulting value changes only the vertex parameter
+            # on that edge.
+            # -------------------------------------------------------------
+
+            mouse_delta = np.array(
+                [
+                    float(event.x() - self.loop_cut_start_mouse_x),
+                    float(event.y() - self.loop_cut_start_mouse_y)
+                ],
+                dtype=np.float64
+            )
+
+            obj = self.selected_object
+
+            try:
+                self.makeCurrent()
+
+                glMatrixMode(GL_PROJECTION)
+                glPushMatrix()
+                glLoadIdentity()
+
+                width = max(1, self.width())
+                height = max(1, self.height())
+
+                gluPerspective(
+                    45.0,
+                    width / height,
+                    0.1,
+                    100.0
+                )
+
+                glMatrixMode(GL_MODELVIEW)
+                glPushMatrix()
+                glLoadIdentity()
+
+                self.camera.apply()
+
+                # Apply exactly the same object transform used by
+                # draw_scene_object(). This makes the projected supporting
+                # edge direction match what the user sees on screen.
+                glTranslatef(
+                    float(obj.position[0]),
+                    float(obj.position[1]),
+                    float(obj.position[2])
+                )
+
+                glRotatef(
+                    float(obj.rotation[0]),
+                    1.0,
+                    0.0,
+                    0.0
+                )
+
+                glRotatef(
+                    float(obj.rotation[1]),
+                    0.0,
+                    1.0,
+                    0.0
+                )
+
+                glRotatef(
+                    float(obj.rotation[2]),
+                    0.0,
+                    0.0,
+                    1.0
+                )
+
+                glScalef(
+                    float(obj.scale[0]),
+                    float(obj.scale[1]),
+                    float(obj.scale[2])
+                )
+
+                model_matrix = glGetDoublev(
+                    GL_MODELVIEW_MATRIX
+                )
+
+                projection_matrix = glGetDoublev(
+                    GL_PROJECTION_MATRIX
+                )
+
+                viewport = glGetIntegerv(
+                    GL_VIEWPORT
+                )
+
+                projected_edges = {}
+
+                for vertex_index, source_edge in (
+                    self.loop_cut_vertex_sources.items()
+                ):
+
+                    if vertex_index not in self.loop_cut_original_positions:
+                        continue
+
+                    a, b = source_edge
+
+                    if (
+                        a < 0
+                        or b < 0
+                        or a >= len(mesh.vertices)
+                        or b >= len(mesh.vertices)
+                    ):
+                        continue
+
+                    va = np.array(
+                        mesh.vertices[a],
+                        dtype=np.float64
+                    )
+
+                    vb = np.array(
+                        mesh.vertices[b],
+                        dtype=np.float64
+                    )
+
+                    try:
+                        screen_a = np.array(
+                            gluProject(
+                                float(va[0]),
+                                float(va[1]),
+                                float(va[2]),
+                                model_matrix,
+                                projection_matrix,
+                                viewport
+                            ),
+                            dtype=np.float64
+                        )
+
+                        screen_b = np.array(
+                            gluProject(
+                                float(vb[0]),
+                                float(vb[1]),
+                                float(vb[2]),
+                                model_matrix,
+                                projection_matrix,
+                                viewport
+                            ),
+                            dtype=np.float64
+                        )
+
+                    except Exception:
+                        continue
+
+                    screen_vector = screen_b[:2] - screen_a[:2]
+
+                    # OpenGL uses bottom-up screen Y; Qt mouse coordinates
+                    # use top-down screen Y.
+                    screen_vector[1] = -screen_vector[1]
+
+                    screen_length = float(
+                        np.linalg.norm(screen_vector)
+                    )
+
+                    if screen_length < 1e-6:
+                        continue
+
+                    screen_direction = (
+                        screen_vector / screen_length
+                    )
+
+                    projected_edges[vertex_index] = (
+                        screen_direction,
+                        screen_length
+                    )
+
+                # Restore OpenGL state before modifying the mesh.
+                glMatrixMode(GL_MODELVIEW)
+                glPopMatrix()
+
+                glMatrixMode(GL_PROJECTION)
+                glPopMatrix()
+
+                glMatrixMode(GL_MODELVIEW)
+
+                self.doneCurrent()
+
+            except Exception as error:
+                print(
+                    "LOOP CUT SLIDE PROJECTION ERROR:",
+                    error
+                )
+
+                try:
+                    self.doneCurrent()
+                except Exception:
+                    pass
+
+            for vertex_index, source_edge in (
+                self.loop_cut_vertex_sources.items()
+            ):
+
+                if vertex_index not in self.loop_cut_original_positions:
+                    continue
+
+                a, b = source_edge
+
+                if (
+                    a < 0
+                    or b < 0
+                    or a >= len(mesh.vertices)
+                    or b >= len(mesh.vertices)
+                ):
+                    continue
+
+                original_position = np.array(
+                    self.loop_cut_original_positions[
+                        vertex_index
+                    ],
+                    dtype=np.float64
+                )
+
+                edge_start = np.array(
+                    mesh.vertices[a],
+                    dtype=np.float64
+                )
+
+                edge_end = np.array(
+                    mesh.vertices[b],
+                    dtype=np.float64
+                )
+
+                edge_vector = edge_end - edge_start
+
+                edge_length_squared = float(
+                    np.dot(
+                        edge_vector,
+                        edge_vector
+                    )
+                )
+
+                if edge_length_squared < 1e-12:
+                    continue
+
+                start_parameter = self.loop_cut_start_parameters.get(
+                    vertex_index,
+                    0.5
+                )
+
+                projection_data = projected_edges.get(
+                    vertex_index
+                )
+
+                if projection_data is None:
+                    continue
+
+                screen_direction, screen_length = projection_data
+
+                # Mouse movement is converted into the fraction of the
+                # supporting edge travelled on screen. The 0.85 factor
+                # keeps the motion controlled on small edges.
+                mouse_along_edge = float(
+                    np.dot(
+                        mouse_delta,
+                        screen_direction
+                    )
+                )
+
+                parameter_delta = (
+                    mouse_along_edge
+                    / max(screen_length, 1.0)
+                    * 0.85
+                )
+
+                parameter = max(
+                    0.02,
+                    min(
+                        0.98,
+                        start_parameter + parameter_delta
+                    )
+                )
+
+                new_position = (
+                    edge_start
+                    + edge_vector * parameter
+                )
+
+                mesh.vertices[vertex_index] = [
+                    float(new_position[0]),
+                    float(new_position[1]),
+                    float(new_position[2])
+                ]
+
+            self.update()
+
+            return
+
+        # ---------------------------------
         # EDGE DRAG
         # ---------------------------------
 
@@ -2841,9 +3286,7 @@ class Viewport(QOpenGLWidget):
                 if edge_index < 0:
                     continue
 
-                if edge_index >= len(
-                    mesh.edges
-                ):
+                if edge_index >= len(mesh.edges):
                     continue
 
                 edge = mesh.edges[
@@ -4519,6 +4962,9 @@ class Viewport(QOpenGLWidget):
         # Create one midpoint vertex per loop edge
         # ---------------------------------
 
+        # Replace metadata from any previous loop cut.
+        self.loop_cut_vertex_sources = {}
+
         midpoint_indices = {}
 
         for edge in loop_edges:
@@ -4551,7 +4997,17 @@ class Viewport(QOpenGLWidget):
                 float(midpoint[2])
             ])
 
-            midpoint_indices[edge] = len(mesh.vertices) - 1
+            midpoint_index = len(mesh.vertices) - 1
+
+            midpoint_indices[edge] = midpoint_index
+
+            # Remember the original edge so the new loop can later be
+            # slid along the existing surface instead of simply translating
+            # its vertices in world space.
+            self.loop_cut_vertex_sources[midpoint_index] = (
+                int(a),
+                int(b)
+            )
 
         # ---------------------------------
         # Split every crossed quad
@@ -4692,6 +5148,436 @@ class Viewport(QOpenGLWidget):
             len(loop_edges),
             "| Faces Split:",
             cut_faces,
+            "| Vertices:",
+            len(mesh.vertices),
+            "| Faces:",
+            len(mesh.faces),
+            "| Edges:",
+            len(mesh.edges)
+        )
+
+        return True
+
+
+    def bridge_selected_edge_loops(self):
+
+        """
+        Bridge two selected edge loops by creating quad faces between them.
+
+        The current implementation works with two selected, connected edge
+        components. Each component must form a closed loop or an open path,
+        and both components must contain the same number of vertices.
+        """
+
+        # ---------------------------------
+        # Validate editing state
+        # ---------------------------------
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("BRIDGE: Requires EDIT mode")
+                return False
+
+        if not self.edge_mode:
+            print("BRIDGE: Requires EDGE mode")
+            return False
+
+        if self.selected_object is None:
+            print("BRIDGE: No selected object")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("BRIDGE: Selected object has no mesh")
+            return False
+
+        # ---------------------------------
+        # Read selected edges
+        # ---------------------------------
+
+        selected_edge_indices = sorted(
+            int(index)
+            for index in self.selected_edges
+            if index is not None
+        )
+
+        if self.selected_edge is not None:
+            if self.selected_edge not in selected_edge_indices:
+                selected_edge_indices.append(
+                    int(self.selected_edge)
+                )
+                selected_edge_indices.sort()
+
+        valid_edges = []
+
+        for edge_index in selected_edge_indices:
+
+            if edge_index < 0 or edge_index >= len(mesh.edges):
+                continue
+
+            edge = mesh.edges[edge_index]
+
+            if len(edge) != 2:
+                continue
+
+            valid_edges.append(
+                (
+                    int(edge[0]),
+                    int(edge[1])
+                )
+            )
+
+        if len(valid_edges) < 4:
+            print("BRIDGE: Select two edge loops")
+            return False
+
+        # ---------------------------------
+        # Build selected-edge graph
+        # ---------------------------------
+
+        adjacency = {}
+
+        for a, b in valid_edges:
+            adjacency.setdefault(a, set()).add(b)
+            adjacency.setdefault(b, set()).add(a)
+
+        # Find connected components.
+        components = []
+        remaining = set(adjacency.keys())
+
+        while remaining:
+
+            start = next(iter(remaining))
+            stack = [start]
+            component = set()
+
+            while stack:
+
+                vertex = stack.pop()
+
+                if vertex in component:
+                    continue
+
+                component.add(vertex)
+                remaining.discard(vertex)
+
+                for neighbor in adjacency.get(vertex, set()):
+                    if neighbor not in component:
+                        stack.append(neighbor)
+
+            components.append(component)
+
+        if len(components) != 2:
+            print(
+                "BRIDGE: Select exactly two connected edge loops"
+            )
+            return False
+
+        # ---------------------------------
+        # Order each selected component
+        # ---------------------------------
+
+        def order_component(component):
+
+            local_adjacency = {
+                vertex: [
+                    neighbor
+                    for neighbor in adjacency.get(vertex, set())
+                    if neighbor in component
+                ]
+                for vertex in component
+            }
+
+            degrees = [
+                len(neighbors)
+                for neighbors in local_adjacency.values()
+            ]
+
+            if any(
+                degree not in (1, 2)
+                for degree in degrees
+            ):
+                return None
+
+            # Closed loop: every vertex has degree two.
+            closed = all(
+                degree == 2
+                for degree in degrees
+            )
+
+            if closed:
+                start = min(component)
+            else:
+                endpoints = [
+                    vertex
+                    for vertex, neighbors
+                    in local_adjacency.items()
+                    if len(neighbors) == 1
+                ]
+
+                if len(endpoints) != 2:
+                    return None
+
+                start = min(endpoints)
+
+            ordered = []
+            previous = None
+            current = start
+
+            while True:
+
+                ordered.append(current)
+
+                neighbors = local_adjacency[current]
+
+                candidates = [
+                    neighbor
+                    for neighbor in neighbors
+                    if neighbor != previous
+                ]
+
+                if not candidates:
+                    break
+
+                next_vertex = candidates[0]
+
+                if next_vertex == start:
+                    break
+
+                if next_vertex in ordered:
+                    return None
+
+                previous, current = current, next_vertex
+
+                if len(ordered) > len(component):
+                    return None
+
+            if len(ordered) != len(component):
+                return None
+
+            return ordered, closed
+
+        ordered_a = order_component(components[0])
+        ordered_b = order_component(components[1])
+
+        if ordered_a is None or ordered_b is None:
+            print(
+                "BRIDGE: Selected edges must form two valid loops or paths"
+            )
+            return False
+
+        loop_a, closed_a = ordered_a
+        loop_b, closed_b = ordered_b
+
+        if len(loop_a) != len(loop_b):
+            print(
+                "BRIDGE: Both edge loops must have the same number of vertices"
+            )
+            return False
+
+        if len(loop_a) < 2:
+            print("BRIDGE: Edge loops are too small")
+            return False
+
+        # ---------------------------------
+        # Save undo state
+        # ---------------------------------
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(
+                self.selected_object
+            )
+
+        # ---------------------------------
+        # Align loop direction and starting point
+        # ---------------------------------
+
+        positions_a = [
+            np.array(mesh.vertices[index], dtype=np.float32)
+            for index in loop_a
+        ]
+
+        positions_b = [
+            np.array(mesh.vertices[index], dtype=np.float32)
+            for index in loop_b
+        ]
+
+        count = len(loop_a)
+
+        # For a closed loop, choose the cyclic shift and direction that
+        # produces the smallest total distance between corresponding points.
+        # For an open path, compare the forward and reversed orientations.
+        candidates = []
+
+        if closed_a and closed_b:
+
+            for reverse in (False, True):
+
+                base = list(reversed(loop_b)) if reverse else list(loop_b)
+
+                for shift in range(count):
+
+                    candidate = [
+                        base[(index + shift) % count]
+                        for index in range(count)
+                    ]
+
+                    distance = 0.0
+
+                    for i in range(count):
+                        va = positions_a[i]
+                        vb = np.array(
+                            mesh.vertices[candidate[i]],
+                            dtype=np.float32
+                        )
+                        distance += float(
+                            np.linalg.norm(va - vb)
+                        )
+
+                    candidates.append(
+                        (distance, candidate)
+                    )
+
+        else:
+
+            forward = list(loop_b)
+            reverse = list(reversed(loop_b))
+
+            for candidate in (forward, reverse):
+
+                distance = 0.0
+
+                for i in range(count):
+                    va = positions_a[i]
+                    vb = np.array(
+                        mesh.vertices[candidate[i]],
+                        dtype=np.float32
+                    )
+                    distance += float(
+                        np.linalg.norm(va - vb)
+                    )
+
+                candidates.append(
+                    (distance, candidate)
+                )
+
+        loop_b = min(
+            candidates,
+            key=lambda item: item[0]
+        )[1]
+
+        # ---------------------------------
+        # Create bridge faces
+        # ---------------------------------
+
+        new_faces = []
+
+        for i in range(count - 1):
+
+            a0 = loop_a[i]
+            a1 = loop_a[i + 1]
+            b1 = loop_b[i + 1]
+            b0 = loop_b[i]
+
+            face = (
+                a0,
+                a1,
+                b1,
+                b0
+            )
+
+            if len(set(face)) == 4:
+                new_faces.append(face)
+
+        # Closed loops need the final wraparound face.
+        if closed_a and closed_b:
+
+            a0 = loop_a[-1]
+            a1 = loop_a[0]
+            b1 = loop_b[0]
+            b0 = loop_b[-1]
+
+            face = (
+                a0,
+                a1,
+                b1,
+                b0
+            )
+
+            if len(set(face)) == 4:
+                new_faces.append(face)
+
+        if not new_faces:
+            print("BRIDGE: Could not create bridge faces")
+            return False
+
+        mesh.faces.extend(new_faces)
+        mesh.build_edges()
+
+        # ---------------------------------
+        # Select the newly created bridge edges
+        # ---------------------------------
+
+        def canonical(edge):
+            a, b = int(edge[0]), int(edge[1])
+            return (a, b) if a < b else (b, a)
+
+        bridge_edge_keys = set()
+
+        for face in new_faces:
+            for i in range(len(face)):
+                bridge_edge_keys.add(
+                    canonical((
+                        face[i],
+                        face[(i + 1) % len(face)]
+                    ))
+                )
+
+        original_selected_keys = {
+            canonical(edge)
+            for edge in valid_edges
+        }
+
+        # Keep only the new cross-loop edges selected, not the original
+        # boundary-loop edges.
+        new_selected_edges = set()
+
+        for edge_index, edge in enumerate(mesh.edges):
+
+            key = canonical(edge)
+
+            if (
+                key in bridge_edge_keys
+                and key not in original_selected_keys
+            ):
+                new_selected_edges.add(edge_index)
+
+        self.selected_edges = new_selected_edges
+        self.selected_edge = (
+            next(iter(new_selected_edges))
+            if new_selected_edges
+            else None
+        )
+
+        self.selected_vertex = None
+        self.selected_vertices.clear()
+        self.selected_face = None
+        self.selected_faces.clear()
+
+        mesh.selected_face = None
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+
+        self.update()
+
+        print(
+            "BRIDGE COMPLETE | Loops:",
+            count,
+            "vertices each | Faces Created:",
+            len(new_faces),
             "| Vertices:",
             len(mesh.vertices),
             "| Faces:",
@@ -6256,6 +7142,20 @@ class Viewport(QOpenGLWidget):
             print("BEVEL")
 
             self.bevel_selected_edge()
+
+            return
+
+        # ---------------------------------
+        # BRIDGE EDGE LOOPS
+        # ---------------------------------
+        elif (
+            event.key() == Qt.Key_E
+            and event.modifiers() & Qt.ControlModifier
+        ):
+
+            print("BRIDGE EDGE LOOPS")
+
+            self.bridge_selected_edge_loops()
 
             return
 
