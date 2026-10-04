@@ -6647,6 +6647,153 @@ class Viewport(QOpenGLWidget):
 
 
 
+    def connect_selected_vertices(self):
+        """Connect exactly two selected vertices by splitting shared faces."""
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("CONNECT: Requires EDIT mode")
+                return False
+
+        if not self.vertex_mode:
+            print("CONNECT: Requires VERTEX mode")
+            return False
+
+        if self.selected_object is None or self.selected_object.mesh is None:
+            print("CONNECT: No selected mesh")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        selected = set()
+        for index in self.selected_vertices:
+            try:
+                index = int(index)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= index < len(mesh.vertices):
+                selected.add(index)
+
+        if self.selected_vertex is not None:
+            try:
+                index = int(self.selected_vertex)
+                if 0 <= index < len(mesh.vertices):
+                    selected.add(index)
+            except (TypeError, ValueError):
+                pass
+
+        if len(selected) != 2:
+            print("CONNECT: Select exactly two vertices")
+            return False
+
+        vertex_a, vertex_b = sorted(selected)
+
+        # Do not create a duplicate edge.
+        existing_edge = False
+        for edge in mesh.edges:
+            if len(edge) != 2:
+                continue
+            if set((int(edge[0]), int(edge[1]))) == {vertex_a, vertex_b}:
+                existing_edge = True
+                break
+
+        if existing_edge:
+            print("CONNECT: Vertices are already connected")
+            return False
+
+        # The two vertices must share at least one face. Connecting vertices
+        # from unrelated faces would create a loose edge rather than topology.
+        new_faces = []
+        split_count = 0
+
+        for face in mesh.faces:
+            face_vertices = [int(index) for index in face]
+
+            if vertex_a not in face_vertices or vertex_b not in face_vertices:
+                new_faces.append(tuple(face_vertices))
+                continue
+
+            position_a = face_vertices.index(vertex_a)
+            position_b = face_vertices.index(vertex_b)
+
+            if position_a == position_b:
+                new_faces.append(tuple(face_vertices))
+                continue
+
+            # If the vertices are already adjacent in this face, the edge
+            # exists topologically even if the derived edge list is stale.
+            if (
+                (position_a + 1) % len(face_vertices) == position_b
+                or
+                (position_b + 1) % len(face_vertices) == position_a
+            ):
+                new_faces.append(tuple(face_vertices))
+                continue
+
+            # Walk from A to B in the face's existing winding.
+            path_ab = []
+            current = position_a
+            while True:
+                path_ab.append(face_vertices[current])
+                if current == position_b:
+                    break
+                current = (current + 1) % len(face_vertices)
+
+            # Walk from B back to A in the same winding.
+            path_ba = []
+            current = position_b
+            while True:
+                path_ba.append(face_vertices[current])
+                if current == position_a:
+                    break
+                current = (current + 1) % len(face_vertices)
+
+            if len(path_ab) >= 3 and len(path_ba) >= 3:
+                new_faces.append(tuple(path_ab))
+                new_faces.append(tuple(path_ba))
+                split_count += 1
+            else:
+                new_faces.append(tuple(face_vertices))
+
+        if split_count == 0:
+            print("CONNECT: Vertices must be non-adjacent on a common face")
+            return False
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(self.selected_object)
+
+        mesh.faces = new_faces
+        mesh.build_edges()
+
+        # Keep the two vertices selected after the connection.
+        self.selected_vertices = {vertex_a, vertex_b}
+        self.selected_vertex = vertex_a
+
+        self.selected_edges.clear()
+        self.selected_edge = None
+        self.selected_faces.clear()
+        self.selected_face = None
+
+        mesh.selected_vertex = vertex_a
+        mesh.selected_edge = None
+        mesh.selected_face = None
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+        self.loop_cut_dragging = False
+
+        self.update()
+
+        print(
+            "CONNECT COMPLETE | Vertices:",
+            vertex_a,
+            vertex_b,
+            "| Faces split:",
+            split_count
+        )
+        return True
+
     def fill_selected_boundary(self):
         """Fill one selected closed boundary edge loop with a new face."""
 
@@ -7320,6 +7467,17 @@ class Viewport(QOpenGLWidget):
             print("MERGE VERTICES")
 
             self.merge_selected_vertices()
+
+            return
+
+        # ---------------------------------
+        # CONNECT VERTICES
+        # ---------------------------------
+        elif event.key() == Qt.Key_J:
+
+            print("CONNECT VERTICES")
+
+            self.connect_selected_vertices()
 
             return
 
