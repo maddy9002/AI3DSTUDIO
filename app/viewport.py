@@ -19,6 +19,7 @@ from scene.mesh_renderer import MeshRenderer
 from PySide6.QtCore import QEvent
 from app.geometry_utils import GeometryUtils
 import math
+import copy
 
 class Viewport(QOpenGLWidget):
 
@@ -7395,6 +7396,260 @@ class Viewport(QOpenGLWidget):
         )
         return True
 
+
+    def separate_selected_faces(self):
+        """
+        Separate the currently selected faces into a new scene object.
+
+        The selected faces are copied into the new object and removed from
+        the original mesh. The new object keeps the original object's
+        transform, while its mesh contains only the separated faces.
+        """
+
+        if self.main_window is None:
+            print("SEPARATE: Main window is not available")
+            return False
+
+        if self.main_window.mode_manager.get_mode() != "EDIT":
+            print("SEPARATE: Requires EDIT mode")
+            return False
+
+        if not self.face_mode:
+            print("SEPARATE: Select faces in FACE mode")
+            return False
+
+        old_object = self.selected_object
+
+        if old_object is None:
+            print("SEPARATE: No selected object")
+            return False
+
+        mesh = old_object.mesh
+
+        if mesh is None:
+            print("SEPARATE: Selected object has no mesh")
+            return False
+
+        selected_face_indices = set(
+            int(index)
+            for index in self.selected_faces
+            if index is not None
+        )
+
+        if self.selected_face is not None:
+            selected_face_indices.add(
+                int(self.selected_face)
+            )
+
+        selected_face_indices = sorted(
+            index
+            for index in selected_face_indices
+            if 0 <= index < len(mesh.faces)
+        )
+
+        if not selected_face_indices:
+            print("SEPARATE: Select at least one face")
+            return False
+
+        if len(selected_face_indices) >= len(mesh.faces):
+            print("SEPARATE: Cannot separate the entire mesh")
+            return False
+
+        # Save the complete scene state before changing the scene.
+        if self.history_manager is not None:
+            self.history_manager.save_scene_state(
+                self.main_window.scene_objects,
+                self.main_window.selected_object
+            )
+
+        # ---------------------------------
+        # Build the new mesh from selected
+        # faces only.
+        # ---------------------------------
+
+        new_mesh = copy.deepcopy(mesh)
+
+        selected_faces = [
+            tuple(
+                int(vertex_index)
+                for vertex_index in mesh.faces[face_index]
+            )
+            for face_index in selected_face_indices
+        ]
+
+        used_vertices = []
+        used_set = set()
+
+        for face in selected_faces:
+            for vertex_index in face:
+                if vertex_index not in used_set:
+                    used_set.add(vertex_index)
+                    used_vertices.append(vertex_index)
+
+        if len(used_vertices) < 3:
+            print("SEPARATE: Selected faces do not form valid geometry")
+            return False
+
+        vertex_map = {
+            old_index: new_index
+            for new_index, old_index
+            in enumerate(used_vertices)
+        }
+
+        new_mesh.vertices = [
+            list(mesh.vertices[old_index])
+            for old_index in used_vertices
+        ]
+
+        new_mesh.faces = [
+            tuple(
+                vertex_map[vertex_index]
+                for vertex_index in face
+            )
+            for face in selected_faces
+        ]
+
+        new_mesh.build_edges()
+
+        # ---------------------------------
+        # Remove selected faces from the
+        # original mesh.
+        # ---------------------------------
+
+        selected_set = set(selected_face_indices)
+
+        remaining_faces = [
+            tuple(face)
+            for index, face in enumerate(mesh.faces)
+            if index not in selected_set
+        ]
+
+        if not remaining_faces:
+            print("SEPARATE: Operation would remove the entire mesh")
+            return False
+
+        mesh.faces = remaining_faces
+
+        self._cleanup_mesh_after_deletion(mesh)
+
+        # ---------------------------------
+        # Create the new scene object.
+        # ---------------------------------
+
+        new_name = (
+            f"{old_object.name}_Separated"
+        )
+
+        existing_names = {
+            obj.name
+            for obj in self.main_window.scene_objects
+        }
+
+        counter = 1
+        base_name = new_name
+
+        while new_name in existing_names:
+            counter += 1
+            new_name = (
+                f"{base_name}_{counter}"
+            )
+
+        new_object = type(old_object)(
+            new_name,
+            old_object.object_type
+        )
+
+        new_object.position = (
+            old_object.position.copy()
+        )
+
+        new_object.rotation = (
+            old_object.rotation.copy()
+        )
+
+        new_object.scale = (
+            old_object.scale.copy()
+        )
+
+        new_object.mesh = new_mesh
+
+        # Add the new object to the scene.
+        self.main_window.scene_objects.append(
+            new_object
+        )
+
+        self.scene_objects = (
+            self.main_window.scene_objects
+        )
+
+        # Select the new object.
+        self.main_window.selected_object = (
+            new_object
+        )
+
+        self.main_window.scene_hierarchy.addItem(
+            new_object.name
+        )
+
+        self.main_window.scene_hierarchy.setCurrentRow(
+            len(self.main_window.scene_objects) - 1
+        )
+
+        self.set_selected_object(
+            new_object
+        )
+
+        # Keep the application-level selection and viewport selection
+        # synchronized.  The separated object must be the active object
+        # before Object Mode movement is attempted.
+        self.main_window.selected_object = new_object
+        self.selection_manager.select(new_object)
+
+        self.main_window.viewport.update_scene(
+            self.main_window.scene_objects
+        )
+
+        # Leave Edit Mode after separating.  The separated mesh is now a
+        # normal independent scene object, so it can be moved immediately
+        # with the existing Object Mode transform system.
+        if self.main_window.mode_manager.get_mode() == "EDIT":
+            self.main_window.mode_manager.toggle()
+
+        # Clear edit-element selection state because the active operation
+        # has produced a new Object Mode object.
+        self.selected_vertex = None
+        self.selected_vertices.clear()
+        self.selected_edge = None
+        self.selected_edges.clear()
+        self.selected_face = None
+        self.selected_faces.clear()
+
+        new_mesh.selected_face = None
+
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+        self.dragging_object = False
+
+        self.main_window.viewport.update()
+
+        print(
+            "SEPARATE OBJECT MODE | Active Object:",
+            new_object.name
+        )
+
+        return True
+
+        print(
+            "SEPARATE COMPLETE | New Object:",
+            new_object.name,
+            "| Faces:",
+            len(new_mesh.faces)
+        )
+
+        return True
+
+
     def keyPressEvent(self, event):
 
         print("VIEWPORT KEY:", event.key())
@@ -7720,6 +7975,22 @@ class Viewport(QOpenGLWidget):
             self.history_manager.redo()
 
             self.update()
+
+            return
+
+        # ---------------------------------
+        # SEPARATE SELECTED FACES
+        # ---------------------------------
+
+        if (
+            event.key() == Qt.Key_P
+            and self.main_window.mode_manager.get_mode()
+            == "EDIT"
+        ):
+
+            print("SEPARATE SELECTED FACES")
+
+            self.separate_selected_faces()
 
             return
 
