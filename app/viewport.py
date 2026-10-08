@@ -20,6 +20,7 @@ from PySide6.QtCore import QEvent
 from app.geometry_utils import GeometryUtils
 import math
 import copy
+import time
 
 class Viewport(QOpenGLWidget):
 
@@ -111,6 +112,26 @@ class Viewport(QOpenGLWidget):
 
         self.edge_vertex_a = None
         self.edge_vertex_b = None
+
+        # ---------------------------------
+        # Edge Slide
+        # ---------------------------------
+
+        self.edge_slide_dragging = False
+        self.edge_slide_g_time = 0.0
+
+        self.edge_slide_vertex_a = None
+        self.edge_slide_vertex_b = None
+
+        self.edge_slide_original_positions = {}
+        self.edge_slide_target_pairs = []
+
+        self.edge_slide_start_mouse_x = 0
+        self.edge_slide_start_mouse_y = 0
+
+        self.edge_slide_screen_axis = None
+        self.edge_slide_screen_length = 0.0
+        self.edge_slide_factor = 0.0
 
         # ---------------------------------
         # Loop Cut Sliding
@@ -224,6 +245,7 @@ class Viewport(QOpenGLWidget):
         # ---------------------------------
 
         self.setFocusPolicy(Qt.StrongFocus)
+        self.setMouseTracking(True)
         self.setFocus()
 
         print(
@@ -1767,6 +1789,19 @@ class Viewport(QOpenGLWidget):
         self.mouse_x = event.position().x()
         self.mouse_y = event.position().y()
 
+        if self.edge_slide_dragging:
+
+            if event.button() == Qt.LeftButton:
+                # The matching mouse release confirms Edge Slide.
+                event.accept()
+                return
+
+            if event.button() == Qt.RightButton:
+                print("RIGHT CLICK - CANCEL EDGE SLIDE")
+                self._cancel_edge_slide()
+                event.accept()
+                return
+
         if event.button() == Qt.LeftButton:
 
             ray = RayBuilder.build_ray(
@@ -2501,9 +2536,31 @@ class Viewport(QOpenGLWidget):
             self.vertex_dragging = False
 
             # ---------------------------------
+            # Edge Slide Confirmation
+            # ---------------------------------
+
+            if self.edge_slide_dragging:
+
+                print(
+                    "EDGE SLIDE CONFIRMED | Factor:",
+                    self.edge_slide_factor
+                )
+
+                self.edge_slide_dragging = False
+                self.edge_slide_vertex_a = None
+                self.edge_slide_vertex_b = None
+                self.edge_slide_original_positions = {}
+                self.edge_slide_target_pairs = []
+                self.edge_slide_screen_axis = None
+                self.edge_slide_screen_length = 0.0
+                self.edge_slide_factor = 0.0
+                self.edge_slide_g_time = 0.0
+
+            # ---------------------------------
             # Edge Drag
             # ---------------------------------
 
+            self.edge_dragging = False
             self.edge_dragging = False
 
             self.loop_cut_dragging = False
@@ -2581,6 +2638,37 @@ class Viewport(QOpenGLWidget):
         elif event.button() == Qt.RightButton:
 
             self.right_mouse = False
+
+            if self.edge_slide_dragging:
+
+                print("RIGHT CLICK - CANCEL EDGE SLIDE")
+
+                if self.selected_object is not None:
+                    mesh = self.selected_object.mesh
+
+                    if mesh is not None:
+                        for vertex_index, original in self.edge_slide_original_positions.items():
+                            if 0 <= vertex_index < len(mesh.vertices):
+                                mesh.vertices[vertex_index] = [
+                                    float(original[0]),
+                                    float(original[1]),
+                                    float(original[2])
+                                ]
+
+                        mesh.build_edges()
+
+                self.edge_slide_dragging = False
+                self.edge_slide_vertex_a = None
+                self.edge_slide_vertex_b = None
+                self.edge_slide_original_positions = {}
+                self.edge_slide_target_pairs = []
+                self.edge_slide_screen_axis = None
+                self.edge_slide_screen_length = 0.0
+                self.edge_slide_factor = 0.0
+                self.edge_slide_g_time = 0.0
+
+                self.update()
+                return
 
             if self.knife_mode:
                 print("RIGHT CLICK - CANCEL KNIFE")
@@ -3261,6 +3349,19 @@ class Viewport(QOpenGLWidget):
 
             self.update()
 
+            return
+
+        # ---------------------------------
+        # EDGE SLIDE
+        # ---------------------------------
+
+        if (
+            self.edge_slide_dragging
+            and self.selected_object is not None
+            and self.main_window.mode_manager.get_mode() == "EDIT"
+        ):
+
+            self.update_edge_slide(event)
             return
 
         # ---------------------------------
@@ -8535,6 +8636,331 @@ class Viewport(QOpenGLWidget):
             point
         )
 
+    def _cancel_edge_slide(self):
+        """Restore the original edge positions and clear Edge Slide state."""
+
+        if self.selected_object is not None:
+            mesh = self.selected_object.mesh
+
+            if mesh is not None:
+                for vertex_index, original in self.edge_slide_original_positions.items():
+                    if 0 <= vertex_index < len(mesh.vertices):
+                        mesh.vertices[vertex_index] = [
+                            float(original[0]),
+                            float(original[1]),
+                            float(original[2])
+                        ]
+
+                mesh.build_edges()
+
+        self.edge_slide_dragging = False
+        self.edge_slide_vertex_a = None
+        self.edge_slide_vertex_b = None
+        self.edge_slide_original_positions = {}
+        self.edge_slide_target_pairs = []
+        self.edge_slide_screen_axis = None
+        self.edge_slide_screen_length = 0.0
+        self.edge_slide_factor = 0.0
+        self.edge_slide_g_time = 0.0
+        self.update()
+
+    def begin_edge_slide(self):
+        """Start topology-constrained Edge Slide for the active selected edge."""
+
+        if self.selected_object is None:
+            print("EDGE SLIDE: No selected object")
+            return False
+
+        if self.main_window.mode_manager.get_mode() != "EDIT":
+            print("EDGE SLIDE: Requires EDIT mode")
+            return False
+
+        if not self.edge_mode:
+            print("EDGE SLIDE: Requires EDGE mode")
+            return False
+
+        if len(self.selected_edges) != 1:
+            print("EDGE SLIDE: Select exactly one edge")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            print("EDGE SLIDE: Selected object has no mesh")
+            return False
+
+        edge_index = next(iter(self.selected_edges))
+
+        if edge_index < 0 or edge_index >= len(mesh.edges):
+            print("EDGE SLIDE: Invalid edge")
+            return False
+
+        edge = mesh.edges[edge_index]
+
+        if len(edge) != 2:
+            print("EDGE SLIDE: Invalid edge topology")
+            return False
+
+        vertex_a = int(edge[0])
+        vertex_b = int(edge[1])
+
+        adjacent_faces = []
+
+        for face in mesh.faces:
+            if vertex_a in face and vertex_b in face:
+                adjacent_faces.append(face)
+
+        if len(adjacent_faces) < 2:
+            print("EDGE SLIDE: Edge must have two adjacent faces")
+            return False
+
+        target_pairs = []
+
+        for face in adjacent_faces:
+            if len(face) != 4:
+                print("EDGE SLIDE: Current version requires quad faces")
+                return False
+
+            face = list(face)
+
+            try:
+                ia = face.index(vertex_a)
+                ib = face.index(vertex_b)
+            except ValueError:
+                continue
+
+            if ib == (ia + 1) % 4:
+                target_a = int(face[(ia - 1) % 4])
+                target_b = int(face[(ib + 1) % 4])
+            elif ia == (ib + 1) % 4:
+                target_a = int(face[(ia + 1) % 4])
+                target_b = int(face[(ib - 1) % 4])
+            else:
+                continue
+
+            target_pairs.append((target_a, target_b))
+
+        if len(target_pairs) < 2:
+            print("EDGE SLIDE: Could not determine neighboring edge loops")
+            return False
+
+        self.edge_slide_original_positions = {
+            vertex_a: np.array(mesh.vertices[vertex_a], dtype=np.float64).copy(),
+            vertex_b: np.array(mesh.vertices[vertex_b], dtype=np.float64).copy()
+        }
+
+        self.edge_slide_vertex_a = vertex_a
+        self.edge_slide_vertex_b = vertex_b
+        self.edge_slide_target_pairs = target_pairs[:2]
+        self.edge_slide_factor = 0.0
+        self.edge_slide_start_mouse_x = int(self.last_mouse_x)
+        self.edge_slide_start_mouse_y = int(self.last_mouse_y)
+        self.edge_slide_screen_axis = None
+        self.edge_slide_screen_length = 0.0
+
+        obj = self.selected_object
+
+        try:
+            self.makeCurrent()
+
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+
+            width = max(1, self.width())
+            height = max(1, self.height())
+
+            gluPerspective(
+                45.0,
+                float(width) / float(height),
+                0.1,
+                100.0
+            )
+
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            glLoadIdentity()
+            self.camera.apply()
+
+            glTranslatef(
+                float(obj.position[0]),
+                float(obj.position[1]),
+                float(obj.position[2])
+            )
+            glRotatef(float(obj.rotation[0]), 1, 0, 0)
+            glRotatef(float(obj.rotation[1]), 0, 1, 0)
+            glRotatef(float(obj.rotation[2]), 0, 0, 1)
+            glScalef(
+                float(obj.scale[0]),
+                float(obj.scale[1]),
+                float(obj.scale[2])
+            )
+
+            model_matrix = glGetDoublev(GL_MODELVIEW_MATRIX)
+            projection_matrix = glGetDoublev(GL_PROJECTION_MATRIX)
+            viewport = glGetIntegerv(GL_VIEWPORT)
+
+            projected_midpoints = []
+
+            for target_a, target_b in self.edge_slide_target_pairs:
+                if (
+                    target_a < 0
+                    or target_b < 0
+                    or target_a >= len(mesh.vertices)
+                    or target_b >= len(mesh.vertices)
+                ):
+                    continue
+
+                midpoint = (
+                    np.array(mesh.vertices[target_a], dtype=np.float64)
+                    + np.array(mesh.vertices[target_b], dtype=np.float64)
+                ) * 0.5
+
+                projected = np.array(
+                    gluProject(
+                        float(midpoint[0]),
+                        float(midpoint[1]),
+                        float(midpoint[2]),
+                        model_matrix,
+                        projection_matrix,
+                        viewport
+                    ),
+                    dtype=np.float64
+                )
+
+                projected[1] = float(height) - projected[1]
+                projected_midpoints.append(projected[:2])
+
+            current_midpoint = (
+                self.edge_slide_original_positions[vertex_a]
+                + self.edge_slide_original_positions[vertex_b]
+            ) * 0.5
+
+            current_screen = np.array(
+                gluProject(
+                    float(current_midpoint[0]),
+                    float(current_midpoint[1]),
+                    float(current_midpoint[2]),
+                    model_matrix,
+                    projection_matrix,
+                    viewport
+                ),
+                dtype=np.float64
+            )
+            current_screen[1] = float(height) - current_screen[1]
+
+            if len(projected_midpoints) >= 2:
+                screen_axis = projected_midpoints[0] - projected_midpoints[1]
+                screen_length = float(np.linalg.norm(screen_axis))
+            elif len(projected_midpoints) == 1:
+                screen_axis = projected_midpoints[0] - current_screen
+                screen_length = float(np.linalg.norm(screen_axis))
+            else:
+                screen_axis = None
+                screen_length = 0.0
+
+            if screen_axis is not None and screen_length > 1e-6:
+                self.edge_slide_screen_axis = screen_axis / screen_length
+                self.edge_slide_screen_length = screen_length
+
+            glMatrixMode(GL_MODELVIEW)
+            glPopMatrix()
+            glMatrixMode(GL_PROJECTION)
+            glPopMatrix()
+            glMatrixMode(GL_MODELVIEW)
+            self.doneCurrent()
+
+        except Exception as error:
+            print("EDGE SLIDE PROJECTION ERROR:", error)
+            try:
+                self.doneCurrent()
+            except Exception:
+                pass
+
+        if self.edge_slide_screen_axis is None:
+            print("EDGE SLIDE: Could not determine slide direction")
+            self.edge_slide_original_positions = {}
+            self.edge_slide_target_pairs = []
+            return False
+
+        self.edge_dragging = False
+        self.loop_cut_dragging = False
+        self.edge_slide_dragging = True
+
+        print("EDGE SLIDE START | Edge:", edge_index)
+        self.update()
+        return True
+
+    def update_edge_slide(self, event):
+        """Move the selected edge along its neighboring quad topology."""
+
+        if not self.edge_slide_dragging or self.selected_object is None:
+            return
+
+        mesh = self.selected_object.mesh
+
+        if mesh is None:
+            return
+
+        vertex_a = self.edge_slide_vertex_a
+        vertex_b = self.edge_slide_vertex_b
+
+        if (
+            vertex_a is None
+            or vertex_b is None
+            or vertex_a not in self.edge_slide_original_positions
+            or vertex_b not in self.edge_slide_original_positions
+            or self.edge_slide_screen_axis is None
+        ):
+            return
+
+        mouse_delta = np.array(
+            [
+                float(event.x() - self.edge_slide_start_mouse_x),
+                float(event.y() - self.edge_slide_start_mouse_y)
+            ],
+            dtype=np.float64
+        )
+
+        factor = (
+            float(np.dot(mouse_delta, self.edge_slide_screen_axis))
+            / max(self.edge_slide_screen_length, 1.0)
+            * 0.85
+        )
+
+        factor = max(-0.98, min(0.98, factor))
+        self.edge_slide_factor = factor
+
+        if factor >= 0.0:
+            target_a, target_b = self.edge_slide_target_pairs[0]
+            amount = factor
+        else:
+            target_a, target_b = self.edge_slide_target_pairs[1]
+            amount = -factor
+
+        if (
+            target_a < 0
+            or target_b < 0
+            or target_a >= len(mesh.vertices)
+            or target_b >= len(mesh.vertices)
+        ):
+            return
+
+        original_a = self.edge_slide_original_positions[vertex_a]
+        original_b = self.edge_slide_original_positions[vertex_b]
+
+        target_position_a = np.array(mesh.vertices[target_a], dtype=np.float64)
+        target_position_b = np.array(mesh.vertices[target_b], dtype=np.float64)
+
+        new_a = original_a + (target_position_a - original_a) * amount
+        new_b = original_b + (target_position_b - original_b) * amount
+
+        mesh.vertices[vertex_a] = [float(new_a[0]), float(new_a[1]), float(new_a[2])]
+        mesh.vertices[vertex_b] = [float(new_b[0]), float(new_b[1]), float(new_b[2])]
+
+        mesh.build_edges()
+        self.update()
+
     def keyPressEvent(self, event):
 
         print("VIEWPORT KEY:", event.key())
@@ -8739,6 +9165,16 @@ class Viewport(QOpenGLWidget):
 
                 self.update()
 
+                return
+
+            #------------------------------
+            # Cancel edge slide
+            #------------------------------
+
+            if self.edge_slide_dragging:
+
+                print("CANCEL EDGE SLIDE")
+                self._cancel_edge_slide()
                 return
 
             #------------------------------
@@ -9036,7 +9472,59 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
-        # MOVE
+        # MOVE / EDGE SLIDE
+        # ---------------------------------
+        elif event.key() == Qt.Key_G:
+
+            now = time.monotonic()
+
+            if (
+                self.main_window.mode_manager.get_mode() == "EDIT"
+                and self.edge_mode
+                and len(self.selected_edges) == 1
+                and not self.edge_slide_dragging
+            ):
+
+                self.tool_manager.set_tool(ToolManager.MOVE)
+
+                if now - self.edge_slide_g_time <= 0.45:
+                    self.edge_slide_g_time = 0.0
+                    print("EDGE SLIDE")
+                    self.begin_edge_slide()
+                else:
+                    self.edge_slide_g_time = now
+                    print("EDGE SLIDE: Press G again")
+
+                self.update()
+                return
+
+            self.edge_slide_g_time = 0.0
+            print("MOVE")
+
+            self.tool_manager.set_tool(ToolManager.MOVE)
+
+            if (
+                self.main_window.mode_manager.get_mode() == "EDIT"
+                and self.selected_object is not None
+            ):
+
+                if self.face_mode and self.selected_faces:
+
+                    self.face_dragging = True
+                    self.vertex_dragging = False
+                    self.edge_dragging = False
+
+                    self.last_mouse_x = self.width() // 2
+                    self.last_mouse_y = self.height() // 2
+
+                    print(
+                        "FACE MOVE START:",
+                        self.selected_faces
+                    )
+
+            self.update()
+            return
+
         # ---------------------------------
         elif event.key() == Qt.Key_G:
 
