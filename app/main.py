@@ -2055,7 +2055,6 @@ class AI3DStudio(QMainWindow):
 
             raise
 
-
 if __name__ == "__main__":
 
     app = QApplication([])

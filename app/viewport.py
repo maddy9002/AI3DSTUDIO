@@ -5,7 +5,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from scene.ray_builder import RayBuilder
 from PySide6.QtGui import QImage
-from PySide6.QtGui import QPainter
+from PySide6.QtGui import QPainter, QFont
 import cv2
 from camera.camera import Camera
 from scene.ray import Ray
@@ -133,6 +133,17 @@ class Viewport(QOpenGLWidget):
 
         self.face_dragging = False
         self.face_original_vertices = None
+
+        # ---------------------------------
+        # Knife Tool
+        # ---------------------------------
+
+        self.knife_mode = False
+        self.knife_first_point = None
+        self.knife_first_edge = None
+        self.knife_first_face = None
+        self.knife_status = ""
+        self.selected_knife = None
 
         # ---------------------------------
         # Extrude
@@ -1262,6 +1273,15 @@ class Viewport(QOpenGLWidget):
 
         self.draw_hand_cursor_overlay()
 
+        if self.knife_mode:
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.Antialiasing)
+            painter.setPen(Qt.yellow)
+            painter.setFont(QFont("Arial", 14, QFont.Bold))
+            status = self.knife_status or "KNIFE: READY"
+            painter.drawText(20, 30, status)
+            painter.end()
+
     def draw_cube(self):
 
         glBegin(GL_QUADS)
@@ -1757,6 +1777,16 @@ class Viewport(QOpenGLWidget):
             )
 
             tool = self.tool_manager.get_tool()
+
+            # -------------------------------------------------
+            # KNIFE TOOL
+            # -------------------------------------------------
+
+            if self.knife_mode:
+
+                print("KNIFE MOUSE CLICK")
+                self.knife_click(event)
+                return
 
             # -------------------------------------------------
             # EDIT MODE
@@ -2551,6 +2581,10 @@ class Viewport(QOpenGLWidget):
         elif event.button() == Qt.RightButton:
 
             self.right_mouse = False
+
+            if self.knife_mode:
+                print("RIGHT CLICK - CANCEL KNIFE")
+                self._reset_knife()
 
         # ---------------------------------
         # Update Viewport
@@ -7397,6 +7431,222 @@ class Viewport(QOpenGLWidget):
         return True
 
 
+    def recalculate_normals(self):
+        """Recalculate consistent outward face winding for the selected mesh."""
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("NORMALS: Requires EDIT mode")
+                return False
+
+        if self.selected_object is None or self.selected_object.mesh is None:
+            print("NORMALS: No selected mesh")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        if len(mesh.faces) == 0:
+            print("NORMALS: Mesh has no faces")
+            return False
+
+        original_faces = [list(face) for face in mesh.faces]
+
+        valid_faces = []
+        for index, face in enumerate(original_faces):
+            if len(face) < 3:
+                valid_faces.append(False)
+                continue
+            valid = True
+            for vertex_index in face:
+                if vertex_index < 0 or vertex_index >= len(mesh.vertices):
+                    valid = False
+                    break
+            valid_faces.append(valid)
+
+        if not any(valid_faces):
+            print("NORMALS: No valid faces")
+            return False
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(self.selected_object)
+
+        faces = [list(face) for face in original_faces]
+
+        # Build face adjacency from shared undirected edges.
+        edge_faces = {}
+        for face_index, face in enumerate(faces):
+            if len(face) < 3 or not valid_faces[face_index]:
+                continue
+            for i in range(len(face)):
+                a = int(face[i])
+                b = int(face[(i + 1) % len(face)])
+                key = tuple(sorted((a, b)))
+                edge_faces.setdefault(key, []).append(
+                    (face_index, a, b)
+                )
+
+        adjacency = {}
+        for entries in edge_faces.values():
+            if len(entries) < 2:
+                continue
+            for i in range(len(entries)):
+                for j in range(i + 1, len(entries)):
+                    fi, ai, bi = entries[i]
+                    fj, aj, bj = entries[j]
+                    adjacency.setdefault(fi, []).append(
+                        (fj, ai, bi, aj, bj)
+                    )
+                    adjacency.setdefault(fj, []).append(
+                        (fi, aj, bj, ai, bi)
+                    )
+
+        oriented = [False] * len(faces)
+        components = []
+
+        # Propagate winding through every connected face component.
+        for start in range(len(faces)):
+            if not valid_faces[start] or oriented[start]:
+                continue
+
+            oriented[start] = True
+            component = [start]
+            queue = [start]
+
+            while queue:
+                current = queue.pop(0)
+
+                for neighbor_data in adjacency.get(current, []):
+                    neighbor, current_a, current_b, neighbor_a, neighbor_b = neighbor_data
+
+                    if oriented[neighbor]:
+                        continue
+
+                    # Across a manifold edge, adjacent faces must traverse
+                    # the shared edge in opposite directions.
+                    same_direction = (
+                        current_a == neighbor_a
+                        and current_b == neighbor_b
+                    )
+
+                    if same_direction:
+                        faces[neighbor].reverse()
+
+                    oriented[neighbor] = True
+                    component.append(neighbor)
+                    queue.append(neighbor)
+
+            components.append(component)
+
+        # Orient closed/roughly convex components toward the outside using
+        # the mesh centroid. This makes a cube's normals point outward.
+        mesh_center = np.mean(
+            np.asarray(mesh.vertices, dtype=np.float64),
+            axis=0
+        ) if mesh.vertices else np.zeros(3, dtype=np.float64)
+
+        for component in components:
+            score = 0.0
+
+            for face_index in component:
+                face = faces[face_index]
+                if len(face) < 3:
+                    continue
+
+                v0 = np.asarray(mesh.vertices[face[0]], dtype=np.float64)
+                v1 = np.asarray(mesh.vertices[face[1]], dtype=np.float64)
+                v2 = np.asarray(mesh.vertices[face[2]], dtype=np.float64)
+
+                normal = np.cross(v1 - v0, v2 - v0)
+                length = np.linalg.norm(normal)
+                if length < 1e-12:
+                    continue
+
+                face_center = np.mean(
+                    np.asarray(
+                        [mesh.vertices[index] for index in face],
+                        dtype=np.float64
+                    ),
+                    axis=0
+                )
+
+                score += float(
+                    np.dot(normal / length, face_center - mesh_center)
+                )
+
+            if score < 0.0:
+                for face_index in component:
+                    faces[face_index].reverse()
+
+        mesh.faces = [
+            list(face)
+            for face in faces
+        ]
+        mesh.build_edges()
+
+        self.update()
+
+        print(
+            "NORMALS: Recalculated | Faces:",
+            len(mesh.faces)
+        )
+
+        return True
+
+    def flip_selected_normals(self):
+        """Reverse winding of the currently selected faces."""
+
+        if self.main_window is not None:
+            if self.main_window.mode_manager.get_mode() != "EDIT":
+                print("FLIP NORMALS: Requires EDIT mode")
+                return False
+
+        if self.selected_object is None or self.selected_object.mesh is None:
+            print("FLIP NORMALS: No selected mesh")
+            return False
+
+        mesh = self.selected_object.mesh
+
+        selected = set()
+        for index in self.selected_faces:
+            try:
+                index = int(index)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= index < len(mesh.faces):
+                selected.add(index)
+
+        if self.selected_face is not None:
+            try:
+                index = int(self.selected_face)
+                if 0 <= index < len(mesh.faces):
+                    selected.add(index)
+            except (TypeError, ValueError):
+                pass
+
+        if not selected:
+            print("FLIP NORMALS: Select at least one face")
+            return False
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(self.selected_object)
+
+        for face_index in selected:
+            mesh.faces[face_index] = list(
+                reversed(mesh.faces[face_index])
+            )
+
+        mesh.build_edges()
+        self.update()
+
+        print(
+            "FLIP NORMALS: Flipped",
+            len(selected),
+            "face(s)"
+        )
+
+        return True
+
+
     def separate_selected_faces(self):
         """
         Separate the currently selected faces into a new scene object.
@@ -7650,6 +7900,641 @@ class Viewport(QOpenGLWidget):
         return True
 
 
+    def _reset_knife(self):
+
+        self.knife_mode = False
+        self.knife_first_point = None
+        self.knife_first_edge = None
+        self.knife_first_face = None
+        self.knife_status = ""
+
+    def _knife_edge_point(self, ray, obj, edge_index):
+
+        if obj is None or obj.mesh is None:
+            return None
+
+        if edge_index is None:
+            return None
+
+        if edge_index < 0 or edge_index >= len(obj.mesh.edges):
+            return None
+
+        edge = obj.mesh.edges[edge_index]
+
+        if len(edge) != 2:
+            return None
+
+        a = np.array(
+            obj.mesh.vertices[edge[0]],
+            dtype=np.float64
+        ) * np.array(obj.scale, dtype=np.float64)
+        b = np.array(
+            obj.mesh.vertices[edge[1]],
+            dtype=np.float64
+        ) * np.array(obj.scale, dtype=np.float64)
+
+        a += np.array(obj.position, dtype=np.float64)
+        b += np.array(obj.position, dtype=np.float64)
+
+        edge_vector = b - a
+        ray_direction = np.array(
+            ray.direction,
+            dtype=np.float64
+        )
+
+        edge_length_squared = float(
+            np.dot(edge_vector, edge_vector)
+        )
+
+        if edge_length_squared < 1e-12:
+            return None
+
+        ray_length_squared = float(
+            np.dot(ray_direction, ray_direction)
+        )
+
+        if ray_length_squared < 1e-12:
+            return None
+
+        w0 = np.array(
+            ray.origin,
+            dtype=np.float64
+        ) - a
+
+        b_dot = float(
+            np.dot(ray_direction, edge_vector)
+        )
+        d_dot = float(
+            np.dot(ray_direction, w0)
+        )
+        e_dot = float(
+            np.dot(edge_vector, w0)
+        )
+
+        denominator = (
+            ray_length_squared * edge_length_squared
+            - b_dot * b_dot
+        )
+
+        if abs(denominator) < 1e-12:
+            parameter = float(
+                np.dot(
+                    np.array(ray.origin, dtype=np.float64) - a,
+                    edge_vector
+                ) / edge_length_squared
+            )
+        else:
+            parameter = float(
+                (
+                    ray_length_squared * e_dot
+                    - b_dot * d_dot
+                ) / denominator
+            )
+
+        parameter = max(0.0, min(1.0, parameter))
+
+        point = a + edge_vector * parameter
+
+        return point
+
+    def _knife_insert_vertex_on_edge(
+        self,
+        mesh,
+        edge_index,
+        point
+    ):
+
+        if edge_index < 0 or edge_index >= len(mesh.edges):
+            return None
+
+        edge = mesh.edges[edge_index]
+
+        if len(edge) != 2:
+            return None
+
+        a = int(edge[0])
+        b = int(edge[1])
+
+        va = np.array(
+            mesh.vertices[a],
+            dtype=np.float64
+        )
+        vb = np.array(
+            mesh.vertices[b],
+            dtype=np.float64
+        )
+
+        edge_vector = vb - va
+        length_squared = float(
+            np.dot(edge_vector, edge_vector)
+        )
+
+        if length_squared < 1e-12:
+            return None
+
+        # The knife intersection point is calculated in world space,
+        # while mesh.vertices are stored in object/local space. Convert
+        # the point before calculating its position on the local edge.
+        local_point = np.array(point, dtype=np.float64)
+
+        object_position = np.array(
+            self.selected_object.position,
+            dtype=np.float64
+        )
+
+        object_scale = np.array(
+            self.selected_object.scale,
+            dtype=np.float64
+        )
+
+        object_scale[np.abs(object_scale) < 1e-8] = 1.0
+
+        local_point = (
+            local_point - object_position
+        ) / object_scale
+
+        parameter = float(
+            np.dot(
+                local_point - va,
+                edge_vector
+            ) / length_squared
+        )
+
+        parameter = max(0.0, min(1.0, parameter))
+
+        if parameter <= 1e-4:
+            return a
+
+        if parameter >= 1.0 - 1e-4:
+            return b
+
+        new_index = len(mesh.vertices)
+
+        # Use the exact point on the local edge so the new vertex remains
+        # on the mesh even when the object is translated or scaled.
+        local_insert_point = va + edge_vector * parameter
+
+        mesh.vertices.append([
+            float(local_insert_point[0]),
+            float(local_insert_point[1]),
+            float(local_insert_point[2])
+        ])
+
+        # Add the new vertex to every polygon sharing the edge. This keeps
+        # the new cut point connected to the surrounding topology instead
+        # of creating a floating vertex on only the selected face.
+        for face_index, face in enumerate(mesh.faces):
+
+            if len(face) < 2:
+                continue
+
+            new_face = []
+            inserted = False
+
+            for i, vertex_index in enumerate(face):
+
+                new_face.append(vertex_index)
+
+                next_index = face[
+                    (i + 1) % len(face)
+                ]
+
+                if (
+                    not inserted
+                    and (
+                        (
+                            int(vertex_index) == a
+                            and int(next_index) == b
+                        )
+                        or
+                        (
+                            int(vertex_index) == b
+                            and int(next_index) == a
+                        )
+                    )
+                ):
+                    new_face.append(new_index)
+                    inserted = True
+
+            if inserted:
+                mesh.faces[face_index] = new_face
+
+        mesh.build_edges()
+
+        return new_index
+
+    def knife_cut_selected_face(
+        self,
+        obj,
+        face_index,
+        edge_a,
+        point_a,
+        edge_b,
+        point_b
+    ):
+
+        if obj is None or obj.mesh is None:
+            return False
+
+        mesh = obj.mesh
+
+        if face_index < 0 or face_index >= len(mesh.faces):
+            return False
+
+        original_face = list(mesh.faces[face_index])
+
+        if len(original_face) < 3:
+            print("KNIFE: Invalid face")
+            return False
+
+        if edge_a == edge_b:
+            print("KNIFE: Two different boundary edges are required")
+            return False
+
+        edge_a_vertices = set(mesh.edges[edge_a])
+        edge_b_vertices = set(mesh.edges[edge_b])
+
+        if not (
+            edge_a_vertices.issubset(set(original_face))
+            and edge_b_vertices.issubset(set(original_face))
+        ):
+            print("KNIFE: Both clicks must be on the selected face boundary")
+            return False
+
+        if self.history_manager is not None:
+            self.history_manager.save_state(obj)
+
+        vertex_a = self._knife_insert_vertex_on_edge(
+            mesh,
+            edge_a,
+            point_a
+        )
+
+        if vertex_a is None:
+            if self.history_manager is not None:
+                self.history_manager.undo()
+            return False
+
+        # Rebuild edges changed the edge numbering, so find the second
+        # original edge again by its endpoint pair.
+        target_b = set(mesh.edges[edge_b]) if edge_b < len(mesh.edges) else edge_b_vertices
+
+        current_edge_b = None
+        for index, edge in enumerate(mesh.edges):
+            if set(edge) == edge_b_vertices:
+                current_edge_b = index
+                break
+
+        if current_edge_b is None:
+            print("KNIFE: Second boundary edge disappeared")
+            if self.history_manager is not None:
+                self.history_manager.undo()
+            return False
+
+        vertex_b = self._knife_insert_vertex_on_edge(
+            mesh,
+            current_edge_b,
+            point_b
+        )
+
+        if vertex_b is None or vertex_a == vertex_b:
+            print("KNIFE: Invalid cut endpoints")
+            if self.history_manager is not None:
+                self.history_manager.undo()
+            return False
+
+        # The selected face was updated when the boundary vertices were
+        # inserted. Locate the two new vertices in that face and split its
+        # cyclic boundary into two polygons.
+        current_face_index = None
+
+        for index, face in enumerate(mesh.faces):
+            if (
+                vertex_a in face
+                and vertex_b in face
+                and index >= 0
+            ):
+                # Prefer the original face position. Adjacent faces can
+                # also contain both boundary vertices after edge insertion.
+                if index == face_index:
+                    current_face_index = index
+                    break
+
+                if current_face_index is None:
+                    current_face_index = index
+
+        if current_face_index is None:
+            print("KNIFE: Could not locate selected face after edge insertion")
+            if self.history_manager is not None:
+                self.history_manager.undo()
+            return False
+
+        face = list(mesh.faces[current_face_index])
+        position_a = face.index(vertex_a)
+        position_b = face.index(vertex_b)
+
+        if position_a == position_b:
+            return False
+
+        count = len(face)
+
+        if (
+            (position_a + 1) % count == position_b
+            or
+            (position_b + 1) % count == position_a
+        ):
+            print("KNIFE: Cut endpoints are adjacent")
+            if self.history_manager is not None:
+                self.history_manager.undo()
+            return False
+
+        if position_a < position_b:
+            polygon_one = face[position_a:position_b + 1]
+            polygon_two = (
+                face[position_b:]
+                + face[:position_a + 1]
+            )
+        else:
+            polygon_one = face[position_b:position_a + 1]
+            polygon_two = (
+                face[position_a:]
+                + face[:position_b + 1]
+            )
+
+        if len(polygon_one) < 3 or len(polygon_two) < 3:
+            print("KNIFE: Degenerate cut")
+            if self.history_manager is not None:
+                self.history_manager.undo()
+            return False
+
+        # ---------------------------------------------------------
+        # KNIFE: MAKE THE NEW FACE TOPOLOGICALLY INDEPENDENT
+        # ---------------------------------------------------------
+
+        # Duplicate every vertex used by polygon_two.
+        # This prevents G/face movement from dragging the
+        # neighboring faces through shared vertices.
+
+        vertex_map = {}
+
+        for old_vertex_index in polygon_two:
+
+            if old_vertex_index in vertex_map:
+                continue
+
+            old_vertex = mesh.vertices[old_vertex_index]
+
+            new_vertex = [
+                float(old_vertex[0]),
+                float(old_vertex[1]),
+                float(old_vertex[2])
+            ]
+
+            mesh.vertices.append(new_vertex)
+
+            vertex_map[old_vertex_index] = len(mesh.vertices) - 1
+
+
+        # Replace polygon_two with the duplicated vertices.
+        polygon_two_independent = [
+            vertex_map[vertex_index]
+            for vertex_index in polygon_two
+        ]
+
+
+        # Keep the original side unchanged.
+        mesh.faces[current_face_index] = polygon_one
+
+        # Insert the independent Knife side.
+        mesh.faces.insert(
+            current_face_index + 1,
+            polygon_two_independent
+        )
+
+        # Rebuild topology.
+        mesh.build_edges()
+
+        self.selected_faces = {
+            current_face_index + 1
+        }
+
+        self.selected_face = current_face_index + 1
+
+        # Knife-created face must be moved independently.
+        self.face_dragging = False
+
+        # Mark the newly created face as a Knife-isolated face.
+        self.knife_selected_face = current_face_index + 1
+
+        self.selected_vertices.clear()
+        self.selected_edges.clear()
+        self.selected_vertex = None
+        self.selected_edge = None
+
+        mesh.selected_face = self.selected_face
+
+        print(
+            "KNIFE COMPLETE | Faces:",
+            current_face_index,
+            current_face_index + 1,
+            "| Vertices:",
+            vertex_a,
+            vertex_b
+        )
+
+        self._reset_knife()
+        self.update()
+
+        return True
+
+    def knife_click(self, event):
+
+        if self.main_window.mode_manager.get_mode() != "EDIT":
+            print("KNIFE: Requires EDIT mode")
+            return
+
+        obj = self.selected_object
+
+        if obj is None or obj.mesh is None:
+            print("KNIFE: No selected object")
+            return
+
+        ray = RayBuilder.build_ray(
+            event.position().x(),
+            event.position().y(),
+            self,
+            self.camera
+        )
+
+        face_index = self.pick_face(obj, ray)
+
+        if face_index is None:
+            print("KNIFE: Could not pick a face")
+            return
+
+        face_vertices = set(obj.mesh.faces[face_index])
+
+        # Prefer the normal edge picker. If the click is close to a visible
+        # boundary but the strict edge picker misses it, find the closest
+        # edge belonging to the picked face.
+        edge_index = self.pick_edge(obj, ray)
+
+        if (
+            edge_index is not None
+            and not set(obj.mesh.edges[edge_index]).issubset(face_vertices)
+        ):
+            edge_index = None
+
+        if edge_index is None:
+            best_edge = None
+            best_distance = float("inf")
+
+            ray_origin = np.array(ray.origin, dtype=np.float64)
+            ray_direction = np.array(ray.direction, dtype=np.float64)
+
+            direction_length = float(np.linalg.norm(ray_direction))
+
+            if direction_length > 1e-12:
+                ray_direction = ray_direction / direction_length
+
+                for candidate_index, candidate_edge in enumerate(obj.mesh.edges):
+                    if len(candidate_edge) != 2:
+                        continue
+
+                    if not set(candidate_edge).issubset(face_vertices):
+                        continue
+
+                    a = (
+                        np.array(
+                            obj.mesh.vertices[int(candidate_edge[0])],
+                            dtype=np.float64
+                        )
+                        * np.array(obj.scale, dtype=np.float64)
+                        + np.array(obj.position, dtype=np.float64)
+                    )
+                    b = (
+                        np.array(
+                            obj.mesh.vertices[int(candidate_edge[1])],
+                            dtype=np.float64
+                        )
+                        * np.array(obj.scale, dtype=np.float64)
+                        + np.array(obj.position, dtype=np.float64)
+                    )
+
+                    edge_vector = b - a
+                    edge_length_squared = float(
+                        np.dot(edge_vector, edge_vector)
+                    )
+
+                    if edge_length_squared < 1e-12:
+                        continue
+
+                    # Point on the edge nearest the ray.
+                    w = a - ray_origin
+                    cross = np.cross(ray_direction, edge_vector)
+                    cross_length_squared = float(np.dot(cross, cross))
+
+                    if cross_length_squared < 1e-12:
+                        parameter = float(
+                            np.dot(
+                                ray_origin - a,
+                                edge_vector
+                            ) / edge_length_squared
+                        )
+                    else:
+                        parameter = float(
+                            (
+                                np.dot(
+                                    np.cross(w, ray_direction),
+                                    cross
+                                )
+                            )
+                            / cross_length_squared
+                        )
+
+                    parameter = max(0.0, min(1.0, parameter))
+                    edge_point = a + edge_vector * parameter
+
+                    distance = float(
+                        np.linalg.norm(
+                            np.cross(
+                                edge_point - ray_origin,
+                                ray_direction
+                            )
+                        )
+                    )
+
+                    if distance < best_distance:
+                        best_distance = distance
+                        best_edge = candidate_index
+
+            # Only accept the fallback when the ray is genuinely close to
+            # the face boundary. This prevents a click in the middle of a
+            # face from silently becoming a knife endpoint.
+            if best_edge is None or best_distance > 0.20:
+                print("KNIFE: Click closer to a face boundary edge")
+                return
+
+            edge_index = best_edge
+
+        edge_vertices = set(obj.mesh.edges[edge_index])
+
+        if not edge_vertices.issubset(face_vertices):
+            print("KNIFE: Edge is not on the picked face")
+            return
+
+        point = self._knife_edge_point(
+            ray,
+            obj,
+            edge_index
+        )
+
+        if point is None:
+            print("KNIFE: Could not calculate edge point")
+            return
+
+        if self.knife_first_face is None:
+
+            self.knife_mode = True
+            self.knife_first_point = np.array(
+                point,
+                dtype=np.float64
+            )
+            self.knife_first_edge = edge_index
+            self.knife_first_face = face_index
+            self.knife_status = "KNIFE: FIRST POINT SET — click another edge"
+
+            self.selected_face = face_index
+            self.selected_faces = {face_index}
+            obj.mesh.selected_face = face_index
+
+            print(
+                "KNIFE FIRST POINT | Face:",
+                face_index,
+                "| Edge:",
+                edge_index,
+                "| Point:",
+                point
+            )
+
+            self.update()
+            return
+
+        if face_index != self.knife_first_face:
+            self.knife_status = "KNIFE: SECOND POINT MUST BE ON SAME FACE"
+            print("KNIFE: Second point must be on the same face")
+            self.update()
+            return
+
+        self.knife_cut_selected_face(
+            obj,
+            self.knife_first_face,
+            self.knife_first_edge,
+            self.knife_first_point,
+            edge_index,
+            point
+        )
+
     def keyPressEvent(self, event):
 
         print("VIEWPORT KEY:", event.key())
@@ -7661,6 +8546,17 @@ class Viewport(QOpenGLWidget):
         if event.key() == Qt.Key_Escape:
 
             print("ESC - CANCEL CURRENT OPERATION")
+
+            # ---------------------------------
+            # CANCEL KNIFE
+            # ---------------------------------
+
+            if self.knife_mode:
+
+                print("CANCEL KNIFE")
+                self._reset_knife()
+                self.update()
+                return
 
             # ---------------------------------
             # CANCEL EXTRUDE
@@ -8122,6 +9018,24 @@ class Viewport(QOpenGLWidget):
             return
 
         # ---------------------------------
+        # KNIFE TOOL
+        # ---------------------------------
+        elif (
+            event.key() == Qt.Key_K
+            and self.main_window.mode_manager.get_mode() == "EDIT"
+        ):
+
+            self.knife_mode = True
+            self.knife_first_point = None
+            self.knife_first_edge = None
+            self.knife_first_face = None
+
+            self.knife_status = "KNIFE: READY — click the first face edge"
+            print("KNIFE TOOL")
+            self.update()
+            return
+
+        # ---------------------------------
         # MOVE
         # ---------------------------------
         elif event.key() == Qt.Key_G:
@@ -8131,6 +9045,32 @@ class Viewport(QOpenGLWidget):
             self.tool_manager.set_tool(
                 ToolManager.MOVE
             )
+
+            # In Edit Mode, G should be immediately move 
+            # the currently selected face/edge/vertex
+            if (
+                self.main_window.mode_manager.get_mode() == "EDIT"
+                and self.selected_object is not None
+            ):
+                
+                if self.face_mode and self.selected_faces:
+
+                    self.face_dragging = True
+                    self.vertex_dragging = False
+                    self.edge_dragging = False
+
+                    self.last_mouse_x = (
+                        self.width() // 2
+                    )
+
+                    self.last_mouse_y = (
+                        self.height() // 2
+                    )
+
+                    print(
+                        "FACE MOVE START:",
+                        self.selected_faces
+                    )
 
             self.update()
 
@@ -8208,6 +9148,34 @@ class Viewport(QOpenGLWidget):
             print("SPLIT")
 
             self.split_selected_edit_element()
+
+            return
+
+        # ---------------------------------
+        # RECALCULATE NORMALS
+        # ---------------------------------
+        elif (
+            event.key() == Qt.Key_N
+            and event.modifiers() & Qt.ShiftModifier
+        ):
+
+            print("RECALCULATE NORMALS")
+
+            self.recalculate_normals()
+
+            return
+
+        # ---------------------------------
+        # FLIP SELECTED NORMALS
+        # ---------------------------------
+        elif (
+            event.key() == Qt.Key_N
+            and event.modifiers() & Qt.AltModifier
+        ):
+
+            print("FLIP SELECTED NORMALS")
+
+            self.flip_selected_normals()
 
             return
 
