@@ -1,0 +1,8 @@
+PySide6
+PyOpenGL
+numpy==1.26.4
+opencv-python==4.11.0.86
+mediapipe==0.10.21
+cvzone
+mysql-connector-python
+ollama
