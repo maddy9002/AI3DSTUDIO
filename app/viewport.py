@@ -134,6 +134,21 @@ class Viewport(QOpenGLWidget):
         self.edge_slide_factor = 0.0
 
         # ---------------------------------
+        # Vertex Slide
+        # ---------------------------------
+
+        self.vertex_slide_dragging = False
+        self.vertex_slide_g_time = 0.0
+        self.vertex_slide_index = None
+        self.vertex_slide_neighbor = None
+        self.vertex_slide_original_positions = {}
+        self.vertex_slide_start_mouse_x = 0
+        self.vertex_slide_start_mouse_y = 0
+        self.vertex_slide_screen_axis = None
+        self.vertex_slide_screen_length = 0.0
+        self.vertex_slide_factor = 0.0
+
+        # ---------------------------------
         # Loop Cut Sliding
         # ---------------------------------
 
@@ -1287,7 +1302,6 @@ class Viewport(QOpenGLWidget):
         # -------------------------
         self.upload_webcam_texture()
         self.draw_webcam_texture()
-
 
     def paintEvent(self, event):
 
@@ -2530,6 +2544,24 @@ class Viewport(QOpenGLWidget):
         if event.button() == Qt.LeftButton:
 
             # ---------------------------------
+            # Vertex Slide Confirmation
+            # ---------------------------------
+
+            if self.vertex_slide_dragging:
+                print("VERTEX SLIDE CONFIRMED | Factor:", self.vertex_slide_factor)
+                self.vertex_slide_dragging = False
+                self.vertex_slide_index = None
+                self.vertex_slide_neighbor = None
+                self.vertex_slide_original_positions = {}
+                self.vertex_slide_screen_axis = None
+                self.vertex_slide_screen_length = 0.0
+                self.vertex_slide_factor = 0.0
+                self.vertex_slide_g_time = 0.0
+                self.vertex_dragging = False
+                self.update()
+                return
+
+            # ---------------------------------
             # Vertex Drag
             # ---------------------------------
 
@@ -2638,6 +2670,11 @@ class Viewport(QOpenGLWidget):
         elif event.button() == Qt.RightButton:
 
             self.right_mouse = False
+
+            if self.vertex_slide_dragging:
+                print("RIGHT CLICK - CANCEL VERTEX SLIDE")
+                self.cancel_vertex_slide()
+                return
 
             if self.edge_slide_dragging:
 
@@ -3349,6 +3386,19 @@ class Viewport(QOpenGLWidget):
 
             self.update()
 
+            return
+
+        # ---------------------------------
+        # VERTEX SLIDE
+        # ---------------------------------
+
+        if (
+            self.vertex_slide_dragging
+            and self.selected_object is not None
+            and self.main_window.mode_manager.get_mode() == "EDIT"
+        ):
+            print("VERTEX SLIDE MOUSE MOVE:", event.x(), event.y())
+            self.update_vertex_slide(event)
             return
 
         # ---------------------------------
@@ -5294,7 +5344,6 @@ class Viewport(QOpenGLWidget):
 
         return True
 
-
     def bridge_selected_edge_loops(self):
 
         """
@@ -5723,7 +5772,6 @@ class Viewport(QOpenGLWidget):
         )
 
         return True
-
 
     def bevel_selected_edge(self, bevel_ratio=0.20):
 
@@ -6522,6 +6570,7 @@ class Viewport(QOpenGLWidget):
         )
 
         return True
+    
     def merge_selected_vertices(self):
         """
         Merge all currently selected vertices into their average position.
@@ -6781,8 +6830,6 @@ class Viewport(QOpenGLWidget):
 
         return True
 
-
-
     def connect_selected_vertices(self):
         """Connect exactly two selected vertices by splitting shared faces."""
 
@@ -6929,7 +6976,6 @@ class Viewport(QOpenGLWidget):
             split_count
         )
         return True
-
 
     def split_selected_edit_element(self):
         """
@@ -7531,7 +7577,6 @@ class Viewport(QOpenGLWidget):
         )
         return True
 
-
     def recalculate_normals(self):
         """Recalculate consistent outward face winding for the selected mesh."""
 
@@ -7746,7 +7791,6 @@ class Viewport(QOpenGLWidget):
         )
 
         return True
-
 
     def separate_selected_faces(self):
         """
@@ -7999,7 +8043,6 @@ class Viewport(QOpenGLWidget):
         )
 
         return True
-
 
     def _reset_knife(self):
 
@@ -8664,6 +8707,278 @@ class Viewport(QOpenGLWidget):
         self.edge_slide_g_time = 0.0
         self.update()
 
+    def cancel_vertex_slide(self):
+        """Restore the vertex position and clear the active Vertex Slide."""
+        if self.selected_object is not None:
+            mesh = self.selected_object.mesh
+            if mesh is not None:
+                for index, original in self.vertex_slide_original_positions.items():
+                    if 0 <= index < len(mesh.vertices):
+                        mesh.vertices[index] = [float(original[0]), float(original[1]), float(original[2])]
+                mesh.build_edges()
+
+        self.vertex_slide_dragging = False
+        self.vertex_slide_index = None
+        self.vertex_slide_neighbor = None
+        self.vertex_slide_original_positions = {}
+        self.vertex_slide_candidates = []
+        self.vertex_slide_screen_axis = None
+        self.vertex_slide_screen_length = 0.0
+        self.vertex_slide_factor = 0.0
+        self.vertex_slide_g_time = 0.0
+        self.vertex_dragging = False
+        self.update()
+
+    def begin_vertex_slide(self):
+        """Begin a basic topology-constrained slide for one selected vertex."""
+        if self.selected_object is None:
+            print("VERTEX SLIDE: No selected object")
+            return False
+        if self.main_window.mode_manager.get_mode() != "EDIT":
+            print("VERTEX SLIDE: Requires EDIT mode")
+            return False
+        if not self.vertex_mode:
+            print("VERTEX SLIDE: Requires VERTEX mode")
+            return False
+        if len(self.selected_vertices) != 1:
+            print("VERTEX SLIDE: Select exactly one vertex")
+            return False
+
+        mesh = self.selected_object.mesh
+        if mesh is None:
+            print("VERTEX SLIDE: Selected object has no mesh")
+            return False
+
+        vertex_index = int(next(iter(self.selected_vertices)))
+        if vertex_index < 0 or vertex_index >= len(mesh.vertices):
+            print("VERTEX SLIDE: Invalid selected vertex")
+            return False
+
+        neighbors = []
+        for edge in mesh.edges:
+            if len(edge) != 2:
+                continue
+            a, b = int(edge[0]), int(edge[1])
+            if a == vertex_index and 0 <= b < len(mesh.vertices):
+                neighbors.append(b)
+            elif b == vertex_index and 0 <= a < len(mesh.vertices):
+                neighbors.append(a)
+
+        neighbors = sorted(set(neighbors))
+        if not neighbors:
+            print("VERTEX SLIDE: Selected vertex has no connected edges")
+            return False
+
+        # Prefer the connected edge with the strongest visible screen direction.
+        # The camera basis is used to estimate how each candidate edge appears.
+        try:
+            camera_right = np.asarray(self.camera.get_right(), dtype=np.float64)
+            camera_up = np.asarray(self.camera.get_up(), dtype=np.float64)
+        except Exception:
+            camera_right = np.array([1.0, 0.0, 0.0], dtype=np.float64)
+            camera_up = np.array([0.0, 1.0, 0.0], dtype=np.float64)
+
+        origin = np.asarray(mesh.vertices[vertex_index], dtype=np.float64)
+        candidates = []
+        originals = {
+            vertex_index: np.asarray(
+                mesh.vertices[vertex_index],
+                dtype=np.float64
+            ).copy()
+        }
+
+        for neighbor in neighbors:
+            target = np.asarray(
+                mesh.vertices[neighbor],
+                dtype=np.float64
+            )
+
+            vector = target - origin
+            length = float(np.linalg.norm(vector))
+
+            if length < 1e-8:
+                continue
+
+            screen_vector = np.array([
+                float(np.dot(vector, camera_right)),
+                -float(np.dot(vector, camera_up))
+            ], dtype=np.float64)
+
+            screen_length = float(np.linalg.norm(screen_vector))
+
+            if screen_length < 1e-8:
+                continue
+
+            axis = screen_vector / screen_length
+
+            candidates.append({
+                "neighbor": neighbor,
+                "axis": axis,
+                "length": screen_length
+            })
+
+            originals[neighbor] = target.copy()
+
+        if not candidates:
+            print("VERTEX SLIDE: Could not determine a connected edge")
+            return False
+
+        self.vertex_slide_candidates = candidates
+        self.vertex_slide_original_positions = originals
+        self.vertex_slide_index = vertex_index
+        self.vertex_slide_neighbor = candidates[0]["neighbor"]
+        self.vertex_slide_start_mouse_x = self.mouse_x
+        self.vertex_slide_start_mouse_y = self.mouse_y
+        self.vertex_slide_screen_length = max(
+            candidate["length"] for candidate in candidates
+        )
+        self.vertex_slide_factor = 0.0
+        self.vertex_dragging = False
+        self.edge_dragging = False
+        self.face_dragging = False
+        self.vertex_slide_dragging = True
+        print("VERTEX SLIDE START | Vertex:", vertex_index, "Neighbor:", self.vertex_slide_neighbor)
+        self.update()
+        return True
+
+    def update_vertex_slide(self, event):
+        """Slide the active vertex along a connected edge."""
+        if not self.vertex_slide_dragging or self.selected_object is None:
+            return
+
+        mesh = self.selected_object.mesh
+        vertex_index = self.vertex_slide_index
+
+        if mesh is None or vertex_index is None:
+            return
+
+        if vertex_index not in self.vertex_slide_original_positions:
+            return
+
+        candidates = getattr(self, "vertex_slide_candidates", [])
+
+        print("SLIDE DEBUG | Vertex:", vertex_index)
+        print("SLIDE DEBUG | Candidates:", candidates)
+        print("SLIDE DEBUG | Original positions:", self.vertex_slide_original_positions)
+
+        if not candidates:
+            return
+
+        mouse_delta = np.array([
+            float(event.x() - self.vertex_slide_start_mouse_x),
+            float(event.y() - self.vertex_slide_start_mouse_y)
+        ], dtype=np.float64)
+
+        if float(np.linalg.norm(mouse_delta)) < 1.0:
+            return
+
+        # Choose the connected edge most closely aligned with mouse movement.
+        best_candidate = max(
+            candidates,
+            key=lambda candidate: abs(
+                float(np.dot(mouse_delta, candidate["axis"]))
+            )
+        )
+
+        neighbor_index = best_candidate["neighbor"]
+        axis = best_candidate["axis"]
+
+        if neighbor_index not in self.vertex_slide_original_positions:
+            return
+
+        projected_delta = float(np.dot(mouse_delta, axis))
+
+        # Keep the movement constrained to the selected connected edge.
+        factor = projected_delta / 150.0
+        factor = max(-1.0, min(1.0, factor))
+
+        original = self.vertex_slide_original_positions[vertex_index]
+        neighbor = self.vertex_slide_original_positions[neighbor_index]
+
+        position = original + (neighbor - original) * factor
+
+        print("SLIDE DEBUG | Neighbor:", neighbor_index)
+        print("SLIDE DEBUG | Factor:", factor)
+        print("SLIDE DEBUG | New position:", position)
+
+        mesh.vertices[vertex_index] = [
+            float(position[0]),
+            float(position[1]),
+            float(position[2])
+        ]
+
+        self.vertex_slide_neighbor = neighbor_index
+        self.vertex_slide_screen_axis = axis
+        self.vertex_slide_factor = factor
+
+        mesh.build_edges()
+        self.update()
+        
+    def update_vertex_slide(self, event):
+        """Slide the active vertex along a connected edge."""
+        if not self.vertex_slide_dragging or self.selected_object is None:
+            return
+
+        mesh = self.selected_object.mesh
+        vertex_index = self.vertex_slide_index
+
+        if mesh is None or vertex_index is None:
+            return
+
+        if vertex_index not in self.vertex_slide_original_positions:
+            return
+
+        candidates = getattr(self, "vertex_slide_candidates", [])
+
+        if not candidates:
+            return
+
+        mouse_delta = np.array([
+            float(event.x() - self.vertex_slide_start_mouse_x),
+            float(event.y() - self.vertex_slide_start_mouse_y)
+        ], dtype=np.float64)
+
+        if float(np.linalg.norm(mouse_delta)) < 1.0:
+            return
+
+        # Choose the connected edge most closely aligned with mouse movement.
+        best_candidate = max(
+            candidates,
+            key=lambda candidate: abs(
+                float(np.dot(mouse_delta, candidate["axis"]))
+            )
+        )
+
+        neighbor_index = best_candidate["neighbor"]
+        axis = best_candidate["axis"]
+
+        if neighbor_index not in self.vertex_slide_original_positions:
+            return
+
+        projected_delta = float(np.dot(mouse_delta, axis))
+
+        # Keep the movement constrained to the selected connected edge.
+        factor = projected_delta / 150.0
+        factor = max(-1.0, min(1.0, factor))
+
+        original = self.vertex_slide_original_positions[vertex_index]
+        neighbor = self.vertex_slide_original_positions[neighbor_index]
+
+        position = original + (neighbor - original) * factor
+
+        mesh.vertices[vertex_index] = [
+            float(position[0]),
+            float(position[1]),
+            float(position[2])
+        ]
+
+        self.vertex_slide_neighbor = neighbor_index
+        self.vertex_slide_screen_axis = axis
+        self.vertex_slide_factor = factor
+
+        mesh.build_edges()
+        self.update()
+
     def begin_edge_slide(self):
         """Start topology-constrained Edge Slide for the active selected edge."""
 
@@ -9074,6 +9389,15 @@ class Viewport(QOpenGLWidget):
 
                 return
             #-------------------------------
+            # Cancel vertex slide
+            #-------------------------------
+
+            if self.vertex_slide_dragging:
+                print("CANCEL VERTEX SLIDE")
+                self.cancel_vertex_slide()
+                return
+
+            #-------------------------------
             # Cancel vertex drag
             #-------------------------------
 
@@ -9480,21 +9804,35 @@ class Viewport(QOpenGLWidget):
 
             if (
                 self.main_window.mode_manager.get_mode() == "EDIT"
+                and self.vertex_mode
+                and len(self.selected_vertices) == 1
+                and not self.vertex_slide_dragging
+            ):
+                self.tool_manager.set_tool(ToolManager.MOVE)
+                if now - self.vertex_slide_g_time <= 0.8:
+                    self.vertex_slide_g_time = 0.0
+                    print("VERTEX SLIDE")
+                    self.begin_vertex_slide()
+                else:
+                    self.vertex_slide_g_time = now
+                    print("VERTEX SLIDE: Press G again")
+                self.update()
+                return
+
+            if (
+                self.main_window.mode_manager.get_mode() == "EDIT"
                 and self.edge_mode
                 and len(self.selected_edges) == 1
                 and not self.edge_slide_dragging
             ):
-
                 self.tool_manager.set_tool(ToolManager.MOVE)
-
-                if now - self.edge_slide_g_time <= 0.45:
+                if now - self.edge_slide_g_time <= 0.8:
                     self.edge_slide_g_time = 0.0
                     print("EDGE SLIDE")
                     self.begin_edge_slide()
                 else:
                     self.edge_slide_g_time = now
                     print("EDGE SLIDE: Press G again")
-
                 self.update()
                 return
 
@@ -10082,7 +10420,7 @@ class Viewport(QOpenGLWidget):
             return
 
         super().keyPressEvent(event)
-        
+
     def pick_object(self):
 
         if len(self.scene_objects) == 0:
@@ -10397,4 +10735,3 @@ class Viewport(QOpenGLWidget):
         self.selected_edges.clear()
 
         self.update()
-
