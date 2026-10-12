@@ -1,105 +1,183 @@
 # AI3DSTUDIO
 
-## AI-Powered 3D Designing Environment
+AI3DSTUDIO is a Python-based 3D editor designed to bring 3D modeling, object manipulation, hand tracking, and AI-assisted interactions together in one application.
 
-AI3DSTUDIO is an AI-powered 3D designing application designed to make 3D modeling more accessible through a combination of traditional 3D interaction, AI commands, hand gestures, and an interactive web-based studio.
+The project aims to provide an interactive 3D design environment inspired by applications such as Blender, Unity, and Unreal Engine.
 
-The project combines a Python desktop application with a browser-based version so that the core idea of AI-assisted 3D design can be explored both as a desktop application and as an accessible web application.
+## Features
 
----
+* **3D Viewport:** Interact with objects in a 3D environment.
+* **3D Modeling:** Create and manipulate 3D objects.
+* **Object Selection:** Select objects and interact with scene elements.
+* **Transform Tools:** Move, rotate, and scale objects.
+* **Hand Tracking:** Explore hands-free interaction.
+* **AI-Assisted Interaction:** Integrate AI capabilities into the 3D design workflow.
+* **Scene Management:** Organize objects and work with scenes.
+* **Keyboard and Mouse Controls:** Interact with the editor using conventional input methods.
 
-## Project Overview
+*Note: AI3DSTUDIO is under active development. Features and their availability may change between versions.*
 
-Traditional 3D modeling applications often require users to learn a large number of tools, menus, shortcuts, and interaction techniques.
+## Requirements
 
-AI3DSTUDIO explores a different approach.
+Before installing AI3DSTUDIO, ensure you have the following:
 
-The goal is to allow users to interact with 3D objects using:
+* Windows 10 or later
+* Python 3.11 (64-bit recommended)
+* Git
+* A compatible graphics environment
+* A webcam for hand-tracking functionality
+* Additional software or services for features that depend on them, such as MySQL and Ollama
 
-- Mouse
-- Keyboard
-- AI commands
-- Hand gestures
-- 3D transformation tools
-- Object selection
-- Scene hierarchy
-- Web-based interaction
+Some features may require additional configuration.
 
-The system is being developed as an experimental AI-assisted 3D design environment.
+## Installation
 
----
+Follow these steps to set up AI3DSTUDIO on your computer.
 
-# Main Features
+### 1. Install Git and Python
 
-## 1. 3D Viewport
+Install Git and Python 3.11 (64-bit) if they are not already installed.
 
-AI3DSTUDIO provides an interactive 3D viewport for working with objects.
+Verify your Python installation:
 
-The viewport supports:
+```powershell
+python --version
+```
 
-- 3D camera navigation
-- Orbit
-- Zoom
-- Grid
-- Coordinate axes
-- Object selection
-- Object transformations
-- Real-time scene updates
+The recommended version for this project is Python 3.11.
 
----
+### 2. Clone the repository
 
-## 2. Primitive Creation
+Open PowerShell or a terminal and run:
 
-The application supports basic 3D primitives.
+```powershell
+git clone https://github.com/maddy9002/AI3DSTUDIO.git
+cd AI3DSTUDIO
+```
 
-Current primitives include:
+### 3. Create a virtual environment
 
-- Cube
-- Sphere
-- Cylinder
+Create an isolated Python environment for the project's dependencies:
 
-These objects can be selected and transformed inside the scene.
+```powershell
+py -3.11 -m venv venv311
+```
 
----
+### 4. Activate the virtual environment
 
-## 3. Object Selection
+Run:
 
-Objects can be selected through the viewport or through the scene hierarchy.
+```powershell
+.\venv311\Scripts\Activate.ps1
+```
 
-The selection system is designed to provide the foundation for more advanced object interaction.
+After activation, your terminal should display `(venv311)`.
 
-Selection is important because future AI and gesture-based operations can act directly on the selected object.
+If PowerShell blocks the activation script, consult the official Python documentation for alternative activation methods.
 
----
+### 5. Install the dependencies
 
-## 4. Transformation Tools
+Upgrade pip:
 
-AI3DSTUDIO includes transformation tools inspired by professional 3D applications.
+```powershell
+python -m pip install --upgrade pip
+```
 
-Current transformation modes include:
+Install the required Python packages:
 
-- Select
-- Move
-- Rotate
-- Scale
+```powershell
+python -m pip install -r requirements.txt
+```
 
-The desktop version also contains interactive transformation gizmos.
+Wait for the installation to finish.
 
-The web version provides equivalent transformation functionality through browser-based controls.
+### 6. Verify the installation
 
----
+Check for dependency conflicts:
 
-# AI Command System
+```powershell
+python -m pip check
+```
 
-AI3DSTUDIO includes an AI command interface that allows users to describe simple operations using text.
-
-Examples include:
+If the dependencies are consistent, pip should report:
 
 ```text
-Create cube
-Create sphere
-Create cylinder
-Delete object
-Move object
-Rotate object
-Scale object
+No broken requirements found.
+```
+
+### 7. Launch AI3DSTUDIO
+
+From the repository's root directory, run:
+
+```powershell
+python app/main.py
+```
+
+This is the main application launch command.
+
+## Important Note for Readers
+
+**The main application entry point is `app/main.py`.**
+
+The following files in the repository root are not the main application entry point:
+
+* `main_saved.py`
+* `sample_main.py`
+
+Do not use these files to launch the primary application. To start AI3DSTUDIO, use:
+
+```powershell
+python app/main.py
+```
+
+The project also contains other files with similar names for development or saved versions. The correct entry point for the application is `app/main.py`.
+
+## Dependency Information
+
+The `requirements.txt` file specifies the Python packages needed by AI3DSTUDIO.
+
+The project currently specifies compatible versions of NumPy, OpenCV, and MediaPipe to reduce dependency conflicts.
+
+The current dependency configuration includes:
+
+* PySide6
+* PyOpenGL
+* NumPy
+* OpenCV
+* MediaPipe
+* cvzone
+* MySQL Connector/Python
+* Ollama
+
+Installing the Python dependencies does not automatically install or configure external services such as MySQL Server or Ollama. Features that depend on these services may require additional setup.
+
+## Project Structure
+
+The repository contains several directories and files responsible for different parts of the application.
+
+| Directory or file  | Purpose                                                  |
+| ------------------ | -------------------------------------------------------- |
+| `app/`             | Main application code and supporting modules             |
+| `app/main.py`      | Main application entry point                             |
+| `requirements.txt` | Python dependency list                                   |
+| `README.md`        | Project documentation                                    |
+| `main_saved.py`    | Saved Python file; not the main application entry point  |
+| `sample_main.py`   | Sample Python file; not the main application entry point |
+
+Other project directories contain modules for the viewport, scene management, tools, AI functionality, and related systems.
+
+## Development Status
+
+AI3DSTUDIO is an actively developed project. New modeling capabilities, interaction methods, and AI-assisted features are being developed over time.
+
+Some features may be incomplete or require additional configuration.
+
+## Contributing
+
+Developers interested in experimenting with AI3DSTUDIO can clone the repository, create a virtual environment, install the dependencies, and explore the source code.
+
+Before submitting changes, test the affected functionality and verify that the application launches correctly.
+
+## License
+
+Please refer to the repository for licensing information.
