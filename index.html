@@ -832,37 +832,103 @@ document
     .getElementById("loadButton")
     .onclick=loadScene;
 
-renderer.domElement.addEventListener(
-    "pointerdown",
-    event=>{
+let mouseTransform = null;
 
-        const rect=
-            renderer.domElement.getBoundingClientRect();
+function updatePointerFromEvent(event) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+}
 
-        pointer.x=
-            ((event.clientX-rect.left)/
-            rect.width)*2-1;
+function getObjectHit(event) {
+    updatePointerFromEvent(event);
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObjects(objects, false);
+    return hits.length ? hits[0] : null;
+}
 
-        pointer.y=
-            -((event.clientY-rect.top)/
-            rect.height)*2+1;
+renderer.domElement.addEventListener("pointerdown", event => {
+    if (event.button !== 0) return;
 
-        raycaster.setFromCamera(
-            pointer,
-            camera
-        );
-
-        const hit=
-            raycaster.intersectObjects(
-                objects,
-                false
-            )[0];
-
-        if(hit){
-            selectObject(hit.object);
-        }
+    const hit = getObjectHit(event);
+    if (!hit) {
+        if (currentTool === "select") selectObject(null);
+        return;
     }
-);
+
+    selectObject(hit.object);
+    if (currentTool === "select") return;
+
+    event.preventDefault();
+    renderer.domElement.setPointerCapture(event.pointerId);
+    controls.enabled = false;
+
+    const object = hit.object;
+    const cameraDirection = new THREE.Vector3();
+    camera.getWorldDirection(cameraDirection);
+    const movePlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+        cameraDirection, object.position.clone()
+    );
+
+    updatePointerFromEvent(event);
+    raycaster.setFromCamera(pointer, camera);
+    const startIntersection = new THREE.Vector3();
+    const hasStartIntersection = raycaster.ray.intersectPlane(movePlane, startIntersection);
+
+    mouseTransform = {
+        pointerId: event.pointerId,
+        object,
+        tool: currentTool,
+        startX: event.clientX,
+        startY: event.clientY,
+        startPosition: object.position.clone(),
+        startRotation: object.rotation.clone(),
+        startScale: object.scale.clone(),
+        movePlane,
+        startIntersection: hasStartIntersection ? startIntersection.clone() : null
+    };
+});
+
+renderer.domElement.addEventListener("pointermove", event => {
+    if (!mouseTransform || event.pointerId !== mouseTransform.pointerId) return;
+
+    const state = mouseTransform;
+    const object = state.object;
+    const dx = event.clientX - state.startX;
+    const dy = event.clientY - state.startY;
+
+    if (state.tool === "move") {
+        updatePointerFromEvent(event);
+        raycaster.setFromCamera(pointer, camera);
+        const currentIntersection = new THREE.Vector3();
+        const intersects = raycaster.ray.intersectPlane(state.movePlane, currentIntersection);
+        if (intersects && state.startIntersection) {
+            object.position.copy(state.startPosition).add(
+                currentIntersection.sub(state.startIntersection)
+            );
+        }
+    } else if (state.tool === "rotate") {
+        object.rotation.copy(state.startRotation);
+        object.rotation.y += dx * 0.01;
+        object.rotation.x += dy * 0.01;
+    } else if (state.tool === "scale") {
+        const factor = Math.max(0.05, Math.exp((dx - dy) * 0.01));
+        object.scale.copy(state.startScale).multiplyScalar(factor);
+    }
+
+    if (typeof updateUI === "function") updateUI();
+});
+
+function finishMouseTransform(event) {
+    if (!mouseTransform) return;
+    if (event && event.pointerId !== mouseTransform.pointerId) return;
+    mouseTransform = null;
+    controls.enabled = true;
+}
+
+renderer.domElement.addEventListener("pointerup", finishMouseTransform);
+renderer.domElement.addEventListener("pointercancel", finishMouseTransform);
+renderer.domElement.addEventListener("lostpointercapture", finishMouseTransform);
 
 function saveScene(){
 
