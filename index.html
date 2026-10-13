@@ -1527,8 +1527,8 @@ renderer.domElement.addEventListener("pointerdown", event => {
     controls.enabled = false;
 
     const object = hit.object;
-    const cameraDirection = new THREE.Vector3();
-    camera.getWorldDirection(cameraDirection);
+    // Keep mouse movement on the horizontal XZ plane (constant Y).
+    const cameraDirection = new THREE.Vector3(0, 1, 0);
     const movePlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
         cameraDirection, object.position.clone()
     );
@@ -2143,16 +2143,14 @@ function manipulateHand(
             .setFromMatrixColumn(
                 camera.matrixWorld,
                 0
-            )
-            .normalize();
+            );
+        right.y = 0;
+        right.normalize();
 
-        const up=
-            new THREE.Vector3()
-            .setFromMatrixColumn(
-                camera.matrixWorld,
-                1
-            )
-            .normalize();
+        const forward = new THREE.Vector3();
+        camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
 
         selected.position.copy(
             grabState.position
@@ -2164,9 +2162,10 @@ function manipulateHand(
         );
 
         selected.position.addScaledVector(
-            up,
-            -dy*5
+            forward,
+            dy*5
         );
+        selected.position.y = grabState.position.y;
     }
 
     if(currentTool==="rotate"){
