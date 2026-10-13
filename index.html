@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>AI3DSTUDIO Web Studio</title>
+<link rel="stylesheet" href="https://db.onlinewebfonts.com/c/60e08b003f770224a213af909d54e1a0?family=Sqeron">
 
 <style>
 *{box-sizing:border-box}
@@ -15,7 +16,7 @@ html,body{
     overflow:hidden;
     background:#05070a;
     color:#e8edf2;
-    font-family:Arial,Helvetica,sans-serif
+    font-family:'Sqeron',Arial,Helvetica,sans-serif
 }
 
 button,input{
@@ -548,6 +549,403 @@ button, input {
     }
 }
 
+
+
+/* SQERON TYPE SYSTEM + MINIMAL FLOATING GLASS UI */
+@font-face {
+    font-family: "Sqeron";
+    src: url("https://db.onlinewebfonts.com/t/60e08b003f770224a213af909d54e1a0.woff2") format("woff2"),
+         url("https://db.onlinewebfonts.com/t/60e08b003f770224a213af909d54e1a0.woff") format("woff");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+:root {
+    --glass-bg: rgba(13, 18, 27, .52);
+    --glass-bg-strong: rgba(13, 18, 27, .68);
+    --glass-border: rgba(210, 228, 255, .12);
+    --glass-highlight: rgba(255, 255, 255, .055);
+    --accent: #ff8a24;
+}
+html, body {
+    background: #060910;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+/* Use Sqeron where its geometric sci-fi character helps, while keeping long
+   instructions and editable values highly legible. */
+.brand,
+.section-title,
+.tool,
+.panel h3,
+.bottom-item,
+.status,
+#cameraButton {
+    font-family: "Sqeron", "Segoe UI", Arial, sans-serif !important;
+    font-weight: 400;
+}
+.brand {
+    letter-spacing: 2.2px;
+    font-size: 20px;
+    color: #ff9a42;
+}
+.section-title, .panel h3 {
+    letter-spacing: 1.5px;
+}
+.tool {
+    letter-spacing: .65px;
+    font-size: 10px;
+}
+/* Minimal, translucent panels floating above the 3D viewport. */
+header, #tools, #right, #bottom {
+    border: 1px solid rgba(215, 230, 255, .12);
+    background: rgba(11, 16, 25, .50);
+    backdrop-filter: blur(24px) saturate(135%);
+    -webkit-backdrop-filter: blur(24px) saturate(135%);
+    box-shadow: 0 14px 42px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255,255,255,.045);
+}
+header {
+    width: min(680px, calc(100vw - 36px));
+    min-height: 56px;
+    top: 14px;
+    border-radius: 16px;
+    padding: 9px 18px;
+}
+#tools {
+    top: 86px;
+    left: 14px;
+    bottom: 82px;
+    width: 148px;
+    padding: 12px 10px;
+    border-radius: 16px;
+}
+#right {
+    top: 86px;
+    right: 14px;
+    bottom: 82px;
+    width: 248px;
+    padding: 9px;
+    border-radius: 16px;
+}
+.panel {
+    background: rgba(255,255,255,.025);
+    border-color: rgba(225,235,255,.07);
+    box-shadow: none;
+}
+#bottom {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    left: 50%;
+    bottom: 14px;
+    width: min(780px, calc(100vw - 340px));
+    min-height: 52px;
+    padding: 8px 10px;
+    border-radius: 15px;
+}
+#command {
+    flex: 1 1 220px;
+    background: rgba(255,255,255,.045);
+    border-color: rgba(220,230,255,.10);
+    border-radius: 10px;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+#hint {
+    left: 178px;
+    bottom: 78px;
+    max-width: min(460px, calc(100vw - 350px));
+    padding: 9px 12px;
+    border-color: rgba(220,230,255,.10);
+    background: rgba(11,16,25,.48);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+#cameraButton {
+    letter-spacing: .5px;
+}
+@media (max-width: 900px) {
+    header { width: calc(100vw - 24px); top: 8px; }
+    #tools { top: 76px; left: 8px; bottom: 74px; width: 126px; }
+    #right { top: 76px; right: 8px; bottom: 74px; width: 205px; }
+    #bottom { bottom: 8px; width: calc(100vw - 16px); }
+    #hint { display: none; }
+}
+@media (max-width: 620px) {
+    #tools { width: 112px; }
+    #right { display: none; }
+    header { padding: 8px 11px; }
+    .brand { font-size: 15px; }
+    .status { font-size: 8px; }
+    #bottom { gap: 6px; }
+    .bottom-item { font-size: 8px; }
+}
+
+
+
+/* FINAL PASS: minimal transparent floating-glass workspace */
+:root {
+    --glass-line: rgba(210, 228, 255, .105);
+    --glass-fill: rgba(13, 19, 30, .34);
+    --glass-fill-heavy: rgba(13, 19, 30, .48);
+    --glass-shine: rgba(255, 255, 255, .055);
+}
+html, body, #app {
+    background: #070a10;
+}
+#viewport {
+    inset: 0 !important;
+    background:
+        radial-gradient(ellipse at 50% 48%, rgba(34, 48, 68, .16), transparent 58%),
+        #070a10 !important;
+}
+header, #tools, #right, #bottom, #hint {
+    background: var(--glass-fill) !important;
+    border: 1px solid var(--glass-line) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(125%);
+    backdrop-filter: blur(28px) saturate(125%);
+    box-shadow: 0 12px 38px rgba(0,0,0,.17),
+                inset 0 1px 0 var(--glass-shine) !important;
+}
+header {
+    top: 12px;
+    min-height: 52px;
+    width: min(620px, calc(100vw - 32px));
+    padding: 8px 16px;
+    border-radius: 14px;
+}
+.brand { font-size: 18px; letter-spacing: 2px; }
+.subtitle { opacity: .75; }
+#tools {
+    top: 78px;
+    left: 12px;
+    bottom: 76px;
+    width: 136px;
+    padding: 10px 8px;
+    border-radius: 14px;
+}
+.section-title { margin: 8px 4px; font-size: 9px; }
+.tool {
+    padding: 9px 9px;
+    margin: 3px 0;
+    border-radius: 8px;
+    background: rgba(255,255,255,.025);
+}
+.tool:hover { background: rgba(255,255,255,.075); }
+.tool.active { background: rgba(255,138,36,.11); }
+#right {
+    top: 78px;
+    right: 12px;
+    bottom: 76px;
+    width: 226px;
+    padding: 8px;
+    border-radius: 14px;
+}
+.panel {
+    padding: 11px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.018) !important;
+    border: 1px solid rgba(220,232,255,.055) !important;
+}
+.panel h3 { margin-bottom: 8px; }
+.object-row { padding: 7px; }
+#bottom {
+    left: 50%;
+    bottom: 12px;
+    width: min(700px, calc(100vw - 330px));
+    min-height: 48px;
+    padding: 7px 9px;
+    gap: 9px;
+    border-radius: 13px;
+    background: var(--glass-fill-heavy) !important;
+}
+#command {
+    padding: 10px 12px;
+    background: rgba(255,255,255,.035) !important;
+    border: 1px solid rgba(220,230,255,.09) !important;
+    border-radius: 9px;
+}
+#hint {
+    left: 160px;
+    bottom: 70px;
+    border-radius: 9px;
+    background: rgba(13,19,30,.32) !important;
+}
+#webcamWrap { border-color: rgba(220,230,255,.10); border-radius: 8px; }
+#tools, #right { scrollbar-width: thin; scrollbar-color: rgba(190,205,225,.22) transparent; }
+#tools::-webkit-scrollbar, #right::-webkit-scrollbar { width: 5px; }
+#tools::-webkit-scrollbar-thumb, #right::-webkit-scrollbar-thumb {
+    background: rgba(190,205,225,.20); border-radius: 10px;
+}
+@media (max-width: 900px) {
+    header { top: 8px; width: calc(100vw - 20px); }
+    #tools { top: 70px; left: 8px; bottom: 68px; width: 120px; }
+    #right { top: 70px; right: 8px; bottom: 68px; width: 194px; }
+    #bottom { bottom: 8px; width: calc(100vw - 16px); }
+}
+@media (max-width: 620px) {
+    #tools { top: 68px; bottom: 68px; width: 108px; }
+    #right { display: none; }
+    #bottom { left: 124px; transform: none; width: calc(100vw - 132px); }
+    .bottom-item { display: none; }
+    header { width: calc(100vw - 16px); }
+}
+
+
+
+/* TRANSPARENT FLOATING GLASS — stronger transparency, viewport remains visible */
+:root {
+    --glass-bg: rgba(13, 18, 27, 0.16) !important;
+    --glass-bg-strong: rgba(13, 18, 27, 0.22) !important;
+    --glass-border: rgba(220, 235, 255, 0.19) !important;
+    --glass-highlight: rgba(255, 255, 255, 0.10) !important;
+}
+header,
+#tools,
+#right,
+#bottom {
+    background: rgba(10, 15, 24, 0.18) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(125%) !important;
+    backdrop-filter: blur(14px) saturate(125%) !important;
+    border-color: rgba(220, 235, 255, 0.18) !important;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.14),
+                inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+}
+#bottom {
+    background: rgba(10, 15, 24, 0.22) !important;
+}
+.panel {
+    background: rgba(255, 255, 255, 0.025) !important;
+    border-color: rgba(220, 235, 255, 0.09) !important;
+    box-shadow: none !important;
+}
+.tool {
+    background: rgba(255, 255, 255, 0.018) !important;
+}
+.tool:hover {
+    background: rgba(255, 255, 255, 0.075) !important;
+}
+.tool.active,
+.object-row.selected {
+    background: rgba(255, 138, 36, 0.13) !important;
+}
+#command {
+    background: rgba(255, 255, 255, 0.035) !important;
+    border-color: rgba(220, 235, 255, 0.12) !important;
+}
+#hint {
+    background: rgba(10, 15, 24, 0.20) !important;
+    border-color: rgba(220, 235, 255, 0.16) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+}
+
+
+
+/* GLOBAL SQERON ENFORCEMENT: no UI element should use a different font. */
+html, body, body *, body *::before, body *::after,
+button, input, select, textarea, option, optgroup,
+button *, input *, select *, textarea *, svg text, canvas {
+    font-family: "Sqeron" !important;
+}
+
+/* Form controls must not revert to the browser/OS default font. */
+button, input, select, textarea {
+    font-family: "Sqeron" !important;
+}
+
+
+
+/* FINAL REFINEMENT: outline-only floating panels + balanced Sqeron typography */
+:root {
+    --glass-bg: transparent !important;
+    --glass-bg-strong: transparent !important;
+    --glass-fill: transparent !important;
+    --glass-fill-heavy: transparent !important;
+    --glass-line: rgba(205, 224, 255, .52) !important;
+    --glass-border: rgba(205, 224, 255, .52) !important;
+    --glass-highlight: transparent !important;
+    --glass-shine: transparent !important;
+}
+html, body, #app { font-family: 'Sqeron', Arial, Helvetica, sans-serif !important; }
+body, button, input, select, textarea, option, label, small, strong, em,
+header, #tools, #right, #bottom, #hint, .panel, .tool, .object-row,
+.brand, .subtitle, .status, .section-title, #command, #webcamWrap {
+    font-family: 'Sqeron', Arial, Helvetica, sans-serif !important;
+}
+header, #tools, #right, #bottom, #hint {
+    background: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(205, 224, 255, .52) !important;
+}
+.panel {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 1px solid rgba(205, 224, 255, .27) !important;
+}
+.tool, .object-row, #command, #webcamWrap {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+.tool { border: 1px solid transparent !important; }
+.tool:hover, .tool:focus-visible {
+    background: transparent !important;
+    border-color: rgba(205, 224, 255, .62) !important;
+    outline: none;
+}
+.tool.active {
+    background: transparent !important;
+    border-color: rgba(255, 138, 36, .9) !important;
+    box-shadow: inset 2px 0 0 rgba(255, 138, 36, .9) !important;
+}
+#command {
+    border: 1px solid rgba(205, 224, 255, .48) !important;
+    color: #f0f4fa !important;
+}
+#command:focus { outline: 1px solid rgba(255, 138, 36, .85) !important; }
+#webcamWrap { border: 1px solid rgba(205, 224, 255, .35) !important; }
+#hint { border-color: rgba(205, 224, 255, .4) !important; }
+
+/* Improve readability without letting labels overwhelm the viewport. */
+.brand { font-size: clamp(15px, 1.25vw, 19px) !important; line-height: 1.25; }
+.subtitle { font-size: clamp(9px, .72vw, 11px) !important; line-height: 1.4; }
+.status { font-size: clamp(10px, .78vw, 12px) !important; line-height: 1.4; }
+.section-title, .panel h3 { font-size: clamp(10px, .78vw, 12px) !important; line-height: 1.35; }
+.tool, .object-row, #command, #hint, .panel, label, input, button, select, textarea {
+    font-size: clamp(11px, .86vw, 13px) !important;
+    line-height: 1.45;
+}
+.tool { min-height: 34px; padding: 7px 8px !important; }
+#command { min-height: 36px; }
+@media (max-width: 900px) {
+    .brand { font-size: clamp(13px, 2vw, 16px) !important; }
+    .subtitle { font-size: 9px !important; }
+    .status, .tool, .object-row, #command, .panel, label, input, button, select, textarea {
+        font-size: 11px !important;
+    }
+}
+@media (max-width: 620px) {
+    .brand { font-size: 13px !important; letter-spacing: 1px !important; }
+    .status { font-size: 10px !important; }
+    .tool { font-size: 10px !important; padding: 6px 5px !important; }
+}
+
+
+
+/* SUBTLE BLUR: keep the panels completely transparent and outline-only. */
+header, #tools, #right, #bottom, #hint {
+    background: transparent !important;
+    -webkit-backdrop-filter: blur(3px) !important;
+    backdrop-filter: blur(3px) !important;
+    box-shadow: none !important;
+}
+.panel, .tool, .object-row, #command, #webcamWrap {
+    background: transparent !important;
+    -webkit-backdrop-filter: blur(2px) !important;
+    backdrop-filter: blur(2px) !important;
+    box-shadow: none !important;
+}
 </style>
 </head>
 
@@ -1082,6 +1480,9 @@ document
 
         objects.length=0;
         selected=null;
+        grabState=null;
+        mouseTransform=null;
+        controls.enabled=true;
 
         updateUI();
     };
@@ -1204,10 +1605,19 @@ function saveScene(){
         })
     );
 
-    localStorage.setItem(
-        "ai3dstudio-web-scene",
-        JSON.stringify(data)
-    );
+    try {
+        localStorage.setItem(
+            "ai3dstudio-web-scene",
+            JSON.stringify(data)
+        );
+        systemStatus.textContent = "SAVED";
+        window.setTimeout(() => {
+            if (systemStatus.textContent === "SAVED") systemStatus.textContent = "ONLINE";
+        }, 1800);
+    } catch (error) {
+        console.error("SCENE SAVE ERROR", error);
+        alert("Could not save the scene in this browser. Check available storage.");
+    }
 }
 
 function loadScene(){
@@ -1229,7 +1639,17 @@ function loadScene(){
 
     objects.length=0;
 
-    JSON.parse(raw).forEach(data=>{
+    let savedObjects;
+    try {
+        savedObjects = JSON.parse(raw);
+        if (!Array.isArray(savedObjects)) throw new Error("Saved scene format is invalid");
+    } catch (error) {
+        console.error("SCENE LOAD ERROR", error);
+        alert("The saved scene could not be read. Create a new scene and save again.");
+        return;
+    }
+
+    savedObjects.forEach(data=>{
 
         const object=new THREE.Mesh(
             geometry(data.type),
@@ -1255,9 +1675,16 @@ function loadScene(){
         objects.push(object);
     });
 
+    grabState = null;
+
     selectObject(
         objects[0]||null
     );
+
+    systemStatus.textContent = "LOADED";
+    window.setTimeout(() => {
+        if (systemStatus.textContent === "LOADED") systemStatus.textContent = "ONLINE";
+    }, 1800);
 }
 
 function runCommand(text){
@@ -1538,6 +1965,9 @@ function processHands(result){
     const hand=
         result.landmarks[0];
 
+    // Use the same hand for gesture calculations and manipulation.
+    currentHand = hand;
+
     const index=
         hand[8];
 
@@ -1657,7 +2087,8 @@ function processHands(result){
                     rotation:
                         target.rotation.clone(),
                     scale:
-                        target.scale.clone()
+                        target.scale.clone(),
+                    pinchDistance: distance3D(index, thumb)
                 };
             }
         }
@@ -1751,18 +2182,20 @@ function manipulateHand(
 
     if(currentTool==="scale"){
 
-        const pinchDistance=
-            distance3D(
-                handFromLastResult()[4],
-                handFromLastResult()[8]
-            );
+        const pinchDistance = currentHand
+            ? distance3D(currentHand[4], currentHand[8])
+            : grabState.pinchDistance;
 
-        const factor=
-            THREE.MathUtils.clamp(
-                pinchDistance/0.075,
-                0.35,
-                3
-            );
+        const initialPinchDistance = Math.max(
+            grabState.pinchDistance || 0.075,
+            0.001
+        );
+
+        const factor = THREE.MathUtils.clamp(
+            pinchDistance / initialPinchDistance,
+            0.35,
+            3
+        );
 
         selected.scale.copy(
             grabState.scale
