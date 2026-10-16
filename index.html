@@ -1,2396 +1,2857 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>AI3DSTUDIO Web Studio</title>
-<link rel="stylesheet" href="https://db.onlinewebfonts.com/c/60e08b003f770224a213af909d54e1a0?family=Sqeron">
-
-<style>
-*{box-sizing:border-box}
-
-html,body{
-    margin:0;
-    width:100%;
-    height:100%;
-    overflow:hidden;
-    background:#05070a;
-    color:#e8edf2;
-    font-family:'Sqeron',Arial,Helvetica,sans-serif
-}
-
-button,input{
-    font:inherit
-}
-
-#app{
-    width:100%;
-    height:100%;
-    display:grid;
-    grid-template-columns:210px 1fr 280px;
-    grid-template-rows:68px 1fr 58px
-}
-
-header{
-    grid-column:1/4;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:0 22px;
-    background:#090c10;
-    border-bottom:1px solid #20262d
-}
-
-.brand{
-    color:#ff8a24;
-    font-size:22px;
-    font-weight:bold;
-    letter-spacing:2px
-}
-
-.subtitle{
-    color:#68737e;
-    font-size:10px;
-    letter-spacing:2px;
-    margin-top:4px
-}
-
-.status{
-    color:#7d8994;
-    font-size:11px;
-    letter-spacing:1px
-}
-
-.status span{
-    color:#ff8a24
-}
-
-#tools{
-    grid-column:1;
-    grid-row:2;
-    padding:14px;
-    background:#080b0f;
-    border-right:1px solid #20262d
-}
-
-.section-title{
-    color:#68737e;
-    font-size:10px;
-    letter-spacing:2px;
-    margin:8px 4px 10px
-}
-
-.tool{
-    width:100%;
-    margin:4px 0;
-    padding:10px;
-    border:1px solid #242b33;
-    border-radius:6px;
-    background:#0d1116;
-    color:#b9c1c9;
-    cursor:pointer;
-    text-align:left
-}
-
-.tool:hover,
-.tool.active{
-    border-color:#ff8a24;
-    color:#ff9a43;
-    background:#20150d
-}
-
-#viewport{
-    position:relative;
-    grid-column:2;
-    grid-row:2;
-    overflow:hidden;
-    background:#030507
-}
-
-#scene{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%
-}
-
-#handOverlay{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    pointer-events:none
-}
-
-#cursor{
-    position:absolute;
-    width:24px;
-    height:24px;
-    border:2px solid #ff8a24;
-    border-radius:50%;
-    box-shadow:0 0 18px #ff8a24;
-    transform:translate(-50%,-50%);
-    display:none;
-    pointer-events:none;
-    z-index:20
-}
-
-#cursor:after{
-    content:"";
-    position:absolute;
-    width:5px;
-    height:5px;
-    left:7px;
-    top:7px;
-    background:white;
-    border-radius:50%
-}
-
-#hint{
-    position:absolute;
-    left:16px;
-    bottom:15px;
-    padding:8px 10px;
-    background:rgba(5,7,10,.85);
-    border:1px solid #20262d;
-    border-radius:5px;
-    color:#77828d;
-    font-size:10px;
-    z-index:10
-}
-
-#right{
-    grid-column:3;
-    grid-row:2;
-    padding:14px;
-    background:#080b0f;
-    border-left:1px solid #20262d;
-    overflow:auto
-}
-
-.panel{
-    padding:12px;
-    margin-bottom:12px;
-    background:#0b0f14;
-    border:1px solid #20262d;
-    border-radius:7px
-}
-
-.panel h3{
-    margin:0 0 10px;
-    color:#727d88;
-    font-size:10px;
-    letter-spacing:2px
-}
-
-.object-row{
-    padding:8px;
-    margin:2px 0;
-    border-radius:4px;
-    color:#bdc5cd;
-    font-size:12px;
-    cursor:pointer
-}
-
-.object-row.selected{
-    color:#ff9a43;
-    background:#21170f
-}
-
-.prop{
-    display:flex;
-    justify-content:space-between;
-    padding:5px 0;
-    color:#89949f;
-    font-size:11px
-}
-
-.prop b{
-    color:#dce1e5;
-    font-weight:normal
-}
-
-#webcamWrap{
-    position:relative;
-    width:100%;
-    aspect-ratio:16/10;
-    overflow:hidden;
-    background:#020304;
-    border:1px solid #252c34;
-    border-radius:5px
-}
-
-#webcam{
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    transform:scaleX(-1)
-}
-
-#webcamCanvas{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    pointer-events:none
-}
-
-#cameraButton{
-    width:100%;
-    margin-top:8px;
-    padding:8px;
-    border:1px solid #ff8a24;
-    border-radius:5px;
-    background:#17100a;
-    color:#ff9a43;
-    cursor:pointer
-}
-
-#cameraStatus{
-    margin-top:7px;
-    color:#7e8994;
-    font-size:10px;
-    line-height:1.4
-}
-
-#bottom{
-    grid-column:1/4;
-    grid-row:3;
-    display:flex;
-    align-items:center;
-    gap:14px;
-    padding:8px 14px;
-    background:#090c10;
-    border-top:1px solid #20262d
-}
-
-#command{
-    flex:1;
-    padding:10px 12px;
-    background:#0c1015;
-    border:1px solid #252c34;
-    border-radius:5px;
-    color:#e9edf2;
-    outline:none
-}
-
-#command:focus{
-    border-color:#ff8a24
-}
-
-.bottom-item{
-    color:#7f8a96;
-    font-size:10px;
-    letter-spacing:1px
-}
-
-.bottom-item span{
-    color:#ff8a24
-}
-
-
-/* =========================================================
-   FLOATING GLASS UI — AI3DSTUDIO
-   Overrides the fixed panel layout with translucent overlays.
-========================================================= */
-:root {
-    --glass-bg: rgba(15, 20, 29, 0.68);
-    --glass-bg-strong: rgba(12, 16, 24, 0.84);
-    --glass-border: rgba(220, 235, 255, 0.15);
-    --glass-highlight: rgba(255, 255, 255, 0.08);
-    --accent: #ff8a24;
-}
-
-html, body {
-    background: #070a10;
-}
-
-#app {
-    display: block !important;
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    background: radial-gradient(ellipse at 50% 40%, #202b3b 0%, #0b1019 55%, #05070b 100%);
-}
-
-#viewport {
-    position: absolute !important;
-    inset: 0 !important;
-    z-index: 0;
-    background: transparent;
-}
-
-#scene {
-    background: transparent;
-}
-
-header {
-    position: absolute;
-    z-index: 30;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(720px, calc(100vw - 32px));
-    min-height: 60px;
-    padding: 10px 20px;
-    border: 1px solid var(--glass-border);
-    border-radius: 18px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(22px) saturate(145%);
-    -webkit-backdrop-filter: blur(22px) saturate(145%);
-    box-shadow: 0 18px 55px rgba(0,0,0,.28), inset 0 1px 0 var(--glass-highlight);
-}
-
-.brand {
-    font-size: 19px;
-    letter-spacing: 2.5px;
-    text-shadow: 0 0 22px rgba(255,138,36,.18);
-}
-
-.subtitle {
-    color: #a3adbd;
-    letter-spacing: 1.6px;
-    font-size: 9px;
-}
-
-.status {
-    color: #b4bfce;
-    font-size: 10px;
-    white-space: nowrap;
-}
-
-#tools {
-    position: absolute !important;
-    z-index: 25;
-    top: 96px;
-    left: 16px;
-    bottom: 88px;
-    width: 166px;
-    padding: 14px 12px;
-    overflow-y: auto;
-    border: 1px solid var(--glass-border);
-    border-radius: 18px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    box-shadow: 0 18px 50px rgba(0,0,0,.26), inset 0 1px 0 var(--glass-highlight);
-}
-
-.section-title {
-    color: #9ba8ba;
-    font-size: 9px;
-    letter-spacing: 1.8px;
-    margin: 9px 4px 8px;
-}
-
-.tool {
-    border: 1px solid transparent;
-    border-radius: 10px;
-    background: rgba(255,255,255,.035);
-    color: #d1d9e5;
-    padding: 10px;
-    transition: background .16s ease, border-color .16s ease, transform .16s ease;
-}
-
-.tool:hover {
-    background: rgba(255,255,255,.09);
-    border-color: rgba(255,255,255,.12);
-    transform: translateX(2px);
-}
-
-.tool.active {
-    color: #ffb36e;
-    border-color: rgba(255,138,36,.48);
-    background: rgba(255,138,36,.15);
-    box-shadow: inset 0 0 18px rgba(255,138,36,.05), 0 0 18px rgba(255,138,36,.07);
-}
-
-#right {
-    position: absolute !important;
-    z-index: 25;
-    top: 96px;
-    right: 16px;
-    bottom: 88px;
-    width: 260px;
-    padding: 10px;
-    overflow-y: auto;
-    border: 1px solid var(--glass-border);
-    border-radius: 18px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    box-shadow: 0 18px 50px rgba(0,0,0,.26), inset 0 1px 0 var(--glass-highlight);
-}
-
-.panel {
-    padding: 13px;
-    margin-bottom: 10px;
-    border: 1px solid rgba(255,255,255,.075);
-    border-radius: 12px;
-    background: rgba(255,255,255,.035);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
-}
-
-.panel h3 {
-    color: #aab7c9;
-    letter-spacing: 1.6px;
-}
-
-.object-row {
-    border: 1px solid transparent;
-    border-radius: 7px;
-    transition: background .15s ease;
-}
-
-.object-row:hover {
-    background: rgba(255,255,255,.06);
-}
-
-.object-row.selected {
-    color: #ffb36e;
-    border-color: rgba(255,138,36,.25);
-    background: rgba(255,138,36,.13);
-}
-
-#bottom {
-    position: absolute !important;
-    z-index: 30;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 16px;
-    width: min(850px, calc(100vw - 32px));
-    min-height: 56px;
-    padding: 9px 12px;
-    border: 1px solid var(--glass-border);
-    border-radius: 17px;
-    background: var(--glass-bg-strong);
-    backdrop-filter: blur(22px) saturate(145%);
-    -webkit-backdrop-filter: blur(22px) saturate(145%);
-    box-shadow: 0 18px 55px rgba(0,0,0,.32), inset 0 1px 0 var(--glass-highlight);
-    gap: 12px;
-}
-
-#command {
-    min-width: 0;
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 11px;
-    background: rgba(255,255,255,.055);
-    padding: 11px 14px;
-}
-
-#command:focus {
-    border-color: rgba(255,138,36,.65);
-    box-shadow: 0 0 0 3px rgba(255,138,36,.08);
-}
-
-#hint {
-    left: 198px;
-    bottom: 90px;
-    border: 1px solid var(--glass-border);
-    border-radius: 10px;
-    background: rgba(12,16,24,.58);
-    color: #aeb9c8;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-}
-
-#cursor {
-    z-index: 40;
-}
-
-button, input {
-    outline-offset: 3px;
-}
-
-@media (max-width: 900px) {
-    header {
-        top: 10px;
-        min-height: 54px;
-        padding: 8px 12px;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrintForge 3D — Precision CAD & 3D Printing Studio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Three.js r128 & Controls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            cad: {
+              bg: '#0b0f17',
+              panel: '#111827',
+              surface: '#1e293b',
+              border: '#334155',
+              accent: '#06b6d4',
+              amber: '#f59e0b',
+              danger: '#ef4444',
+              success: '#10b981'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
     }
-    .brand { font-size: 16px; }
-    .subtitle { display: none; }
-    #tools {
-        top: 80px;
-        left: 10px;
-        bottom: 82px;
-        width: 130px;
-        padding: 10px 8px;
+    input, select, textarea {
+      user-select: text;
     }
-    #right {
-        top: 80px;
-        right: 10px;
-        bottom: 82px;
-        width: 210px;
-        padding: 8px;
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0b0f17;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
     }
-    #bottom {
-        bottom: 10px;
-        width: calc(100vw - 20px);
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
     }
-    #hint {
-        display: none;
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
     }
-}
-
-@media (max-width: 620px) {
-    #right {
-        display: none;
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
     }
-    #tools {
-        width: 116px;
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
     }
-    header {
-        width: calc(100vw - 20px);
+
+    /* Custom Range Sliders */
+    input[type="range"].cad-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #1e293b;
+      height: 6px;
+      border-radius: 999px;
+      outline: none;
     }
-    .status {
-        font-size: 8px;
+    input[type="range"].cad-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #06b6d4;
+      cursor: pointer;
+      border: 2px solid #0f172a;
+      box-shadow: 0 0 6px rgba(6, 182, 212, 0.6);
+      transition: transform 0.1s ease;
     }
-}
-
-
-
-/* SQERON TYPE SYSTEM + MINIMAL FLOATING GLASS UI */
-@font-face {
-    font-family: "Sqeron";
-    src: url("https://db.onlinewebfonts.com/t/60e08b003f770224a213af909d54e1a0.woff2") format("woff2"),
-         url("https://db.onlinewebfonts.com/t/60e08b003f770224a213af909d54e1a0.woff") format("woff");
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-}
-:root {
-    --glass-bg: rgba(13, 18, 27, .52);
-    --glass-bg-strong: rgba(13, 18, 27, .68);
-    --glass-border: rgba(210, 228, 255, .12);
-    --glass-highlight: rgba(255, 255, 255, .055);
-    --accent: #ff8a24;
-}
-html, body {
-    background: #060910;
-    font-family: Inter, "Segoe UI", Arial, sans-serif;
-}
-/* Use Sqeron where its geometric sci-fi character helps, while keeping long
-   instructions and editable values highly legible. */
-.brand,
-.section-title,
-.tool,
-.panel h3,
-.bottom-item,
-.status,
-#cameraButton {
-    font-family: "Sqeron", "Segoe UI", Arial, sans-serif !important;
-    font-weight: 400;
-}
-.brand {
-    letter-spacing: 2.2px;
-    font-size: 20px;
-    color: #ff9a42;
-}
-.section-title, .panel h3 {
-    letter-spacing: 1.5px;
-}
-.tool {
-    letter-spacing: .65px;
-    font-size: 10px;
-}
-/* Minimal, translucent panels floating above the 3D viewport. */
-header, #tools, #right, #bottom {
-    border: 1px solid rgba(215, 230, 255, .12);
-    background: rgba(11, 16, 25, .50);
-    backdrop-filter: blur(24px) saturate(135%);
-    -webkit-backdrop-filter: blur(24px) saturate(135%);
-    box-shadow: 0 14px 42px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255,255,255,.045);
-}
-header {
-    width: min(680px, calc(100vw - 36px));
-    min-height: 56px;
-    top: 14px;
-    border-radius: 16px;
-    padding: 9px 18px;
-}
-#tools {
-    top: 86px;
-    left: 14px;
-    bottom: 82px;
-    width: 148px;
-    padding: 12px 10px;
-    border-radius: 16px;
-}
-#right {
-    top: 86px;
-    right: 14px;
-    bottom: 82px;
-    width: 248px;
-    padding: 9px;
-    border-radius: 16px;
-}
-.panel {
-    background: rgba(255,255,255,.025);
-    border-color: rgba(225,235,255,.07);
-    box-shadow: none;
-}
-#bottom {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    left: 50%;
-    bottom: 14px;
-    width: min(780px, calc(100vw - 340px));
-    min-height: 52px;
-    padding: 8px 10px;
-    border-radius: 15px;
-}
-#command {
-    flex: 1 1 220px;
-    background: rgba(255,255,255,.045);
-    border-color: rgba(220,230,255,.10);
-    border-radius: 10px;
-    font-family: Inter, "Segoe UI", Arial, sans-serif;
-}
-#hint {
-    left: 178px;
-    bottom: 78px;
-    max-width: min(460px, calc(100vw - 350px));
-    padding: 9px 12px;
-    border-color: rgba(220,230,255,.10);
-    background: rgba(11,16,25,.48);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-}
-#cameraButton {
-    letter-spacing: .5px;
-}
-@media (max-width: 900px) {
-    header { width: calc(100vw - 24px); top: 8px; }
-    #tools { top: 76px; left: 8px; bottom: 74px; width: 126px; }
-    #right { top: 76px; right: 8px; bottom: 74px; width: 205px; }
-    #bottom { bottom: 8px; width: calc(100vw - 16px); }
-    #hint { display: none; }
-}
-@media (max-width: 620px) {
-    #tools { width: 112px; }
-    #right { display: none; }
-    header { padding: 8px 11px; }
-    .brand { font-size: 15px; }
-    .status { font-size: 8px; }
-    #bottom { gap: 6px; }
-    .bottom-item { font-size: 8px; }
-}
-
-
-
-/* FINAL PASS: minimal transparent floating-glass workspace */
-:root {
-    --glass-line: rgba(210, 228, 255, .105);
-    --glass-fill: rgba(13, 19, 30, .34);
-    --glass-fill-heavy: rgba(13, 19, 30, .48);
-    --glass-shine: rgba(255, 255, 255, .055);
-}
-html, body, #app {
-    background: #070a10;
-}
-#viewport {
-    inset: 0 !important;
-    background:
-        radial-gradient(ellipse at 50% 48%, rgba(34, 48, 68, .16), transparent 58%),
-        #070a10 !important;
-}
-header, #tools, #right, #bottom, #hint {
-    background: var(--glass-fill) !important;
-    border: 1px solid var(--glass-line) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(125%);
-    backdrop-filter: blur(28px) saturate(125%);
-    box-shadow: 0 12px 38px rgba(0,0,0,.17),
-                inset 0 1px 0 var(--glass-shine) !important;
-}
-header {
-    top: 12px;
-    min-height: 52px;
-    width: min(620px, calc(100vw - 32px));
-    padding: 8px 16px;
-    border-radius: 14px;
-}
-.brand { font-size: 18px; letter-spacing: 2px; }
-.subtitle { opacity: .75; }
-#tools {
-    top: 78px;
-    left: 12px;
-    bottom: 76px;
-    width: 136px;
-    padding: 10px 8px;
-    border-radius: 14px;
-}
-.section-title { margin: 8px 4px; font-size: 9px; }
-.tool {
-    padding: 9px 9px;
-    margin: 3px 0;
-    border-radius: 8px;
-    background: rgba(255,255,255,.025);
-}
-.tool:hover { background: rgba(255,255,255,.075); }
-.tool.active { background: rgba(255,138,36,.11); }
-#right {
-    top: 78px;
-    right: 12px;
-    bottom: 76px;
-    width: 226px;
-    padding: 8px;
-    border-radius: 14px;
-}
-.panel {
-    padding: 11px;
-    margin-bottom: 8px;
-    border-radius: 10px;
-    background: rgba(255,255,255,.018) !important;
-    border: 1px solid rgba(220,232,255,.055) !important;
-}
-.panel h3 { margin-bottom: 8px; }
-.object-row { padding: 7px; }
-#bottom {
-    left: 50%;
-    bottom: 12px;
-    width: min(700px, calc(100vw - 330px));
-    min-height: 48px;
-    padding: 7px 9px;
-    gap: 9px;
-    border-radius: 13px;
-    background: var(--glass-fill-heavy) !important;
-}
-#command {
-    padding: 10px 12px;
-    background: rgba(255,255,255,.035) !important;
-    border: 1px solid rgba(220,230,255,.09) !important;
-    border-radius: 9px;
-}
-#hint {
-    left: 160px;
-    bottom: 70px;
-    border-radius: 9px;
-    background: rgba(13,19,30,.32) !important;
-}
-#webcamWrap { border-color: rgba(220,230,255,.10); border-radius: 8px; }
-#tools, #right { scrollbar-width: thin; scrollbar-color: rgba(190,205,225,.22) transparent; }
-#tools::-webkit-scrollbar, #right::-webkit-scrollbar { width: 5px; }
-#tools::-webkit-scrollbar-thumb, #right::-webkit-scrollbar-thumb {
-    background: rgba(190,205,225,.20); border-radius: 10px;
-}
-@media (max-width: 900px) {
-    header { top: 8px; width: calc(100vw - 20px); }
-    #tools { top: 70px; left: 8px; bottom: 68px; width: 120px; }
-    #right { top: 70px; right: 8px; bottom: 68px; width: 194px; }
-    #bottom { bottom: 8px; width: calc(100vw - 16px); }
-}
-@media (max-width: 620px) {
-    #tools { top: 68px; bottom: 68px; width: 108px; }
-    #right { display: none; }
-    #bottom { left: 124px; transform: none; width: calc(100vw - 132px); }
-    .bottom-item { display: none; }
-    header { width: calc(100vw - 16px); }
-}
-
-
-
-/* TRANSPARENT FLOATING GLASS — stronger transparency, viewport remains visible */
-:root {
-    --glass-bg: rgba(13, 18, 27, 0.16) !important;
-    --glass-bg-strong: rgba(13, 18, 27, 0.22) !important;
-    --glass-border: rgba(220, 235, 255, 0.19) !important;
-    --glass-highlight: rgba(255, 255, 255, 0.10) !important;
-}
-header,
-#tools,
-#right,
-#bottom {
-    background: rgba(10, 15, 24, 0.18) !important;
-    -webkit-backdrop-filter: blur(14px) saturate(125%) !important;
-    backdrop-filter: blur(14px) saturate(125%) !important;
-    border-color: rgba(220, 235, 255, 0.18) !important;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.14),
-                inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
-}
-#bottom {
-    background: rgba(10, 15, 24, 0.22) !important;
-}
-.panel {
-    background: rgba(255, 255, 255, 0.025) !important;
-    border-color: rgba(220, 235, 255, 0.09) !important;
-    box-shadow: none !important;
-}
-.tool {
-    background: rgba(255, 255, 255, 0.018) !important;
-}
-.tool:hover {
-    background: rgba(255, 255, 255, 0.075) !important;
-}
-.tool.active,
-.object-row.selected {
-    background: rgba(255, 138, 36, 0.13) !important;
-}
-#command {
-    background: rgba(255, 255, 255, 0.035) !important;
-    border-color: rgba(220, 235, 255, 0.12) !important;
-}
-#hint {
-    background: rgba(10, 15, 24, 0.20) !important;
-    border-color: rgba(220, 235, 255, 0.16) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
-}
-
-
-
-/* GLOBAL SQERON ENFORCEMENT: no UI element should use a different font. */
-html, body, body *, body *::before, body *::after,
-button, input, select, textarea, option, optgroup,
-button *, input *, select *, textarea *, svg text, canvas {
-    font-family: "Sqeron" !important;
-}
-
-/* Form controls must not revert to the browser/OS default font. */
-button, input, select, textarea {
-    font-family: "Sqeron" !important;
-}
-
-
-
-/* FINAL REFINEMENT: outline-only floating panels + balanced Sqeron typography */
-:root {
-    --glass-bg: transparent !important;
-    --glass-bg-strong: transparent !important;
-    --glass-fill: transparent !important;
-    --glass-fill-heavy: transparent !important;
-    --glass-line: rgba(205, 224, 255, .52) !important;
-    --glass-border: rgba(205, 224, 255, .52) !important;
-    --glass-highlight: transparent !important;
-    --glass-shine: transparent !important;
-}
-html, body, #app { font-family: 'Sqeron', Arial, Helvetica, sans-serif !important; }
-body, button, input, select, textarea, option, label, small, strong, em,
-header, #tools, #right, #bottom, #hint, .panel, .tool, .object-row,
-.brand, .subtitle, .status, .section-title, #command, #webcamWrap {
-    font-family: 'Sqeron', Arial, Helvetica, sans-serif !important;
-}
-header, #tools, #right, #bottom, #hint {
-    background: transparent !important;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-    box-shadow: none !important;
-    border: 1px solid rgba(205, 224, 255, .52) !important;
-}
-.panel {
-    background: transparent !important;
-    box-shadow: none !important;
-    border: 1px solid rgba(205, 224, 255, .27) !important;
-}
-.tool, .object-row, #command, #webcamWrap {
-    background: transparent !important;
-    box-shadow: none !important;
-}
-.tool { border: 1px solid transparent !important; }
-.tool:hover, .tool:focus-visible {
-    background: transparent !important;
-    border-color: rgba(205, 224, 255, .62) !important;
-    outline: none;
-}
-.tool.active {
-    background: transparent !important;
-    border-color: rgba(255, 138, 36, .9) !important;
-    box-shadow: inset 2px 0 0 rgba(255, 138, 36, .9) !important;
-}
-#command {
-    border: 1px solid rgba(205, 224, 255, .48) !important;
-    color: #f0f4fa !important;
-}
-#command:focus { outline: 1px solid rgba(255, 138, 36, .85) !important; }
-#webcamWrap { border: 1px solid rgba(205, 224, 255, .35) !important; }
-#hint { border-color: rgba(205, 224, 255, .4) !important; }
-
-/* Improve readability without letting labels overwhelm the viewport. */
-.brand { font-size: clamp(15px, 1.25vw, 19px) !important; line-height: 1.25; }
-.subtitle { font-size: clamp(9px, .72vw, 11px) !important; line-height: 1.4; }
-.status { font-size: clamp(10px, .78vw, 12px) !important; line-height: 1.4; }
-.section-title, .panel h3 { font-size: clamp(10px, .78vw, 12px) !important; line-height: 1.35; }
-.tool, .object-row, #command, #hint, .panel, label, input, button, select, textarea {
-    font-size: clamp(11px, .86vw, 13px) !important;
-    line-height: 1.45;
-}
-.tool { min-height: 34px; padding: 7px 8px !important; }
-#command { min-height: 36px; }
-@media (max-width: 900px) {
-    .brand { font-size: clamp(13px, 2vw, 16px) !important; }
-    .subtitle { font-size: 9px !important; }
-    .status, .tool, .object-row, #command, .panel, label, input, button, select, textarea {
-        font-size: 11px !important;
+    input[type="range"].cad-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background: #22d3ee;
     }
-}
-@media (max-width: 620px) {
-    .brand { font-size: 13px !important; letter-spacing: 1px !important; }
-    .status { font-size: 10px !important; }
-    .tool { font-size: 10px !important; padding: 6px 5px !important; }
-}
 
+    /* Vertical Slicer Slider */
+    .vertical-slider-wrap {
+      writing-mode: bt-lr;
+      -webkit-appearance: slider-vertical;
+    }
 
+    /* Number input spinner cleanup */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      opacity: 1;
+    }
 
-/* SUBTLE BLUR: keep the panels completely transparent and outline-only. */
-header, #tools, #right, #bottom, #hint {
-    background: transparent !important;
-    -webkit-backdrop-filter: blur(3px) !important;
-    backdrop-filter: blur(3px) !important;
-    box-shadow: none !important;
-}
-.panel, .tool, .object-row, #command, #webcamWrap {
-    background: transparent !important;
-    -webkit-backdrop-filter: blur(2px) !important;
-    backdrop-filter: blur(2px) !important;
-    box-shadow: none !important;
-}
-</style>
+    .tool-btn {
+      transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tool-btn:active {
+      transform: translateY(1px);
+    }
+    .tool-btn.active {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(6, 182, 212, 0.1));
+      border-color: #06b6d4;
+      color: #22d3ee;
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.25);
+    }
+  </style>
 </head>
+<body class="flex flex-col h-screen w-screen overflow-hidden bg-cad-bg text-slate-100">
 
-<body>
+  <!-- ==================== TOP NAVIGATION & TOOLBAR ==================== -->
+  <header class="h-13 min-h-[52px] bg-slate-900/95 border-b border-slate-800 px-3 flex items-center justify-between gap-2 z-30 shadow-lg">
+    <!-- Brand & Project Name -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
+          <i class="fa-solid fa-cubes-stacked text-white text-sm"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-bold tracking-tight text-sm text-white">PrintForge</span>
+            <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold">CAD 3D</span>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-none hidden sm:block">220×220×250mm Build Plate • 1 unit = 1 mm</p>
+        </div>
+      </div>
 
-<div id="app">
+      <div class="h-6 w-[1px] bg-slate-800 hidden md:block"></div>
 
-<header>
-    <div>
-        <div class="brand">AI3D STUDIO</div>
-        <div class="subtitle">AI POWERED 3D DESIGN ENVIRONMENT</div>
+      <!-- Quick Start Templates Dropdown -->
+      <div class="relative">
+        <select id="templateSelect" onchange="loadQuickTemplate(this.value); this.value='';" class="bg-slate-800/90 hover:bg-slate-800 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 border border-slate-700 focus:outline-none focus:border-cyan-500 cursor-pointer">
+          <option value="" disabled selected>⚡ Load Sample Template...</option>
+          <option value="calibration">🧊 20mm XYZ Calibration Block</option>
+          <option value="motormount">🚁 Drone Motor Mount Assembly</option>
+          <option value="gearset">⚙️ Meshing Spur Gear Set</option>
+          <option value="enclosure">📦 Electronics Enclosure & Brackets</option>
+          <option value="clear">🗑️ Clear Scene (Empty Bed)</option>
+        </select>
+      </div>
     </div>
 
-    <div class="status">
-        SYSTEM <span id="systemStatus">ONLINE</span>
-        · HAND <span id="handStatus">OFF</span>
-    </div>
-</header>
+    <!-- Center Transform & Snap Toolbar -->
+    <div class="flex items-center gap-1.5 bg-slate-950/80 px-2 py-1 rounded-xl border border-slate-800/90">
+      <button id="btnModeTranslate" onclick="setTransformMode('translate')" title="Move Tool (Shortcut: W)" class="tool-btn active px-2.5 py-1 rounded-lg border border-transparent text-xs flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800">
+        <i class="fa-solid fa-arrows-up-down-left-right text-cyan-400"></i>
+        <span class="hidden lg:inline">Move</span>
+        <kbd class="text-[9px] font-mono bg-slate-800 px-1 rounded text-slate-400">W</kbd>
+      </button>
+      <button id="btnModeRotate" onclick="setTransformMode('rotate')" title="Rotate Tool (Shortcut: E)" class="tool-btn px-2.5 py-1 rounded-lg border border-transparent text-xs flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800">
+        <i class="fa-solid fa-rotate text-emerald-400"></i>
+        <span class="hidden lg:inline">Rotate</span>
+        <kbd class="text-[9px] font-mono bg-slate-800 px-1 rounded text-slate-400">E</kbd>
+      </button>
+      <button id="btnModeScale" onclick="setTransformMode('scale')" title="Scale Tool (Shortcut: R)" class="tool-btn px-2.5 py-1 rounded-lg border border-transparent text-xs flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800">
+        <i class="fa-solid fa-up-right-and-down-left-from-center text-amber-400"></i>
+        <span class="hidden lg:inline">Scale</span>
+        <kbd class="text-[9px] font-mono bg-slate-800 px-1 rounded text-slate-400">R</kbd>
+      </button>
 
-<div id="tools">
+      <div class="h-4 w-[1px] bg-slate-800 mx-0.5"></div>
 
-    <div class="section-title">TRANSFORM</div>
+      <!-- 3D Print Quick Bed Alignment -->
+      <button onclick="dropSelectedToBed()" title="Drop Flush to Build Plate Z=0 (Shortcut: F)" class="tool-btn px-2.5 py-1 rounded-lg border border-slate-700/70 bg-slate-800/60 hover:bg-slate-800 text-xs flex items-center gap-1.5 text-amber-300 hover:text-amber-200">
+        <i class="fa-solid fa-arrow-down-to-line"></i>
+        <span class="hidden md:inline">Drop to Bed</span>
+        <kbd class="text-[9px] font-mono bg-slate-900 px-1 rounded text-slate-400">F</kbd>
+      </button>
+      <button onclick="centerSelectedOnBed()" title="Center on Build Plate X=0, Y=0 (Shortcut: C)" class="tool-btn px-2 py-1 rounded-lg border border-slate-700/70 bg-slate-800/60 hover:bg-slate-800 text-xs flex items-center gap-1 text-slate-300 hover:text-white">
+        <i class="fa-solid fa-crosshairs text-cyan-400"></i>
+        <span class="hidden xl:inline">Center</span>
+      </button>
 
-    <button class="tool active" data-tool="select">SELECT</button>
-    <button class="tool" data-tool="move">MOVE</button>
-    <button class="tool" data-tool="rotate">ROTATE</button>
-    <button class="tool" data-tool="scale">SCALE</button>
+      <div class="h-4 w-[1px] bg-slate-800 mx-0.5 hidden sm:block"></div>
 
-    <div class="section-title">CREATE</div>
-
-    <button class="tool" data-create="Cube">CUBE</button>
-    <button class="tool" data-create="Sphere">SPHERE</button>
-    <button class="tool" data-create="Cylinder">CYLINDER</button>
-    <button class="tool" id="deleteButton">DELETE</button>
-
-    <div class="section-title">PROJECT</div>
-
-    <button class="tool" id="saveButton">SAVE</button>
-    <button class="tool" id="loadButton">LOAD</button>
-    <button class="tool" id="resetButton">RESET</button>
-
-</div>
-
-<div id="viewport">
-
-    <canvas id="scene"></canvas>
-    <canvas id="handOverlay"></canvas>
-
-    <div id="cursor"></div>
-
-    <div id="hint">
-        Mouse: select / orbit / zoom · Q SELECT · W MOVE · E ROTATE · R SCALE
-    </div>
-
-</div>
-
-<div id="right">
-
-    <div class="panel">
-        <h3>HIERARCHY</h3>
-        <div id="hierarchy"></div>
+      <!-- Snap Controls -->
+      <div class="hidden sm:flex items-center gap-1">
+        <button id="btnSnapToggle" onclick="toggleGridSnap()" title="Toggle Grid & Angle Snapping" class="tool-btn active px-2 py-1 rounded-lg border border-transparent text-xs flex items-center gap-1 text-slate-300">
+          <i class="fa-solid fa-magnet text-cyan-400"></i>
+          <span class="hidden xl:inline">Snap</span>
+        </button>
+        <select id="snapStepSelect" onchange="updateSnapStep(this.value)" title="Grid Snap Increment (mm)" class="bg-slate-900 text-[11px] font-mono text-cyan-300 rounded px-1.5 py-1 border border-slate-700 focus:outline-none">
+          <option value="0.5">0.5mm</option>
+          <option value="1" selected>1.0mm</option>
+          <option value="5">5.0mm</option>
+          <option value="10">10.0mm</option>
+        </select>
+      </div>
     </div>
 
-    <div class="panel">
-        <h3>PROPERTIES</h3>
-        <div id="properties"></div>
+    <!-- Right Project & Slicer Export Actions -->
+    <div class="flex items-center gap-1.5">
+      <!-- Save / Load JSON -->
+      <button onclick="saveProjectJSON()" title="Save Parametric Project (.json)" class="tool-btn px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs flex items-center gap-1.5">
+        <i class="fa-solid fa-floppy-disk text-slate-400"></i>
+        <span class="hidden xl:inline">Save</span>
+      </button>
+      <label title="Load Parametric Project (.json)" class="tool-btn px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs flex items-center gap-1.5 cursor-pointer">
+        <i class="fa-solid fa-folder-open text-slate-400"></i>
+        <span class="hidden xl:inline">Open</span>
+        <input type="file" id="projectFileInput" accept=".json" class="hidden" onchange="loadProjectJSON(event)" />
+      </label>
+
+      <!-- Export Dropdown / Primary STL Button -->
+      <div class="relative group">
+        <button onclick="exportBinarySTL(false)" class="tool-btn px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/20">
+          <i class="fa-solid fa-download"></i>
+          <span>Export .STL</span>
+        </button>
+      </div>
+      <button onclick="toggleExportModal()" title="More Export Formats (Binary STL, ASCII STL, OBJ, Selected Only)" class="tool-btn px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs">
+        <i class="fa-solid fa-ellipsis-vertical"></i>
+      </button>
     </div>
+  </header>
 
-    <div class="panel">
+  <!-- ==================== MAIN WORKSPACE AREA ==================== -->
+  <div class="flex-1 flex overflow-hidden relative">
 
-        <h3>WEBCAM / HAND TRACKING</h3>
-
-        <div id="webcamWrap">
-            <video id="webcam" autoplay playsinline muted></video>
-            <canvas id="webcamCanvas"></canvas>
+    <!-- LEFT SIDEBAR: PRIMITIVES LIBRARY & SCENE OUTLINER -->
+    <aside id="leftSidebar" class="w-72 bg-slate-900/95 border-r border-slate-800 flex flex-col z-20 shrink-0 transition-all duration-200">
+      
+      <!-- Section 1: 3D Printable Shapes & Mechanical Parts -->
+      <div class="p-3 border-b border-slate-800 flex-shrink-0">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-shapes text-cyan-400"></i> Add 3D Primitives
+          </h2>
+          <span class="text-[10px] font-mono text-slate-500">Parametric</span>
         </div>
 
-        <button id="cameraButton">
-            ENABLE CAMERA
+        <div class="grid grid-cols-4 gap-1.5 mb-3">
+          <button onclick="addShape('box')" class="tool-btn flex flex-col items-center justify-center p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-500/50 group">
+            <i class="fa-solid fa-cube text-cyan-400 group-hover:scale-110 transition-transform text-sm mb-1"></i>
+            <span class="text-[10px] text-slate-300">Box</span>
+          </button>
+          <button onclick="addShape('cylinder')" class="tool-btn flex flex-col items-center justify-center p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-500/50 group">
+            <i class="fa-solid fa-database text-cyan-400 group-hover:scale-110 transition-transform text-sm mb-1"></i>
+            <span class="text-[10px] text-slate-300">Cylinder</span>
+          </button>
+          <button onclick="addShape('sphere')" class="tool-btn flex flex-col items-center justify-center p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-500/50 group">
+            <i class="fa-solid fa-globe text-cyan-400 group-hover:scale-110 transition-transform text-sm mb-1"></i>
+            <span class="text-[10px] text-slate-300">Sphere</span>
+          </button>
+          <button onclick="addShape('cone')" class="tool-btn flex flex-col items-center justify-center p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-500/50 group">
+            <i class="fa-solid fa-caret-up text-cyan-400 group-hover:scale-110 transition-transform text-base mb-0.5"></i>
+            <span class="text-[10px] text-slate-300">Cone</span>
+          </button>
+          <button onclick="addShape('torus')" class="tool-btn flex flex-col items-center justify-center p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-500/50 group">
+            <i class="fa-regular fa-circle-dot text-cyan-400 group-hover:scale-110 transition-transform text-sm mb-1"></i>
+            <span class="text-[10px] text-slate-300">Torus</span>
+          </button>
+          <button onclick="addShape('wedge')" class="tool-btn flex flex-col items-center justify-center p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-500/50 group">
+            <i class="fa-solid fa-play -rotate-90 text-cyan-400 group-hover:scale-110 transition-transform text-sm mb-1"></i>
+            <span class="text-[10px] text-slate-300">Wedge</span>
+          </button>
+          <button onclick="addShape('hexprism')" class="tool-btn flex flex-col items-center justify-center p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-500/50 group">
+            <i class="fa-solid fa-hexagon-nodes text-cyan-400 group-hover:scale-110 transition-transform text-sm mb-1"></i>
+            <span class="text-[10px] text-slate-300">Hex Nut</span>
+          </button>
+          <button onclick="addShape('pyramid')" class="tool-btn flex flex-col items-center justify-center p-2 rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-500/50 group">
+            <i class="fa-solid fa-mountain text-cyan-400 group-hover:scale-110 transition-transform text-sm mb-1"></i>
+            <span class="text-[10px] text-slate-300">Pyramid</span>
+          </button>
+        </div>
+
+        <!-- Functional Mechanical Parts -->
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-[11px] font-bold uppercase tracking-wider text-amber-400/90 flex items-center gap-1.5">
+            <i class="fa-solid fa-gears"></i> Functional Print Parts
+          </h2>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button onclick="addShape('tube')" class="tool-btn flex items-center gap-2 p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 hover:border-amber-500/50 text-left group">
+            <div class="w-6 h-6 rounded bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <i class="fa-regular fa-circle text-xs"></i>
+            </div>
+            <div class="overflow-hidden">
+              <div class="text-[11px] font-medium text-slate-200 truncate">Tube / Spacer</div>
+              <div class="text-[9px] text-slate-400 truncate">Hollow sleeve</div>
+            </div>
+          </button>
+
+          <button onclick="addShape('gear')" class="tool-btn flex items-center gap-2 p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 hover:border-amber-500/50 text-left group">
+            <div class="w-6 h-6 rounded bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <i class="fa-solid fa-gear text-xs"></i>
+            </div>
+            <div class="overflow-hidden">
+              <div class="text-[11px] font-medium text-slate-200 truncate">Spur Gear</div>
+              <div class="text-[9px] text-slate-400 truncate">Teeth & bore</div>
+            </div>
+          </button>
+
+          <button onclick="addShape('lbracket')" class="tool-btn flex items-center gap-2 p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 hover:border-amber-500/50 text-left group">
+            <div class="w-6 h-6 rounded bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <i class="fa-solid fa-ruler-combined text-xs"></i>
+            </div>
+            <div class="overflow-hidden">
+              <div class="text-[11px] font-medium text-slate-200 truncate">L-Bracket</div>
+              <div class="text-[9px] text-slate-400 truncate">With bolt holes</div>
+            </div>
+          </button>
+
+          <button onclick="addShape('enclosure')" class="tool-btn flex items-center gap-2 p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 hover:border-amber-500/50 text-left group">
+            <div class="w-6 h-6 rounded bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <i class="fa-solid fa-box-open text-xs"></i>
+            </div>
+            <div class="overflow-hidden">
+              <div class="text-[11px] font-medium text-slate-200 truncate">Enclosure Box</div>
+              <div class="text-[9px] text-slate-400 truncate">Hollow shell</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 2: Scene Outliner / Object List -->
+      <div class="flex-1 flex flex-col min-h-0 p-3">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-layer-group text-cyan-400"></i> Scene Objects (<span id="objectCountBadge">0</span>)
+          </h2>
+          <div class="flex items-center gap-1">
+            <button onclick="mergeVisibleMeshes()" title="Combine All Visible Parts into One Mesh" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 hover:bg-cyan-500/20 text-cyan-300 border border-slate-700 hover:border-cyan-500/40 transition-colors flex items-center gap-1">
+              <i class="fa-solid fa-object-group"></i> Merge All
+            </button>
+          </div>
+        </div>
+
+        <!-- Object Tree List -->
+        <div id="outlinerList" class="flex-1 overflow-y-auto space-y-1 pr-1">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Outliner Bottom Action Bar -->
+        <div class="pt-2 mt-2 border-t border-slate-800 grid grid-cols-3 gap-1.5">
+          <button onclick="duplicateSelected()" title="Duplicate Selected (Shortcut: D)" class="tool-btn py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] flex items-center justify-center gap-1">
+            <i class="fa-regular fa-copy text-cyan-400"></i> Duplicate
+          </button>
+          <button onclick="toggleArrayModal()" title="Linear / Circular Pattern Array" class="tool-btn py-1.5 px-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] flex items-center justify-center gap-1">
+            <i class="fa-solid fa-grip text-amber-400"></i> Array
+          </button>
+          <button onclick="deleteSelected()" title="Delete Selected (Shortcut: Del)" class="tool-btn py-1.5 px-2 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 border border-rose-800/60 text-[11px] flex items-center justify-center gap-1">
+            <i class="fa-regular fa-trash-can"></i> Delete
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==================== CENTER 3D VIEWPORT ==================== -->
+    <main class="flex-1 relative bg-cad-bg overflow-hidden flex flex-col">
+      
+      <!-- Top Viewport HUD: View Modes & Camera Presets -->
+      <div class="absolute top-3 left-3 right-14 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-10">
+        
+        <!-- View Mode Selector Pills -->
+        <div class="flex items-center gap-1 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-800 pointer-events-auto shadow-lg">
+          <button id="viewSolid" onclick="setViewMode('solid')" class="tool-btn active px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 text-slate-300 border border-transparent">
+            <i class="fa-solid fa-cube text-cyan-400"></i> Solid
+          </button>
+          <button id="viewWireframe" onclick="setViewMode('wireframe')" class="tool-btn px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 text-slate-300 border border-transparent">
+            <i class="fa-solid fa-border-all text-sky-400"></i> Wireframe
+          </button>
+          <button id="viewXray" onclick="setViewMode('xray')" class="tool-btn px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 text-slate-300 border border-transparent">
+            <i class="fa-solid fa-eye text-purple-400"></i> X-Ray
+          </button>
+          <button id="viewOverhang" onclick="setViewMode('overhang')" title="Highlights overhangs > 45° in red that require 3D print supports" class="tool-btn px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 text-slate-300 border border-transparent">
+            <i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Overhang Check
+          </button>
+          <div class="h-4 w-[1px] bg-slate-800 mx-0.5"></div>
+          <button id="btnToggleEdges" onclick="toggleCadEdges()" title="Toggle Crisp CAD Feature Edges" class="tool-btn active px-2 py-1 rounded-lg text-xs text-slate-300 border border-transparent">
+            <i class="fa-solid fa-vector-square"></i>
+          </button>
+        </div>
+
+        <!-- Camera Orientation Quick Buttons -->
+        <div class="flex items-center gap-1 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-800 pointer-events-auto shadow-lg">
+          <button onclick="setCameraPreset('iso')" class="px-2 py-1 rounded-lg hover:bg-slate-800 text-[11px] font-mono text-cyan-400 font-semibold" title="Isometric 3D View">ISO</button>
+          <button onclick="setCameraPreset('front')" class="px-2 py-1 rounded-lg hover:bg-slate-800 text-[11px] font-mono text-slate-300" title="Front View (-Y looking North)">FRONT</button>
+          <button onclick="setCameraPreset('right')" class="px-2 py-1 rounded-lg hover:bg-slate-800 text-[11px] font-mono text-slate-300" title="Right View (+X)">RIGHT</button>
+          <button onclick="setCameraPreset('top')" class="px-2 py-1 rounded-lg hover:bg-slate-800 text-[11px] font-mono text-slate-300" title="Top View (+Z)">TOP</button>
+          <button onclick="frameSelectedOrAll()" class="px-2 py-1 rounded-lg hover:bg-slate-800 text-xs text-amber-400" title="Fit View to Model">
+            <i class="fa-solid fa-expand"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Out-of-Bounds / Print Warning Banner -->
+      <div id="boundsWarningBanner" class="hidden absolute top-16 left-1/2 -translate-x-1/2 bg-rose-950/95 border border-rose-500 text-rose-200 px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-medium z-20 pointer-events-auto backdrop-blur-md">
+        <i class="fa-solid fa-triangle-exclamation text-rose-400 text-base animate-pulse"></i>
+        <span id="boundsWarningText">Model extends outside the 220×220×250mm build volume or below Z=0!</span>
+        <button onclick="dropSelectedToBed()" class="ml-2 px-2 py-0.5 rounded bg-rose-800 hover:bg-rose-700 text-white text-[11px] font-semibold">Fix Z=0</button>
+      </div>
+
+      <!-- Overhang Legend Banner (Shown in Overhang Mode) -->
+      <div id="overhangLegend" class="hidden absolute top-16 left-3 bg-slate-900/95 border border-slate-700 p-2.5 rounded-xl shadow-xl text-[11px] z-10 pointer-events-none space-y-1">
+        <div class="font-semibold text-slate-200 mb-1 flex items-center gap-1.5">
+          <i class="fa-solid fa-layer-group text-cyan-400"></i> Printability & Overhang Analysis
+        </div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-emerald-500 inline-block"></span> <span class="text-slate-300">Top / Safe Faces (No Support)</span></div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-sky-500 inline-block"></span> <span class="text-slate-300">Vertical Walls (Safe ≤ 45°)</span></div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-rose-500 inline-block"></span> <span class="text-rose-300 font-medium">Overhang > 45° (Needs Support!)</span></div>
+      </div>
+
+      <!-- VERTICAL LAYER SLICER / CROSS-SECTION INSPECTOR (Right side of viewport) -->
+      <div class="absolute right-3 top-1/2 -translate-y-1/2 bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-2 flex flex-col items-center gap-2 z-10 shadow-xl">
+        <button id="btnSliceToggle" onclick="toggleLayerSlicer()" title="Toggle Cross-Section Layer Slicer" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs border border-slate-700">
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+        </button>
+        <div class="text-[9px] font-mono text-slate-400 uppercase tracking-tighter text-center leading-tight">
+          Z-Slice<br><span id="sliceHeightLabel" class="text-cyan-400 font-semibold">250mm</span>
+        </div>
+        <div class="h-44 flex items-center justify-center py-1">
+          <input id="sliceSlider" type="range" min="0" max="250" step="0.2" value="250" oninput="updateLayerSlicer(this.value)" class="vertical-slider-wrap h-40 w-4 cursor-pointer accent-cyan-400" title="Drag down to inspect internal cross-sections (0.2mm layers)" />
+        </div>
+        <div id="sliceLayerBadge" class="text-[9px] font-mono bg-slate-950 px-1.5 py-0.5 rounded text-amber-400 border border-slate-800">
+          L:1250
+        </div>
+      </div>
+
+      <!-- 3D CANVAS CONTAINER -->
+      <div id="viewportContainer" class="w-full h-full flex-1 relative cursor-crosshair"></div>
+
+      <!-- Bottom Viewport Status & Printability Live Bar -->
+      <div class="h-9 bg-slate-900/95 border-t border-slate-800 px-3 flex items-center justify-between text-[11px] z-10">
+        <!-- Axis Legend & Coordinate Convention -->
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5 font-mono">
+            <span class="inline-block w-2 h-2 rounded-full bg-rose-500"></span><span class="text-rose-400 font-semibold">X</span><span class="text-slate-500">Width</span>
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 ml-1"></span><span class="text-emerald-400 font-semibold">Y</span><span class="text-slate-500">Depth</span>
+            <span class="inline-block w-2 h-2 rounded-full bg-blue-500 ml-1"></span><span class="text-blue-400 font-semibold">Z</span><span class="text-slate-500">Height (Up)</span>
+          </div>
+          <span class="text-slate-700 hidden md:inline">|</span>
+          <span id="statusHint" class="text-slate-400 hidden md:inline">Click any part to inspect • Drag gizmo handles to transform • Right-click to orbit</span>
+        </div>
+
+        <!-- Live Slicer & Print Stats Summary -->
+        <div class="flex items-center gap-3 font-mono">
+          <div title="Total Assembly Bounding Box (Width × Depth × Height)">
+            <span class="text-slate-500">Size:</span>
+            <span id="statBBox" class="text-slate-200">0.0 × 0.0 × 0.0 mm</span>
+          </div>
+          <span class="text-slate-700">|</span>
+          <div title="Total Mesh Triangle Count">
+            <span class="text-slate-500">Tris:</span>
+            <span id="statTriangles" class="text-cyan-400">0</span>
+          </div>
+          <span class="text-slate-700 hidden sm:inline">|</span>
+          <div class="hidden sm:block" title="Solid Mesh Volume">
+            <span class="text-slate-500">Vol:</span>
+            <span id="statVolume" class="text-emerald-400">0.00 cm³</span>
+          </div>
+          <span class="text-slate-700 hidden lg:inline">|</span>
+          <div class="hidden lg:block" title="Estimated PLA Filament Weight">
+            <span class="text-slate-500">PLA:</span>
+            <span id="statWeight" class="text-amber-400 font-semibold">0.0 g</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ==================== RIGHT SIDEBAR: PRECISION CAD INSPECTOR ==================== -->
+    <aside id="rightSidebar" class="w-80 bg-slate-900/95 border-l border-slate-800 flex flex-col z-20 shrink-0 overflow-y-auto">
+      
+      <!-- Empty State (Shown when no object is selected) -->
+      <div id="inspectorEmptyState" class="hidden p-6 text-center my-auto">
+        <div class="w-12 h-12 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center mx-auto mb-3 text-slate-500">
+          <i class="fa-solid fa-arrow-pointer text-lg"></i>
+        </div>
+        <h3 class="text-sm font-semibold text-slate-300 mb-1">No Object Selected</h3>
+        <p class="text-xs text-slate-500 leading-relaxed">Select a 3D mesh in the viewport or outliner, or add a new parametric part from the left panel.</p>
+      </div>
+
+      <!-- Active Object Inspector Content -->
+      <div id="inspectorContent" class="p-3 space-y-4">
+        
+        <!-- Object Header: Name, Type, Color -->
+        <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/90">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span id="inspShapeBadge" class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold">PARAMETRIC GEAR</span>
+            <div class="flex items-center gap-1.5">
+              <input type="color" id="inspColorPicker" oninput="updateSelectedColor(this.value)" title="Part Display Color" class="w-6 h-6 rounded cursor-pointer bg-transparent border-0" value="#06b6d4" />
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <input type="text" id="inspNameInput" onchange="updateSelectedName(this.value)" class="w-full bg-slate-900 text-xs font-medium text-white px-2.5 py-1.5 rounded-lg border border-slate-700 focus:outline-none focus:border-cyan-500" placeholder="Part Name" />
+          </div>
+        </div>
+
+        <!-- Exact Bounding Dimensions (Width X, Depth Y, Height Z in mm) -->
+        <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/90">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-ruler-horizontal text-cyan-400"></i> Exact Size (mm)
+            </h3>
+            <span class="text-[10px] text-slate-500 font-mono">World Bounds</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <div>
+              <label class="text-[10px] font-mono text-rose-400 block mb-0.5">Width (X)</label>
+              <input type="number" step="0.5" min="0.5" id="dimInputX" onchange="applyExactDimension('x', this.value)" class="w-full bg-slate-900 font-mono text-xs text-white px-2 py-1 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="text-[10px] font-mono text-emerald-400 block mb-0.5">Depth (Y)</label>
+              <input type="number" step="0.5" min="0.5" id="dimInputY" onchange="applyExactDimension('y', this.value)" class="w-full bg-slate-900 font-mono text-xs text-white px-2 py-1 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="text-[10px] font-mono text-blue-400 block mb-0.5">Height (Z)</label>
+              <input type="number" step="0.5" min="0.5" id="dimInputZ" onchange="applyExactDimension('z', this.value)" class="w-full bg-slate-900 font-mono text-xs text-white px-2 py-1 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Parametric Shape Generator Controls (Dynamic per shapeType) -->
+        <div id="parametricSection" class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/90">
+          <div class="flex items-center justify-between mb-2.5">
+            <h3 class="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-sliders"></i> Parametric Geometry
+            </h3>
+            <span class="text-[10px] text-slate-500 font-mono">Live CAD</span>
+          </div>
+          <div id="parametricControlsContainer" class="space-y-2.5">
+            <!-- Dynamically injected sliders & numeric inputs -->
+          </div>
+        </div>
+
+        <!-- Precision Position & Rotation Transform Inputs -->
+        <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/90 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-location-crosshairs text-cyan-400"></i> Transform (mm / deg)
+            </h3>
+            <button onclick="resetSelectedRotationAndScale()" class="text-[10px] text-slate-400 hover:text-cyan-400">Reset Rot/Scale</button>
+          </div>
+
+          <!-- Position X, Y, Z -->
+          <div>
+            <div class="text-[10px] text-slate-400 mb-1 font-medium">Position (mm)</div>
+            <div class="grid grid-cols-3 gap-1.5">
+              <div class="relative">
+                <span class="absolute left-2 top-1.5 text-[10px] font-mono font-bold text-rose-400">X</span>
+                <input type="number" step="1" id="posInputX" oninput="applyTransformFromInputs()" class="w-full bg-slate-900 font-mono text-xs text-white pl-5 pr-1.5 py-1 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none" />
+              </div>
+              <div class="relative">
+                <span class="absolute left-2 top-1.5 text-[10px] font-mono font-bold text-emerald-400">Y</span>
+                <input type="number" step="1" id="posInputY" oninput="applyTransformFromInputs()" class="w-full bg-slate-900 font-mono text-xs text-white pl-5 pr-1.5 py-1 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none" />
+              </div>
+              <div class="relative">
+                <span class="absolute left-2 top-1.5 text-[10px] font-mono font-bold text-blue-400">Z</span>
+                <input type="number" step="1" id="posInputZ" oninput="applyTransformFromInputs()" class="w-full bg-slate-900 font-mono text-xs text-white pl-5 pr-1.5 py-1 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Rotation X, Y, Z -->
+          <div>
+            <div class="text-[10px] text-slate-400 mb-1 font-medium">Rotation (° Degrees)</div>
+            <div class="grid grid-cols-3 gap-1.5">
+              <div class="relative">
+                <span class="absolute left-2 top-1.5 text-[10px] font-mono font-bold text-rose-400">X</span>
+                <input type="number" step="15" id="rotInputX" oninput="applyTransformFromInputs()" class="w-full bg-slate-900 font-mono text-xs text-white pl-5 pr-1.5 py-1 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none" />
+              </div>
+              <div class="relative">
+                <span class="absolute left-2 top-1.5 text-[10px] font-mono font-bold text-emerald-400">Y</span>
+                <input type="number" step="15" id="rotInputY" oninput="applyTransformFromInputs()" class="w-full bg-slate-900 font-mono text-xs text-white pl-5 pr-1.5 py-1 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none" />
+              </div>
+              <div class="relative">
+                <span class="absolute left-2 top-1.5 text-[10px] font-mono font-bold text-blue-400">Z</span>
+                <input type="number" step="15" id="rotInputZ" oninput="applyTransformFromInputs()" class="w-full bg-slate-900 font-mono text-xs text-white pl-5 pr-1.5 py-1 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Orientation & Mirror Buttons -->
+          <div class="pt-1 border-t border-slate-800/80">
+            <div class="text-[10px] text-slate-400 mb-1.5 font-medium">3D Print Orientation & Mirror</div>
+            <div class="grid grid-cols-3 gap-1.5 mb-1.5">
+              <button onclick="rotateSelectedBy(90, 0, 0)" class="tool-btn py-1 px-1.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">Rot X +90°</button>
+              <button onclick="rotateSelectedBy(0, 90, 0)" class="tool-btn py-1 px-1.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">Rot Y +90°</button>
+              <button onclick="rotateSelectedBy(0, 0, 90)" class="tool-btn py-1 px-1.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">Rot Z +90°</button>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button onclick="mirrorSelected('x')" class="tool-btn py-1 px-1.5 rounded bg-slate-800/70 hover:bg-slate-700 text-[10px] font-mono text-rose-300 border border-slate-700/80"><i class="fa-solid fa-right-left mr-1"></i>Flip X</button>
+              <button onclick="mirrorSelected('y')" class="tool-btn py-1 px-1.5 rounded bg-slate-800/70 hover:bg-slate-700 text-[10px] font-mono text-emerald-300 border border-slate-700/80"><i class="fa-solid fa-right-left mr-1"></i>Flip Y</button>
+              <button onclick="mirrorSelected('z')" class="tool-btn py-1 px-1.5 rounded bg-slate-800/70 hover:bg-slate-700 text-[10px] font-mono text-blue-300 border border-slate-700/80"><i class="fa-solid fa-up-down mr-1"></i>Flip Z</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Slicer & Filament Estimation Panel (Always visible at bottom of Right Sidebar) -->
+      <div class="mt-auto p-3 border-t border-slate-800 bg-slate-950/90">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-weight-hanging"></i> 3D Print Estimator
+          </h3>
+          <span class="text-[10px] font-mono text-slate-400">PLA (1.24 g/cm³)</span>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <div>
+            <div class="flex justify-between text-[11px] mb-1">
+              <span class="text-slate-400">Slicer Infill Density</span>
+              <span id="infillPctLabel" class="font-mono text-cyan-400 font-semibold">20%</span>
+            </div>
+            <input id="infillSlider" type="range" min="0" max="100" step="5" value="20" oninput="updatePrintStats()" class="cad-slider w-full" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
+              <div class="text-[10px] text-slate-400">Est. Filament</div>
+              <div id="cardFilamentWeight" class="text-sm font-mono font-bold text-amber-400">0.0 g</div>
+              <div id="cardFilamentMeters" class="text-[10px] font-mono text-slate-500">0.00 m (1.75mm)</div>
+            </div>
+            <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
+              <div class="text-[10px] text-slate-400">Est. Print Time</div>
+              <div id="cardPrintTime" class="text-sm font-mono font-bold text-emerald-400">0m</div>
+              <div id="cardLayerCount" class="text-[10px] font-mono text-slate-500">0 layers @ 0.2mm</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ==================== MODAL: PATTERN ARRAY TOOL ==================== -->
+  <div id="arrayModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-grip text-amber-400"></i> Create Pattern Array (3D Print Batch)
+        </h3>
+        <button onclick="toggleArrayModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-400 mb-1">Count X (Columns)</label>
+            <input type="number" id="arrayCountX" value="2" min="1" max="10" class="w-full bg-slate-950 font-mono text-white px-3 py-1.5 rounded-lg border border-slate-700" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Count Y (Rows)</label>
+            <input type="number" id="arrayCountY" value="2" min="1" max="10" class="w-full bg-slate-950 font-mono text-white px-3 py-1.5 rounded-lg border border-slate-700" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-400 mb-1">Spacing X (mm)</label>
+            <input type="number" id="arraySpacingX" value="35" step="1" class="w-full bg-slate-950 font-mono text-white px-3 py-1.5 rounded-lg border border-slate-700" />
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Spacing Y (mm)</label>
+            <input type="number" id="arraySpacingY" value="35" step="1" class="w-full bg-slate-950 font-mono text-white px-3 py-1.5 rounded-lg border border-slate-700" />
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-400 bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+          Creates clones of the currently selected part spaced across the build plate.
+        </p>
+      </div>
+
+      <div class="flex justify-end gap-2 mt-5 pt-3 border-t border-slate-800">
+        <button onclick="toggleArrayModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs">Cancel</button>
+        <button onclick="executeLinearArray()" class="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs">Generate Array</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: EXPORT OPTIONS ==================== -->
+  <div id="exportModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-file-export text-cyan-400"></i> 3D Printer Slicer Export
+        </h3>
+        <button onclick="toggleExportModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-2.5 text-xs">
+        <button onclick="exportBinarySTL(false); toggleExportModal();" class="w-full p-3 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-cyan-500/40 flex items-center justify-between text-left group">
+          <div>
+            <div class="font-semibold text-white group-hover:text-cyan-400">Export All Visible — Binary .STL (Recommended)</div>
+            <div class="text-[11px] text-slate-400">Compact, Z-up, 1:1 millimeter scale for Cura, PrusaSlicer, Orca & Bambu</div>
+          </div>
+          <i class="fa-solid fa-download text-cyan-400 text-base"></i>
         </button>
 
-        <div id="cameraStatus">
-            Camera disabled. Mouse and keyboard remain available.
-        </div>
+        <button onclick="exportBinarySTL(true); toggleExportModal();" class="w-full p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 flex items-center justify-between text-left group">
+          <div>
+            <div class="font-semibold text-slate-200 group-hover:text-cyan-400">Export Selected Part Only — Binary .STL</div>
+            <div class="text-[11px] text-slate-400">Exports only the currently highlighted mesh</div>
+          </div>
+          <i class="fa-solid fa-cube text-slate-400"></i>
+        </button>
 
+        <button onclick="exportASCIISTL(); toggleExportModal();" class="w-full p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 flex items-center justify-between text-left group">
+          <div>
+            <div class="font-semibold text-slate-200 group-hover:text-amber-400">Export All Visible — ASCII .STL</div>
+            <div class="text-[11px] text-slate-400">Human-readable facet text format</div>
+          </div>
+          <i class="fa-solid fa-file-code text-amber-400"></i>
+        </button>
+
+        <button onclick="exportWavefrontOBJ(); toggleExportModal();" class="w-full p-3 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 flex items-center justify-between text-left group">
+          <div>
+            <div class="font-semibold text-slate-200 group-hover:text-emerald-400">Export All Visible — Wavefront .OBJ</div>
+            <div class="text-[11px] text-slate-400">Universal mesh format with vertex normals</div>
+          </div>
+          <i class="fa-solid fa-shapes text-emerald-400"></i>
+        </button>
+      </div>
+
+      <div class="flex justify-end mt-5 pt-3 border-t border-slate-800">
+        <button onclick="toggleExportModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-xs">Close</button>
+      </div>
     </div>
-
-    <div class="panel">
-
-        <h3>AI COMMAND</h3>
-
-        <div style="font-size:11px;color:#77828e;line-height:1.5">
-            Create Cube<br>
-            Create Sphere<br>
-            Move Cube<br>
-            Rotate Cube<br>
-            Scale Cube<br>
-            Delete Cube
-        </div>
-
-    </div>
-
-</div>
-
-<div id="bottom">
-
-    <input id="command" placeholder="AI Command...">
-
-    <div class="bottom-item">
-        ENGINE <span>READY</span>
-    </div>
-
-    <div class="bottom-item">
-        MODE <span id="modeLabel">SELECT</span>
-    </div>
-
-    <div class="bottom-item">
-        OBJECTS <span id="objectCount">0</span>
-    </div>
-
-    <div class="bottom-item">
-        TRACKER <span id="trackerLabel">OFF</span>
-    </div>
-
-</div>
-
-</div>
-
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
-    }
-}
-</script>
-
-<script type="module">
-
-import * as THREE from "three";
-import {OrbitControls} from "three/addons/controls/OrbitControls.js";
-
-const canvas=document.getElementById("scene");
-const overlay=document.getElementById("handOverlay");
-const viewport=document.getElementById("viewport");
-
-const cursor=document.getElementById("cursor");
-
-const video=document.getElementById("webcam");
-const webcamCanvas=document.getElementById("webcamCanvas");
-
-const cameraButton=document.getElementById("cameraButton");
-const cameraStatus=document.getElementById("cameraStatus");
-
-const handStatus=document.getElementById("handStatus");
-const trackerLabel=document.getElementById("trackerLabel");
-const systemStatus=document.getElementById("systemStatus");
-
-const hierarchy=document.getElementById("hierarchy");
-const properties=document.getElementById("properties");
-
-const command=document.getElementById("command");
-const modeLabel=document.getElementById("modeLabel");
-const objectCount=document.getElementById("objectCount");
-
-const renderer=new THREE.WebGLRenderer({
-    canvas:canvas,
-    antialias:true
-});
-
-renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio,1.5)
-);
-
-renderer.setSize(
-    viewport.clientWidth,
-    viewport.clientHeight,
-    false
-);
-
-renderer.setClearColor(0x030507,1);
-
-const scene=new THREE.Scene();
-
-const camera=new THREE.PerspectiveCamera(
-    45,
-    viewport.clientWidth/viewport.clientHeight,
-    0.1,
-    1000
-);
-
-camera.position.set(6,4.5,7);
-
-const controls=new OrbitControls(
-    camera,
-    renderer.domElement
-);
-
-controls.enableDamping=true;
-controls.dampingFactor=0.08;
-controls.target.set(0,0,0);
-
-scene.add(
-    new THREE.HemisphereLight(
-        0xffffff,
-        0x20242a,
-        2.2
-    )
-);
-
-const light=new THREE.DirectionalLight(
-    0xffffff,
-    2.5
-);
-
-light.position.set(5,8,6);
-scene.add(light);
-
-scene.add(
-    new THREE.GridHelper(
-        20,
-        20,
-        0x30363d,
-        0x171b20
-    )
-);
-
-scene.add(
-    new THREE.AxesHelper(2)
-);
-
-const raycaster=new THREE.Raycaster();
-
-const pointer=new THREE.Vector2();
-
-const objects=[];
-
-let selected=null;
-let currentTool="select";
-
-let stream=null;
-
-let handLandmarker=null;
-let handLoopRunning=false;
-
-let lastVideoTime=-1;
-let lastDetectionTime=0;
-
-let grabState=null;
-
-function resize(){
-
-    const width=viewport.clientWidth;
-    const height=viewport.clientHeight;
-
-    renderer.setSize(
-        width,
-        height,
-        false
-    );
-
-    camera.aspect=width/height;
-    camera.updateProjectionMatrix();
-
-    overlay.width=Math.floor(
-        width*devicePixelRatio
-    );
-
-    overlay.height=Math.floor(
-        height*devicePixelRatio
-    );
-
-    overlay.style.width=width+"px";
-    overlay.style.height=height+"px";
-
-    webcamCanvas.width=640;
-    webcamCanvas.height=400;
-}
-
-window.addEventListener(
-    "resize",
-    resize
-);
-
-resize();
-
-function material(){
-
-    return new THREE.MeshStandardMaterial({
-        color:0xff8a24,
-        metalness:0.15,
-        roughness:0.5
-    });
-}
-
-function geometry(type){
-
-    if(type==="Cube"){
-        return new THREE.BoxGeometry(
-            1.6,
-            1.6,
-            1.6
-        );
-    }
-
-    if(type==="Sphere"){
-        return new THREE.SphereGeometry(
-            1,
-            32,
-            20
-        );
-    }
-
-    return new THREE.CylinderGeometry(
-        1,
-        1,
-        1.8,
-        32
-    );
-}
-
-function addObject(type){
-
-    const object=new THREE.Mesh(
-        geometry(type),
-        material()
-    );
-
-    const count=
-        objects.filter(
-            object=>object.userData.type===type
-        ).length+1;
-
-    object.name=
-        type+" "+count;
-
-    object.userData.type=type;
-
-    object.position.set(
-        (objects.length%3-1)*2.2,
-        0,
-        Math.floor(objects.length/3)*2.2
-    );
-
-    scene.add(object);
-
-    objects.push(object);
-
-    selectObject(object);
-}
-
-function selectObject(object){
-
-    selected=object||null;
-
-    objects.forEach(item=>{
-
-        if(item===selected){
-
-            item.material.emissive.set(
-                0x542000
-            );
-
-            item.material.emissiveIntensity=0.8;
-
-        }else{
-
-            item.material.emissive.set(
-                0x000000
-            );
-
-            item.material.emissiveIntensity=0;
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastNotification" class="fixed bottom-12 right-5 bg-slate-900/95 border border-cyan-500/50 text-slate-100 px-4 py-2.5 rounded-xl shadow-2xl text-xs font-medium flex items-center gap-2.5 z-50 opacity-0 pointer-events-none transition-all duration-300 translate-y-2">
+    <i class="fa-solid fa-circle-check text-cyan-400 text-sm"></i>
+    <span id="toastMessage">Action completed</span>
+  </div>
+
+  <!-- ==================== APPLICATION JAVASCRIPT ==================== -->
+  <script>
+    /*************************************************************************
+     * 1. COORDINATE SYSTEM & GLOBAL STATE
+     * We configure Three.js with Z-Up (0, 0, 1) so the 3D Viewport, Gizmo
+     * axes (Red=X, Green=Y, Blue=Z), Inspector inputs, and exported STL files
+     * share the exact same 3D Printer coordinate convention!
+     *************************************************************************/
+    THREE.Object3D.DefaultUp.set(0, 0, 1);
+
+    const BED_SIZE_X = 220; // mm
+    const BED_SIZE_Y = 220; // mm
+    const BED_SIZE_Z = 250; // mm
+
+    let scene, camera, renderer, orbitControls, transformControls;
+    let raycaster, mouse;
+    let pointerDownPos = new THREE.Vector2();
+    let isDraggingGizmo = false;
+
+    // Scene collections
+    let cadObjects = []; // Array of THREE.Mesh objects representing user parts
+    let selectedObject = null;
+    let objectIdCounter = 1;
+
+    // Viewport & Tool settings
+    let currentTransformMode = 'translate';
+    let currentViewMode = 'solid'; // 'solid' | 'wireframe' | 'xray' | 'overhang'
+    let showCadEdges = true;
+    let snapEnabled = true;
+    let snapTranslationStep = 1.0; // mm
+    let snapRotationStep = THREE.MathUtils.degToRad(15); // 15 deg
+
+    // Layer Slicer Clipping Plane (slices horizontally along Z axis)
+    let sliceClippingPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), BED_SIZE_Z);
+    let slicerActive = false;
+    let sliceHelperMesh = null;
+    let buildVolumeBoxHelper = null;
+
+    // Custom Overhang Printability Shader Material (>45 deg downward faces turn red)
+    const overhangShaderMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uSliceZ: { value: BED_SIZE_Z },
+        uSliceActive: { value: 0.0 }
+      },
+      clipping: true,
+      side: THREE.DoubleSide,
+      vertexShader: `
+        varying vec3 vWorldNormal;
+        varying vec3 vWorldPosition;
+        void main() {
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPos.xyz;
+          vWorldNormal = normalize(mat3(modelMatrix) * normal);
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
         }
+      `,
+      fragmentShader: `
+        varying vec3 vWorldNormal;
+        varying vec3 vWorldPosition;
+        void main() {
+          vec3 n = normalize(vWorldNormal);
+          vec3 lightDir = normalize(vec3(0.4, -0.6, 0.8));
+          float diff = max(dot(n, lightDir), 0.25);
 
+          // Overhang analysis: cos(135 deg) = -0.7071
+          // If normal.z < -0.7071 and part is above build plate (z > 0.25mm), it requires support
+          vec3 baseColor = vec3(0.15, 0.62, 0.85); // Safe vertical wall (cyan/blue)
+          if (n.z > 0.5) {
+            baseColor = vec3(0.08, 0.72, 0.50); // Safe top surface (emerald)
+          } else if (n.z < -0.7071 && vWorldPosition.z > 0.25) {
+            baseColor = vec3(0.95, 0.22, 0.28); // Overhang warning (bright red)
+          } else if (n.z < -0.35 && vWorldPosition.z > 0.25) {
+            baseColor = vec3(0.96, 0.62, 0.05); // Steep slope warning (amber)
+          }
+          gl_FragColor = vec4(baseColor * (0.55 + 0.45 * diff), 1.0);
+        }
+      `
     });
 
-    updateUI();
-}
-
-function deleteSelected(){
-
-    if(!selected){
-        return;
-    }
-
-    const index=objects.indexOf(
-        selected
-    );
-
-    if(index>=0){
-        objects.splice(index,1);
-    }
-
-    scene.remove(selected);
-
-    selected.geometry.dispose();
-    selected.material.dispose();
-
-    selected=null;
-
-    updateUI();
-}
-
-function updateUI(){
-
-    hierarchy.innerHTML="";
-
-    objects.forEach(object=>{
-
-        const row=
-            document.createElement("div");
-
-        row.className=
-            "object-row"+
-            (object===selected?
-            " selected":
-            "");
-
-        row.textContent=
-            object.name;
-
-        row.onclick=()=>{
-            selectObject(object);
-        };
-
-        hierarchy.appendChild(row);
-    });
-
-    objectCount.textContent=
-        objects.length;
-
-    modeLabel.textContent=
-        currentTool.toUpperCase();
-
-    if(!selected){
-
-        properties.innerHTML=
-            '<div class="prop">'+
-            '<span>Object</span>'+
-            '<b>None</b>'+
-            '</div>';
-
-        return;
-    }
-
-    properties.innerHTML=
-        '<div class="prop">'+
-        '<span>Name</span>'+
-        '<b>'+selected.name+'</b>'+
-        '</div>'+
-        '<div class="prop">'+
-        '<span>Type</span>'+
-        '<b>'+selected.userData.type+'</b>'+
-        '</div>'+
-        '<div class="prop">'+
-        '<span>Position</span>'+
-        '<b>'+
-        selected.position.x.toFixed(2)+
-        ', '+
-        selected.position.y.toFixed(2)+
-        ', '+
-        selected.position.z.toFixed(2)+
-        '</b>'+
-        '</div>'+
-        '<div class="prop">'+
-        '<span>Scale</span>'+
-        '<b>'+
-        selected.scale.x.toFixed(2)+
-        ', '+
-        selected.scale.y.toFixed(2)+
-        ', '+
-        selected.scale.z.toFixed(2)+
-        '</b>'+
-        '</div>';
-}
-
-function setTool(tool){
-
-    currentTool=tool;
-
-    document
-        .querySelectorAll(
-            ".tool[data-tool]"
-        )
-        .forEach(button=>{
-            button.classList.toggle(
-                "active",
-                button.dataset.tool===tool
-            );
-        });
-
-    modeLabel.textContent=
-        tool.toUpperCase();
-}
-
-document
-    .querySelectorAll(
-        ".tool[data-tool]"
-    )
-    .forEach(button=>{
-        button.onclick=()=>{
-            setTool(
-                button.dataset.tool
-            );
-        };
-    });
-
-document
-    .querySelectorAll(
-        ".tool[data-create]"
-    )
-    .forEach(button=>{
-        button.onclick=()=>{
-            addObject(
-                button.dataset.create
-            );
-        };
-    });
-
-document
-    .getElementById("deleteButton")
-    .onclick=deleteSelected;
-
-document
-    .getElementById("resetButton")
-    .onclick=()=>{
-        objects.slice().forEach(object=>{
-            scene.remove(object);
-            object.geometry.dispose();
-            object.material.dispose();
-        });
-
-        objects.length=0;
-        selected=null;
-        grabState=null;
-        mouseTransform=null;
-        controls.enabled=true;
-
-        updateUI();
+    /*************************************************************************
+     * 2. PARAMETRIC GEOMETRY GENERATORS (12 PRIMITIVES & MECHANICAL PARTS)
+     * Every geometry is generated so its base sits at Z = -height/2 and its
+     * top sits at Z = +height/2 (centered around local origin with Z-up).
+     *************************************************************************/
+    const SHAPE_DEFINITIONS = {
+      box: {
+        label: 'Box / Block',
+        defaultColor: '#06b6d4',
+        defaultParams: { width: 30, depth: 30, height: 20, chamfer: 0 },
+        controls: [
+          { key: 'width', label: 'Width X (mm)', min: 1, max: 200, step: 0.5 },
+          { key: 'depth', label: 'Depth Y (mm)', min: 1, max: 200, step: 0.5 },
+          { key: 'height', label: 'Height Z (mm)', min: 1, max: 200, step: 0.5 },
+          { key: 'chamfer', label: 'Corner Fillet (mm)', min: 0, max: 15, step: 0.5 }
+        ]
+      },
+      cylinder: {
+        label: 'Cylinder / Rod',
+        defaultColor: '#38bdf8',
+        defaultParams: { radiusTop: 12, radiusBottom: 12, height: 25, segments: 48 },
+        controls: [
+          { key: 'radiusTop', label: 'Top Radius (mm)', min: 0.5, max: 100, step: 0.5 },
+          { key: 'radiusBottom', label: 'Base Radius (mm)', min: 0.5, max: 100, step: 0.5 },
+          { key: 'height', label: 'Height Z (mm)', min: 1, max: 200, step: 0.5 },
+          { key: 'segments', label: 'Smoothness (Segs)', min: 6, max: 128, step: 2 }
+        ]
+      },
+      sphere: {
+        label: 'Sphere / Ball',
+        defaultColor: '#818cf8',
+        defaultParams: { radius: 15, segments: 36 },
+        controls: [
+          { key: 'radius', label: 'Radius (mm)', min: 1, max: 100, step: 0.5 },
+          { key: 'segments', label: 'Resolution (Segs)', min: 8, max: 96, step: 4 }
+        ]
+      },
+      cone: {
+        label: 'Cone / Taper',
+        defaultColor: '#a78bfa',
+        defaultParams: { radius: 15, height: 30, segments: 48 },
+        controls: [
+          { key: 'radius', label: 'Base Radius (mm)', min: 1, max: 100, step: 0.5 },
+          { key: 'height', label: 'Height Z (mm)', min: 1, max: 200, step: 0.5 },
+          { key: 'segments', label: 'Smoothness (Segs)', min: 6, max: 128, step: 2 }
+        ]
+      },
+      torus: {
+        label: 'Torus / O-Ring',
+        defaultColor: '#f472b6',
+        defaultParams: { radius: 18, tube: 4, radialSegments: 24, tubularSegments: 64 },
+        controls: [
+          { key: 'radius', label: 'Ring Radius (mm)', min: 2, max: 100, step: 0.5 },
+          { key: 'tube', label: 'Tube Radius (mm)', min: 0.5, max: 40, step: 0.5 },
+          { key: 'radialSegments', label: 'Tube Segs', min: 8, max: 64, step: 2 },
+          { key: 'tubularSegments', label: 'Ring Smoothness', min: 12, max: 128, step: 4 }
+        ]
+      },
+      wedge: {
+        label: 'Wedge / Ramp',
+        defaultColor: '#34d399',
+        defaultParams: { width: 30, depth: 40, height: 20, topFlat: 0 },
+        controls: [
+          { key: 'width', label: 'Width X (mm)', min: 2, max: 200, step: 0.5 },
+          { key: 'depth', label: 'Base Depth Y (mm)', min: 2, max: 200, step: 0.5 },
+          { key: 'height', label: 'Height Z (mm)', min: 2, max: 200, step: 0.5 },
+          { key: 'topFlat', label: 'Top Flat Depth (mm)', min: 0, max: 150, step: 1 }
+        ]
+      },
+      hexprism: {
+        label: 'Hex Nut / Prism',
+        defaultColor: '#fbbf24',
+        defaultParams: { radius: 12, height: 8, boreDiameter: 8 },
+        controls: [
+          { key: 'radius', label: 'Outer Hex Radius (mm)', min: 2, max: 80, step: 0.5 },
+          { key: 'height', label: 'Thickness Z (mm)', min: 1, max: 100, step: 0.5 },
+          { key: 'boreDiameter', label: 'Center Thread Hole (mm)', min: 0, max: 120, step: 0.5 }
+        ]
+      },
+      pyramid: {
+        label: 'Pyramid / Frustum',
+        defaultColor: '#fb923c',
+        defaultParams: { baseWidth: 30, baseDepth: 30, topWidth: 0, height: 25 },
+        controls: [
+          { key: 'baseWidth', label: 'Base Width X (mm)', min: 2, max: 200, step: 1 },
+          { key: 'baseDepth', label: 'Base Depth Y (mm)', min: 2, max: 200, step: 1 },
+          { key: 'topWidth', label: 'Top Flat Width (mm)', min: 0, max: 150, step: 1 },
+          { key: 'height', label: 'Height Z (mm)', min: 2, max: 200, step: 1 }
+        ]
+      },
+      tube: {
+        label: 'Tube / Spacer',
+        defaultColor: '#22d3ee',
+        defaultParams: { outerRadius: 14, innerRadius: 8, height: 25, segments: 64 },
+        controls: [
+          { key: 'outerRadius', label: 'Outer Radius (mm)', min: 2, max: 100, step: 0.5 },
+          { key: 'innerRadius', label: 'Inner Bore Radius (mm)', min: 0.5, max: 95, step: 0.5 },
+          { key: 'height', label: 'Length / Height Z (mm)', min: 1, max: 200, step: 0.5 },
+          { key: 'segments', label: 'Wall Smoothness', min: 12, max: 128, step: 4 }
+        ]
+      },
+      gear: {
+        label: 'Spur Gear',
+        defaultColor: '#f59e0b',
+        defaultParams: { teeth: 20, module: 2.0, thickness: 8, boreDiameter: 8 },
+        controls: [
+          { key: 'teeth', label: 'Tooth Count', min: 6, max: 64, step: 1 },
+          { key: 'module', label: 'Tooth Module (Pitch)', min: 0.8, max: 6.0, step: 0.1 },
+          { key: 'thickness', label: 'Face Width Z (mm)', min: 1, max: 80, step: 0.5 },
+          { key: 'boreDiameter', label: 'Shaft Bore Ø (mm)', min: 0, max: 60, step: 0.5 }
+        ]
+      },
+      lbracket: {
+        label: 'L-Bracket Mount',
+        defaultColor: '#10b981',
+        defaultParams: { armX: 40, armZ: 40, width: 28, thickness: 5, holeDiameter: 5 },
+        controls: [
+          { key: 'armX', label: 'Base Arm Length (mm)', min: 15, max: 160, step: 1 },
+          { key: 'armZ', label: 'Vertical Arm Height (mm)', min: 15, max: 160, step: 1 },
+          { key: 'width', label: 'Bracket Width Y (mm)', min: 10, max: 120, step: 1 },
+          { key: 'thickness', label: 'Wall Thickness (mm)', min: 2, max: 25, step: 0.5 },
+          { key: 'holeDiameter', label: 'Mounting Hole Ø (mm)', min: 0, max: 20, step: 0.5 }
+        ]
+      },
+      enclosure: {
+        label: 'Project Enclosure',
+        defaultColor: '#38bdf8',
+        defaultParams: { width: 65, depth: 45, height: 28, wallThickness: 2.4, cornerRadius: 4 },
+        controls: [
+          { key: 'width', label: 'Outer Width X (mm)', min: 15, max: 200, step: 1 },
+          { key: 'depth', label: 'Outer Depth Y (mm)', min: 15, max: 200, step: 1 },
+          { key: 'height', label: 'Outer Height Z (mm)', min: 8, max: 180, step: 1 },
+          { key: 'wallThickness', label: 'Wall Thickness (mm)', min: 1.2, max: 15, step: 0.4 },
+          { key: 'cornerRadius', label: 'Corner Fillet (mm)', min: 0, max: 20, step: 0.5 }
+        ]
+      }
     };
 
-document
-    .getElementById("saveButton")
-    .onclick=saveScene;
-
-document
-    .getElementById("loadButton")
-    .onclick=loadScene;
-
-let mouseTransform = null;
-
-function updatePointerFromEvent(event) {
-    const rect = renderer.domElement.getBoundingClientRect();
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-}
-
-function getObjectHit(event) {
-    updatePointerFromEvent(event);
-    raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObjects(objects, false);
-    return hits.length ? hits[0] : null;
-}
-
-renderer.domElement.addEventListener("pointerdown", event => {
-    if (event.button !== 0) return;
-
-    const hit = getObjectHit(event);
-    if (!hit) {
-        if (currentTool === "select") selectObject(null);
-        return;
+    /**
+     * Helper to create a 2D rounded rectangle THREE.Shape centered at (0,0)
+     */
+    function createRoundedRectShape(w, d, r) {
+      const shape = new THREE.Shape();
+      const hw = w / 2;
+      const hd = d / 2;
+      const rad = Math.min(r, hw - 0.05, hd - 0.05);
+      if (rad <= 0.05) {
+        shape.moveTo(-hw, -hd);
+        shape.lineTo(hw, -hd);
+        shape.lineTo(hw, hd);
+        shape.lineTo(-hw, hd);
+        shape.closePath();
+        return shape;
+      }
+      shape.moveTo(-hw + rad, -hd);
+      shape.lineTo(hw - rad, -hd);
+      shape.absarc(hw - rad, -hd + rad, rad, -Math.PI / 2, 0, false);
+      shape.lineTo(hw, hd - rad);
+      shape.absarc(hw - rad, hd - rad, rad, 0, Math.PI / 2, false);
+      shape.lineTo(-hw + rad, hd);
+      shape.absarc(-hw + rad, hd - rad, rad, Math.PI / 2, Math.PI, false);
+      shape.lineTo(-hw, -hd + rad);
+      shape.absarc(-hw + rad, -hd + rad, rad, Math.PI, 1.5 * Math.PI, false);
+      shape.closePath();
+      return shape;
     }
 
-    selectObject(hit.object);
-    if (currentTool === "select") return;
+    /**
+     * Merges an array of non-indexed or indexed BufferGeometries into one non-indexed BufferGeometry
+     */
+    function mergeGeometriesToSingle(geometries) {
+      const posArrays = [];
+      const normArrays = [];
+      let totalFloats = 0;
 
-    event.preventDefault();
-    renderer.domElement.setPointerCapture(event.pointerId);
-    controls.enabled = false;
+      geometries.forEach(g => {
+        const nonIndexed = g.index ? g.toNonIndexed() : g.clone();
+        nonIndexed.computeVertexNormals();
+        const pos = nonIndexed.attributes.position.array;
+        const norm = nonIndexed.attributes.normal.array;
+        posArrays.push(pos);
+        normArrays.push(norm);
+        totalFloats += pos.length;
+      });
 
-    const object = hit.object;
-    // Keep mouse movement on the horizontal XZ plane (constant Y).
-    const cameraDirection = new THREE.Vector3(0, 1, 0);
-    const movePlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-        cameraDirection, object.position.clone()
-    );
+      const mergedPos = new Float32Array(totalFloats);
+      const mergedNorm = new Float32Array(totalFloats);
+      let offset = 0;
+      for (let i = 0; i < posArrays.length; i++) {
+        mergedPos.set(posArrays[i], offset);
+        mergedNorm.set(normArrays[i], offset);
+        offset += posArrays[i].length;
+      }
 
-    updatePointerFromEvent(event);
-    raycaster.setFromCamera(pointer, camera);
-    const startIntersection = new THREE.Vector3();
-    const hasStartIntersection = raycaster.ray.intersectPlane(movePlane, startIntersection);
-
-    mouseTransform = {
-        pointerId: event.pointerId,
-        object,
-        tool: currentTool,
-        startX: event.clientX,
-        startY: event.clientY,
-        startPosition: object.position.clone(),
-        startRotation: object.rotation.clone(),
-        startScale: object.scale.clone(),
-        movePlane,
-        startIntersection: hasStartIntersection ? startIntersection.clone() : null
-    };
-});
-
-renderer.domElement.addEventListener("pointermove", event => {
-    if (!mouseTransform || event.pointerId !== mouseTransform.pointerId) return;
-
-    const state = mouseTransform;
-    const object = state.object;
-    const dx = event.clientX - state.startX;
-    const dy = event.clientY - state.startY;
-
-    if (state.tool === "move") {
-        updatePointerFromEvent(event);
-        raycaster.setFromCamera(pointer, camera);
-        const currentIntersection = new THREE.Vector3();
-        const intersects = raycaster.ray.intersectPlane(state.movePlane, currentIntersection);
-        if (intersects && state.startIntersection) {
-            object.position.copy(state.startPosition).add(
-                currentIntersection.sub(state.startIntersection)
-            );
-        }
-    } else if (state.tool === "rotate") {
-        object.rotation.copy(state.startRotation);
-        object.rotation.y += dx * 0.01;
-        object.rotation.x += dy * 0.01;
-    } else if (state.tool === "scale") {
-        const factor = Math.max(0.05, Math.exp((dx - dy) * 0.01));
-        object.scale.copy(state.startScale).multiplyScalar(factor);
+      const result = new THREE.BufferGeometry();
+      result.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3));
+      result.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3));
+      return result;
     }
 
-    if (typeof updateUI === "function") updateUI();
-});
+    /**
+     * Generates a centered Z-up BufferGeometry for any supported shapeType and parameter object
+     */
+    function buildParametricGeometry(shapeType, params) {
+      let geom;
 
-function finishMouseTransform(event) {
-    if (!mouseTransform) return;
-    if (event && event.pointerId !== mouseTransform.pointerId) return;
-    mouseTransform = null;
-    controls.enabled = true;
-}
-
-renderer.domElement.addEventListener("pointerup", finishMouseTransform);
-renderer.domElement.addEventListener("pointercancel", finishMouseTransform);
-renderer.domElement.addEventListener("lostpointercapture", finishMouseTransform);
-
-function saveScene(){
-
-    const data=objects.map(
-        object=>({
-            name:object.name,
-            type:object.userData.type,
-            position:object.position.toArray(),
-            rotation:object.rotation.toArray(),
-            scale:object.scale.toArray()
-        })
-    );
-
-    try {
-        localStorage.setItem(
-            "ai3dstudio-web-scene",
-            JSON.stringify(data)
-        );
-        systemStatus.textContent = "SAVED";
-        window.setTimeout(() => {
-            if (systemStatus.textContent === "SAVED") systemStatus.textContent = "ONLINE";
-        }, 1800);
-    } catch (error) {
-        console.error("SCENE SAVE ERROR", error);
-        alert("Could not save the scene in this browser. Check available storage.");
-    }
-}
-
-function loadScene(){
-
-    const raw=
-        localStorage.getItem(
-            "ai3dstudio-web-scene"
-        );
-
-    if(!raw){
-        return;
-    }
-
-    objects.slice().forEach(object=>{
-        scene.remove(object);
-        object.geometry.dispose();
-        object.material.dispose();
-    });
-
-    objects.length=0;
-
-    let savedObjects;
-    try {
-        savedObjects = JSON.parse(raw);
-        if (!Array.isArray(savedObjects)) throw new Error("Saved scene format is invalid");
-    } catch (error) {
-        console.error("SCENE LOAD ERROR", error);
-        alert("The saved scene could not be read. Create a new scene and save again.");
-        return;
-    }
-
-    savedObjects.forEach(data=>{
-
-        const object=new THREE.Mesh(
-            geometry(data.type),
-            material()
-        );
-
-        object.name=data.name;
-        object.userData.type=data.type;
-
-        object.position.fromArray(
-            data.position
-        );
-
-        object.rotation.fromArray(
-            data.rotation
-        );
-
-        object.scale.fromArray(
-            data.scale
-        );
-
-        scene.add(object);
-        objects.push(object);
-    });
-
-    grabState = null;
-
-    selectObject(
-        objects[0]||null
-    );
-
-    systemStatus.textContent = "LOADED";
-    window.setTimeout(() => {
-        if (systemStatus.textContent === "LOADED") systemStatus.textContent = "ONLINE";
-    }, 1800);
-}
-
-function runCommand(text){
-
-    const value=
-        text.toLowerCase().trim();
-
-    if(value.includes("create cube")){
-        addObject("Cube");
-    }
-    else if(value.includes("create sphere")){
-        addObject("Sphere");
-    }
-    else if(value.includes("create cylinder")){
-        addObject("Cylinder");
-    }
-    else if(value.includes("delete")){
-        deleteSelected();
-    }
-    else if(value.includes("move")){
-        setTool("move");
-    }
-    else if(value.includes("rotate")){
-        setTool("rotate");
-    }
-    else if(value.includes("scale")){
-        setTool("scale");
-    }
-    else if(value.includes("select")){
-        setTool("select");
-    }
-
-    command.value="";
-}
-
-command.addEventListener(
-    "keydown",
-    event=>{
-        if(event.key==="Enter"){
-            runCommand(command.value);
-        }
-    }
-);
-
-window.addEventListener(
-    "keydown",
-    event=>{
-
-        if(event.target===command){
-            return;
+      switch (shapeType) {
+        case 'box': {
+          const w = Math.max(0.5, Number(params.width) || 30);
+          const d = Math.max(0.5, Number(params.depth) || 30);
+          const h = Math.max(0.5, Number(params.height) || 20);
+          const c = Math.max(0, Number(params.chamfer) || 0);
+          if (c > 0.05) {
+            const shape = createRoundedRectShape(w, d, c);
+            geom = new THREE.ExtrudeBufferGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 16 });
+            geom.translate(0, 0, -h / 2);
+          } else {
+            geom = new THREE.BoxBufferGeometry(w, d, h);
+          }
+          break;
         }
 
-        if(event.key.toLowerCase()==="q"){
-            setTool("select");
+        case 'cylinder': {
+          const rt = Math.max(0.1, Number(params.radiusTop) || 12);
+          const rb = Math.max(0.1, Number(params.radiusBottom) || 12);
+          const h = Math.max(0.5, Number(params.height) || 25);
+          const segs = Math.max(6, Math.round(Number(params.segments) || 48));
+          geom = new THREE.CylinderBufferGeometry(rt, rb, h, segs);
+          geom.rotateX(Math.PI / 2); // Align cylinder height with Z-Up
+          break;
         }
 
-        if(event.key.toLowerCase()==="w"){
-            setTool("move");
+        case 'sphere': {
+          const r = Math.max(0.5, Number(params.radius) || 15);
+          const segs = Math.max(8, Math.round(Number(params.segments) || 36));
+          geom = new THREE.SphereBufferGeometry(r, segs, Math.round(segs * 0.75));
+          geom.rotateX(Math.PI / 2);
+          break;
         }
 
-        if(event.key.toLowerCase()==="e"){
-            setTool("rotate");
+        case 'cone': {
+          const r = Math.max(0.5, Number(params.radius) || 15);
+          const h = Math.max(0.5, Number(params.height) || 30);
+          const segs = Math.max(6, Math.round(Number(params.segments) || 48));
+          geom = new THREE.ConeBufferGeometry(r, h, segs);
+          geom.rotateX(Math.PI / 2);
+          break;
         }
 
-        if(event.key.toLowerCase()==="r"){
-            setTool("scale");
+        case 'torus': {
+          const r = Math.max(1, Number(params.radius) || 18);
+          const tube = Math.max(0.5, Number(params.tube) || 4);
+          const rSegs = Math.max(6, Math.round(Number(params.radialSegments) || 24));
+          const tSegs = Math.max(12, Math.round(Number(params.tubularSegments) || 64));
+          geom = new THREE.TorusBufferGeometry(r, tube, rSegs, tSegs);
+          break;
         }
 
-        if(event.key==="Delete"){
-            deleteSelected();
+        case 'wedge': {
+          const w = Math.max(1, Number(params.width) || 30);
+          const d = Math.max(1, Number(params.depth) || 40);
+          const h = Math.max(1, Number(params.height) || 20);
+          const topFlat = Math.min(d - 0.5, Math.max(0, Number(params.topFlat) || 0));
+          // Define 2D profile in YZ plane (X=depth, Y=height) and extrude along X width
+          const shape = new THREE.Shape();
+          shape.moveTo(-d / 2, -h / 2);
+          shape.lineTo(d / 2, -h / 2);
+          if (topFlat > 0.1) {
+            shape.lineTo(-d / 2 + topFlat, h / 2);
+          }
+          shape.lineTo(-d / 2, h / 2);
+          shape.closePath();
+
+          geom = new THREE.ExtrudeBufferGeometry(shape, { depth: w, bevelEnabled: false, steps: 1 });
+          geom.translate(0, 0, -w / 2);
+          // Rotate so extrusion axis (Z) becomes X, and profile Y becomes Z
+          geom.rotateY(Math.PI / 2);
+          geom.rotateZ(Math.PI / 2);
+          break;
         }
-    }
-);
 
-async function initializeHandTracker(){
+        case 'hexprism': {
+          const r = Math.max(2, Number(params.radius) || 12);
+          const h = Math.max(1, Number(params.height) || 8);
+          const boreDia = Math.max(0, Number(params.boreDiameter) || 0);
+          const holeR = Math.min(r * 0.8, boreDia / 2);
 
-    handStatus.textContent="LOADING";
-    trackerLabel.textContent="LOADING";
-    systemStatus.textContent="TRACKER";
+          const shape = new THREE.Shape();
+          for (let i = 0; i < 6; i++) {
+            const angle = (i * Math.PI) / 3;
+            const px = r * Math.cos(angle);
+            const py = r * Math.sin(angle);
+            if (i === 0) shape.moveTo(px, py);
+            else shape.lineTo(px, py);
+          }
+          shape.closePath();
 
-    try{
+          if (holeR > 0.2) {
+            const holePath = new THREE.Path();
+            holePath.absarc(0, 0, holeR, 0, Math.PI * 2, true);
+            shape.holes.push(holePath);
+          }
 
-        const vision=
-            await import(
-                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1"
-            );
+          geom = new THREE.ExtrudeBufferGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 36 });
+          geom.translate(0, 0, -h / 2);
+          break;
+        }
 
-        const fileset=
-            await vision.FilesetResolver
-            .forVisionTasks(
-                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm"
-            );
+        case 'pyramid': {
+          const bw = Math.max(2, Number(params.baseWidth) || 30);
+          const bd = Math.max(2, Number(params.baseDepth) || 30);
+          const tw = Math.min(bw, Math.max(0, Number(params.topWidth) || 0));
+          const h = Math.max(2, Number(params.height) || 25);
+          const ratio = tw / bw;
+          const td = bd * ratio;
 
-        handLandmarker=
-            await vision.HandLandmarker
-            .createFromOptions(
-                fileset,
-                {
-                    baseOptions:{
-                        modelAssetPath:
-                            "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
-                    },
+          const hw = bw / 2, hd = bd / 2;
+          const thw = Math.max(0.01, tw / 2), thd = Math.max(0.01, td / 2);
+          const hh = h / 2;
 
-                    runningMode:"VIDEO",
+          // 8 corners of a frustum/pyramid
+          const v = [
+            [-hw, -hd, -hh], [hw, -hd, -hh], [hw, hd, -hh], [-hw, hd, -hh], // 0..3 bottom
+            [-thw, -thd, hh], [thw, -thd, hh], [thw, thd, hh], [-thw, thd, hh] // 4..7 top
+          ];
+          const indices = [
+            0, 2, 1, 0, 3, 2, // bottom
+            4, 5, 6, 4, 6, 7, // top
+            0, 1, 5, 0, 5, 4, // front
+            1, 2, 6, 1, 6, 5, // right
+            2, 3, 7, 2, 7, 6, // back
+            3, 0, 4, 3, 4, 7  // left
+          ];
+          const positions = [];
+          indices.forEach(idx => positions.push(...v[idx]));
+          geom = new THREE.BufferGeometry();
+          geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+          geom.computeVertexNormals();
+          break;
+        }
 
-                    numHands:2,
+        case 'tube': {
+          const outerR = Math.max(1.5, Number(params.outerRadius) || 14);
+          const innerR = Math.min(outerR - 0.6, Math.max(0.2, Number(params.innerRadius) || 8));
+          const h = Math.max(1, Number(params.height) || 25);
+          const segs = Math.max(12, Math.round(Number(params.segments) || 64));
 
-                    minHandDetectionConfidence:0.5,
+          const shape = new THREE.Shape();
+          shape.absarc(0, 0, outerR, 0, Math.PI * 2, false);
+          const hole = new THREE.Path();
+          hole.absarc(0, 0, innerR, 0, Math.PI * 2, true);
+          shape.holes.push(hole);
 
-                    minHandPresenceConfidence:0.5,
+          geom = new THREE.ExtrudeBufferGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: segs });
+          geom.translate(0, 0, -h / 2);
+          break;
+        }
 
-                    minTrackingConfidence:0.5
-                }
-            );
+        case 'gear': {
+          const teeth = Math.max(6, Math.round(Number(params.teeth) || 20));
+          const mod = Math.max(0.5, Number(params.module) || 2.0);
+          const thickness = Math.max(1, Number(params.thickness) || 8);
+          const boreDia = Math.max(0, Number(params.boreDiameter) || 8);
 
-        handStatus.textContent="READY";
-        trackerLabel.textContent="READY";
-        systemStatus.textContent="ONLINE";
+          const pitchR = (teeth * mod) / 2;
+          const addendum = mod * 1.0;
+          const dedendum = mod * 1.2;
+          const outerR = pitchR + addendum;
+          const rootR = Math.max(2, pitchR - dedendum);
+          const boreR = Math.min(rootR * 0.78, boreDia / 2);
 
-        cameraStatus.textContent=
-            "Hand tracker ready. Show your hand.";
+          const shape = new THREE.Shape();
+          const stepAngle = (Math.PI * 2) / teeth;
 
-    }catch(error){
+          for (let i = 0; i < teeth; i++) {
+            const baseAngle = i * stepAngle;
+            // 6 control points per gear tooth for realistic involute-like trapezoidal profile
+            const a0 = baseAngle;
+            const a1 = baseAngle + stepAngle * 0.16;
+            const a2 = baseAngle + stepAngle * 0.30;
+            const a3 = baseAngle + stepAngle * 0.50;
+            const a4 = baseAngle + stepAngle * 0.64;
+            const a5 = baseAngle + stepAngle * 0.82;
 
-        console.error(
-            "HAND TRACKER ERROR",
-            error
-        );
-
-        handLandmarker=null;
-
-        handStatus.textContent="ERROR";
-        trackerLabel.textContent="ERROR";
-        systemStatus.textContent="ERROR";
-
-        cameraStatus.textContent=
-            "Camera works, but MediaPipe failed to load. Mouse and keyboard remain active.";
-    }
-}
-
-async function startCamera(){
-
-    if(stream){
-        return;
-    }
-
-    if(!navigator.mediaDevices||
-       !navigator.mediaDevices.getUserMedia){
-
-        cameraStatus.textContent=
-            "Camera API unavailable. Use the deployed HTTPS site.";
-
-        return;
-    }
-
-    try{
-
-        stream=
-            await navigator.mediaDevices
-            .getUserMedia({
-                video:{
-                    width:{ideal:640},
-                    height:{ideal:400},
-                    facingMode:"user"
-                },
-                audio:false
+            const pts = [
+              [rootR * Math.cos(a0), rootR * Math.sin(a0)],
+              [rootR * Math.cos(a1), rootR * Math.sin(a1)],
+              [pitchR * Math.cos((a1 + a2) * 0.5), pitchR * Math.sin((a1 + a2) * 0.5)],
+              [outerR * Math.cos(a2), outerR * Math.sin(a2)],
+              [outerR * Math.cos(a3), outerR * Math.sin(a3)],
+              [pitchR * Math.cos((a3 + a4) * 0.5), pitchR * Math.sin((a3 + a4) * 0.5)],
+              [rootR * Math.cos(a4), rootR * Math.sin(a4)],
+              [rootR * Math.cos(a5), rootR * Math.sin(a5)]
+            ];
+            pts.forEach((pt, idx) => {
+              if (i === 0 && idx === 0) shape.moveTo(pt[0], pt[1]);
+              else shape.lineTo(pt[0], pt[1]);
             });
+          }
+          shape.closePath();
 
-        video.srcObject=stream;
+          if (boreR > 0.25) {
+            const hole = new THREE.Path();
+            hole.absarc(0, 0, boreR, 0, Math.PI * 2, true);
+            shape.holes.push(hole);
+          }
 
-        await video.play();
-
-        cameraButton.textContent=
-            "CAMERA ACTIVE";
-
-        cameraStatus.textContent=
-            "Camera active. Loading hand tracker...";
-
-        await initializeHandTracker();
-
-        if(!handLoopRunning){
-
-            handLoopRunning=true;
-
-            requestAnimationFrame(
-                handLoop
-            );
+          geom = new THREE.ExtrudeBufferGeometry(shape, { depth: thickness, bevelEnabled: false, curveSegments: 36 });
+          geom.translate(0, 0, -thickness / 2);
+          break;
         }
 
-    }catch(error){
+        case 'lbracket': {
+          const armX = Math.max(15, Number(params.armX) || 40);
+          const armZ = Math.max(15, Number(params.armZ) || 40);
+          const width = Math.max(10, Number(params.width) || 28);
+          const t = Math.min(Math.min(armX, armZ) * 0.45, Math.max(2, Number(params.thickness) || 5));
+          const holeDia = Math.max(0, Number(params.holeDiameter) || 5);
+          const holeR = Math.min(width * 0.35, holeDia / 2);
 
-        console.error(
-            "CAMERA ERROR",
-            error
-        );
+          // 1. Horizontal Base Arm (on XY plane, extruded Z by thickness t)
+          const baseShape = new THREE.Shape();
+          baseShape.moveTo(0, -width / 2);
+          baseShape.lineTo(armX, -width / 2);
+          baseShape.lineTo(armX, width / 2);
+          baseShape.lineTo(0, width / 2);
+          baseShape.closePath();
 
-        cameraStatus.textContent=
-            "Camera permission failed. Mouse and keyboard remain active.";
+          if (holeR > 0.3 && armX - t > holeR * 3) {
+            const holeX = t + (armX - t) * 0.58;
+            const h1 = new THREE.Path();
+            h1.absarc(holeX, 0, holeR, 0, Math.PI * 2, true);
+            baseShape.holes.push(h1);
+          }
+          const baseGeom = new THREE.ExtrudeBufferGeometry(baseShape, { depth: t, bevelEnabled: false, curveSegments: 24 });
 
-        handStatus.textContent="OFF";
-    }
-}
+          // 2. Vertical Back Arm (built in 2D, extruded by t, then rotated vertical)
+          const vertLen = Math.max(2, armZ - t);
+          const vertShape = new THREE.Shape();
+          vertShape.moveTo(0, -width / 2);
+          vertShape.lineTo(vertLen, -width / 2);
+          vertShape.lineTo(vertLen, width / 2);
+          vertShape.lineTo(0, width / 2);
+          vertShape.closePath();
 
-cameraButton.onclick=startCamera;
+          if (holeR > 0.3 && vertLen > holeR * 3) {
+            const holeZ = vertLen * 0.55;
+            const h2 = new THREE.Path();
+            h2.absarc(holeZ, 0, holeR, 0, Math.PI * 2, true);
+            vertShape.holes.push(h2);
+          }
+          const vertGeom = new THREE.ExtrudeBufferGeometry(vertShape, { depth: t, bevelEnabled: false, curveSegments: 24 });
+          // Rotate so local X goes up (+Z) and extrusion depth (+Z) goes along +X (0..t)
+          vertGeom.rotateY(-Math.PI / 2);
+          vertGeom.translate(t, 0, t);
 
-function handLoop(time){
-
-    requestAnimationFrame(
-        handLoop
-    );
-
-    if(!handLandmarker){
-        return;
-    }
-
-    if(video.readyState<2){
-        return;
-    }
-
-    if(video.currentTime===lastVideoTime){
-        return;
-    }
-
-    if(time-lastDetectionTime<35){
-        return;
-    }
-
-    lastDetectionTime=time;
-    lastVideoTime=video.currentTime;
-
-    try{
-
-        const result=
-            handLandmarker.detectForVideo(
-                video,
-                performance.now()
-            );
-
-        processHands(result);
-
-    }catch(error){
-
-        console.error(
-            "DETECTION ERROR",
-            error
-        );
-
-        handStatus.textContent=
-            "ERROR";
-    }
-}
-
-function processHands(result){
-
-    drawHands(result);
-
-    if(
-        !result||
-        !result.landmarks||
-        result.landmarks.length===0
-    ){
-
-        handStatus.textContent=
-            "NO HAND";
-
-        cursor.style.display="none";
-
-        grabState=null;
-
-        return;
-    }
-
-    handStatus.textContent=
-        result.landmarks.length===2?
-        "2 HANDS":
-        "1 HAND";
-
-    const hand=
-        result.landmarks[0];
-
-    // Use the same hand for gesture calculations and manipulation.
-    currentHand = hand;
-
-    const index=
-        hand[8];
-
-    const thumb=
-        hand[4];
-
-    const palm=
-        getPalm(hand);
-
-    const x=
-        1-index.x;
-
-    const y=
-        index.y;
-
-    moveCursor(
-        x,
-        y
-    );
-
-    const pinch=
-        distance3D(
-            index,
-            thumb
-        )<0.075;
-
-    if(
-        result.landmarks.length===2
-    ){
-
-        const hand2=
-            result.landmarks[1];
-
-        const palm2=
-            getPalm(hand2);
-
-        const twoHandDistance=
-            distance3D(
-                palm,
-                palm2
-            );
-
-        if(
-            pinch&&
-            !grabState
-        ){
-
-            if(selected){
-
-                grabState={
-                    type:"two",
-                    distance:twoHandDistance,
-                    scale:selected.scale.clone()
-                };
-            }
+          geom = mergeGeometriesToSingle([baseGeom, vertGeom]);
+          // Center around origin
+          geom.translate(-armX / 2, 0, -armZ / 2);
+          break;
         }
 
-        if(
-            grabState&&
-            grabState.type==="two"
-        ){
+        case 'enclosure': {
+          const w = Math.max(12, Number(params.width) || 65);
+          const d = Math.max(12, Number(params.depth) || 45);
+          const h = Math.max(6, Number(params.height) || 28);
+          const wt = Math.min(Math.min(w, d) * 0.35, Math.max(1.0, Number(params.wallThickness) || 2.4));
+          const r = Math.max(0, Number(params.cornerRadius) || 4);
 
-            if(selected){
+          const floorH = Math.min(h * 0.4, wt);
+          const wallH = Math.max(1, h - floorH);
 
-                const factor=
-                    THREE.MathUtils.clamp(
-                        twoHandDistance/
-                        grabState.distance,
-                        0.3,
-                        3
-                    );
+          // 1. Solid Bottom Floor Plate
+          const outerShapeFloor = createRoundedRectShape(w, d, r);
+          const floorGeom = new THREE.ExtrudeBufferGeometry(outerShapeFloor, { depth: floorH, bevelEnabled: false, curveSegments: 20 });
 
-                selected.scale.set(
-                    grabState.scale.x*factor,
-                    grabState.scale.y*factor,
-                    grabState.scale.z*factor
-                );
+          // 2. Hollow Perimeter Walls
+          const outerShapeWalls = createRoundedRectShape(w, d, r);
+          const innerShapeHole = createRoundedRectShape(w - wt * 2, d - wt * 2, Math.max(0, r - wt));
+          // Reverse points of inner hole path for clean winding
+          const holePts = innerShapeHole.getPoints(20).reverse();
+          const holePath = new THREE.Path(holePts);
+          outerShapeWalls.holes.push(holePath);
 
-                updateUI();
-            }
+          const wallGeom = new THREE.ExtrudeBufferGeometry(outerShapeWalls, { depth: wallH, bevelEnabled: false, curveSegments: 20 });
+          wallGeom.translate(0, 0, floorH);
 
-            if(!pinch){
-                grabState=null;
-            }
-
-            return;
+          geom = mergeGeometriesToSingle([floorGeom, wallGeom]);
+          geom.translate(0, 0, -h / 2);
+          break;
         }
+
+        default:
+          geom = new THREE.BoxBufferGeometry(25, 25, 25);
+      }
+
+      geom.computeBoundingBox();
+      geom.computeVertexNormals();
+      return geom;
     }
 
-    if(pinch){
+    /*************************************************************************
+     * 3. THREE.JS VIEWPORT & 3D PRINTER BUILD PLATE INITIALIZATION
+     *************************************************************************/
+    function initStudio() {
+      const container = document.getElementById('viewportContainer');
+      const width = container.clientWidth || window.innerWidth - 600;
+      const height = container.clientHeight || window.innerHeight - 90;
 
-        if(!grabState){
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0b0f17);
 
-            let target=
-                selected;
+      // Perspective Camera (Z-Up)
+      camera = new THREE.PerspectiveCamera(42, width / height, 1, 3500);
+      camera.up.set(0, 0, 1);
+      camera.position.set(240, -260, 210);
 
-            if(!target){
-                target=
-                    pickAtHand(
-                        x,
-                        y
-                    );
-            }
+      // WebGLRenderer with local clipping enabled for Layer Slicer
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.localClippingEnabled = true;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
 
-            if(target){
+      // Studio Lighting
+      const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.65);
+      scene.add(ambientLight);
 
-                selectObject(
-                    target
-                );
+      const mainDirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+      mainDirLight.position.set(160, -190, 320);
+      scene.add(mainDirLight);
 
-                grabState={
-                    type:"one",
-                    x:x,
-                    y:y,
-                    position:
-                        target.position.clone(),
-                    rotation:
-                        target.rotation.clone(),
-                    scale:
-                        target.scale.clone(),
-                    pinchDistance: distance3D(index, thumb)
-                };
-            }
+      const fillDirLight = new THREE.DirectionalLight(0x38bdf8, 0.35);
+      fillDirLight.position.set(-200, 220, 140);
+      scene.add(fillDirLight);
+
+      const rimLight = new THREE.DirectionalLight(0xf59e0b, 0.22);
+      rimLight.position.set(0, 250, -120);
+      scene.add(rimLight);
+
+      // Build Plate (220x220x250mm)
+      createPrinterBuildPlate();
+
+      // OrbitControls
+      orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+      orbitControls.enableDamping = true;
+      orbitControls.dampingFactor = 0.08;
+      orbitControls.maxDistance = 1400;
+      orbitControls.minDistance = 15;
+      orbitControls.target.set(0, 0, 25);
+
+      // TransformControls
+      transformControls = new THREE.TransformControls(camera, renderer.domElement);
+      transformControls.setSize(0.95);
+      transformControls.setTranslationSnap(snapTranslationStep);
+      transformControls.setRotationSnap(snapRotationStep);
+
+      transformControls.addEventListener('dragging-changed', (event) => {
+        orbitControls.enabled = !event.value;
+        isDraggingGizmo = event.value;
+      });
+
+      transformControls.addEventListener('change', () => {
+        if (selectedObject && isDraggingGizmo) {
+          syncInspectorToSelected();
+          updatePrintStats();
         }
+      });
 
-        if(
-            grabState&&
-            selected
-        ){
+      scene.add(transformControls);
 
-            manipulateHand(
-                x,
-                y,
-                palm
-            );
-        }
+      // Raycasting for object selection
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
 
-    }else{
+      renderer.domElement.addEventListener('pointerdown', onViewportPointerDown);
+      renderer.domElement.addEventListener('pointerup', onViewportPointerUp);
+      window.addEventListener('resize', onWindowResize);
+      window.addEventListener('keydown', onKeyDown);
 
-        if(grabState){
+      // Load default Drone Motor Mount or Calibration Starter so the bed isn't empty
+      loadQuickTemplate('motormount');
 
-            grabState=null;
-        }
+      // Start Render Loop
+      animate();
     }
-}
 
-function manipulateHand(
-    x,
-    y,
-    palm
-){
+    /**
+     * Builds the 220x220x250mm 3D Printer Build Plate with 10mm major grid,
+     * 1mm minor subdivisions, X/Y/Z axis indicators, and a Z-slice laser plane
+     */
+    function createPrinterBuildPlate() {
+      const bedGroup = new THREE.Group();
+      bedGroup.name = '__BUILD_PLATE__';
 
-    if(!selected||
-       !grabState){
+      // Dark metallic PEI spring steel sheet base (slightly below Z=0 to prevent Z-fighting)
+      const plateGeom = new THREE.PlaneBufferGeometry(BED_SIZE_X, BED_SIZE_Y);
+      const plateMat = new THREE.MeshStandardMaterial({
+        color: 0x111827,
+        roughness: 0.75,
+        metalness: 0.2,
+        side: THREE.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: 2,
+        polygonOffsetUnits: 2
+      });
+      const plateMesh = new THREE.Mesh(plateGeom, plateMat);
+      plateMesh.position.z = -0.15;
+      bedGroup.add(plateMesh);
+
+      // Minor 1mm Grid (220 subdivisions across 220mm)
+      const minorGrid = new THREE.GridHelper(BED_SIZE_X, 220, 0x1e293b, 0x172033);
+      minorGrid.rotation.x = Math.PI / 2; // Lay flat on XY plane
+      minorGrid.position.z = -0.05;
+      bedGroup.add(minorGrid);
+
+      // Major 10mm Grid (22 subdivisions across 220mm)
+      const majorGrid = new THREE.GridHelper(BED_SIZE_X, 22, 0x334155, 0x334155);
+      majorGrid.rotation.x = Math.PI / 2;
+      majorGrid.position.z = 0.0;
+      bedGroup.add(majorGrid);
+
+      // Color-Coded Coordinate Axes at Center & Front-Left Corner
+      // Red = X (Width), Green = Y (Depth), Blue = Z (Height/Up)
+      const axisGroup = new THREE.Group();
+      const halfX = BED_SIZE_X / 2;
+      const halfY = BED_SIZE_Y / 2;
+
+      // Center X Axis Line (Red)
+      const xAxisMat = new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 });
+      const xAxisGeom = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-halfX, 0, 0.08),
+        new THREE.Vector3(halfX, 0, 0.08)
+      ]);
+      axisGroup.add(new THREE.Line(xAxisGeom, xAxisMat));
+
+      // Center Y Axis Line (Green)
+      const yAxisMat = new THREE.LineBasicMaterial({ color: 0x10b981, linewidth: 2 });
+      const yAxisGeom = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, -halfY, 0.08),
+        new THREE.Vector3(0, halfY, 0.08)
+      ]);
+      axisGroup.add(new THREE.Line(yAxisGeom, yAxisMat));
+
+      // Origin Z Axis Pole (Blue)
+      const zAxisMat = new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.55 });
+      const zAxisGeom = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, BED_SIZE_Z)
+      ]);
+      axisGroup.add(new THREE.Line(zAxisGeom, zAxisMat));
+
+      // Front-Left Printer Homing Origin Triad (-110, -110, 0) with Arrows
+      const triadOrigin = new THREE.Vector3(-halfX, -halfY, 0.2);
+      axisGroup.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), triadOrigin, 32, 0xef4444, 5, 3));
+      axisGroup.add(new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), triadOrigin, 32, 0x10b981, 5, 3));
+      axisGroup.add(new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), triadOrigin, 32, 0x3b82f6, 5, 3));
+
+      bedGroup.add(axisGroup);
+
+      // 220 x 220 x 250 mm Build Volume Wireframe Envelope
+      const volGeom = new THREE.BoxBufferGeometry(BED_SIZE_X, BED_SIZE_Y, BED_SIZE_Z);
+      const volEdges = new THREE.EdgesGeometry(volGeom);
+      buildVolumeBoxHelper = new THREE.LineSegments(
+        volEdges,
+        new THREE.LineBasicMaterial({ color: 0x1e293b, transparent: true, opacity: 0.7 })
+      );
+      buildVolumeBoxHelper.position.set(0, 0, BED_SIZE_Z / 2);
+      bedGroup.add(buildVolumeBoxHelper);
+
+      // Front Plate Indicator Bar ("FRONT" edge along Y = -110)
+      const frontBarGeom = new THREE.BoxBufferGeometry(80, 3, 1.2);
+      const frontBarMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4 });
+      const frontBar = new THREE.Mesh(frontBarGeom, frontBarMat);
+      frontBar.position.set(0, -halfY - 2, 0);
+      bedGroup.add(frontBar);
+
+      // Horizontal Slicer Laser Plane Indicator (shown when Layer Slicer is active)
+      const slicePlaneGeom = new THREE.PlaneBufferGeometry(BED_SIZE_X, BED_SIZE_Y);
+      const slicePlaneMat = new THREE.MeshBasicMaterial({
+        color: 0x06b6d4,
+        transparent: true,
+        opacity: 0.14,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      sliceHelperMesh = new THREE.Mesh(slicePlaneGeom, slicePlaneMat);
+      const sliceBorder = new THREE.LineSegments(
+        new THREE.EdgesGeometry(slicePlaneGeom),
+        new THREE.LineBasicMaterial({ color: 0x22d3ee })
+      );
+      sliceHelperMesh.add(sliceBorder);
+      sliceHelperMesh.position.z = BED_SIZE_Z;
+      sliceHelperMesh.visible = false;
+      scene.add(sliceHelperMesh);
+
+      scene.add(bedGroup);
+    }
+
+    /*************************************************************************
+     * 4. CREATING, UPDATING & MANAGING PARAMETRIC CAD OBJECTS
+     *************************************************************************/
+    function createCadMaterial(colorHex) {
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(colorHex),
+        roughness: 0.35,
+        metalness: 0.15,
+        side: THREE.DoubleSide,
+        clippingPlanes: slicerActive ? [sliceClippingPlane] : [],
+        clipShadows: true
+      });
+      return mat;
+    }
+
+    /**
+     * Attaches or updates a crisp CAD feature-edge wireframe child on a mesh
+     */
+    function updateMeshEdgeOverlay(mesh) {
+      // Remove existing edge helper
+      for (let i = mesh.children.length - 1; i >= 0; i--) {
+        if (mesh.children[i].userData && mesh.children[i].userData.isEdgeOverlay) {
+          mesh.children[i].geometry.dispose();
+          mesh.remove(mesh.children[i]);
+        }
+      }
+      const edgesGeom = new THREE.EdgesGeometry(mesh.geometry, 26);
+      const edgesMat = new THREE.LineBasicMaterial({
+        color: 0x0f172a,
+        transparent: true,
+        opacity: 0.55,
+        clippingPlanes: slicerActive ? [sliceClippingPlane] : []
+      });
+      const lineSegs = new THREE.LineSegments(edgesGeom, edgesMat);
+      lineSegs.userData.isEdgeOverlay = true;
+      lineSegs.visible = showCadEdges && currentViewMode === 'solid';
+      mesh.add(lineSegs);
+    }
+
+    /**
+     * Adds a new parametric primitive or functional mechanical part to the build plate
+     */
+    function addShape(shapeType, customOptions = null) {
+      const def = SHAPE_DEFINITIONS[shapeType] || SHAPE_DEFINITIONS.box;
+      const params = customOptions?.params
+        ? JSON.parse(JSON.stringify(customOptions.params))
+        : JSON.parse(JSON.stringify(def.defaultParams));
+      const color = customOptions?.color || def.defaultColor;
+      const name = customOptions?.name || `${def.label} ${objectIdCounter}`;
+
+      const geometry = buildParametricGeometry(shapeType, params);
+      const material = createCadMaterial(color);
+      const mesh = new THREE.Mesh(geometry, material);
+
+      mesh.name = name;
+      mesh.userData = {
+        id: 'part_' + (objectIdCounter++),
+        shapeType: shapeType,
+        params: params,
+        color: color,
+        locked: false
+      };
+
+      updateMeshEdgeOverlay(mesh);
+
+      // Position object flush on the build plate (Z=0) unless custom position is supplied
+      geometry.computeBoundingBox();
+      const minZ = geometry.boundingBox.min.z;
+      if (customOptions?.position) {
+        mesh.position.set(customOptions.position[0], customOptions.position[1], customOptions.position[2]);
+      } else {
+        mesh.position.set(0, 0, -minZ);
+      }
+
+      if (customOptions?.rotation) {
+        mesh.rotation.set(
+          THREE.MathUtils.degToRad(customOptions.rotation[0]),
+          THREE.MathUtils.degToRad(customOptions.rotation[1]),
+          THREE.MathUtils.degToRad(customOptions.rotation[2])
+        );
+      }
+      if (customOptions?.scale) {
+        mesh.scale.set(customOptions.scale[0], customOptions.scale[1], customOptions.scale[2]);
+      }
+
+      applyActiveViewModeToMesh(mesh);
+
+      scene.add(mesh);
+      cadObjects.push(mesh);
+
+      selectObject(mesh);
+      renderOutliner();
+      updatePrintStats();
+      return mesh;
+    }
+
+    /**
+     * Selects a mesh and binds TransformControls + CAD Inspector
+     */
+    function selectObject(mesh) {
+      selectedObject = mesh;
+
+      // Highlight selected object's edge overlay
+      cadObjects.forEach(obj => {
+        const edgeChild = obj.children.find(c => c.userData.isEdgeOverlay);
+        if (edgeChild) {
+          edgeChild.material.color.setHex(obj === selectedObject ? 0x22d3ee : 0x0f172a);
+          edgeChild.material.opacity = obj === selectedObject ? 0.9 : 0.55;
+        }
+      });
+
+      if (selectedObject && selectedObject.visible && !selectedObject.userData.locked) {
+        transformControls.attach(selectedObject);
+      } else {
+        transformControls.detach();
+      }
+
+      renderOutliner();
+      renderParametricControls();
+      syncInspectorToSelected();
+    }
+
+    /**
+     * Dynamically populates the Parametric Sliders in the right sidebar for the active part
+     */
+    function renderParametricControls() {
+      const emptyState = document.getElementById('inspectorEmptyState');
+      const content = document.getElementById('inspectorContent');
+      const paramSection = document.getElementById('parametricSection');
+      const container = document.getElementById('parametricControlsContainer');
+
+      if (!selectedObject) {
+        emptyState.classList.remove('hidden');
+        content.classList.add('hidden');
         return;
-    }
+      }
 
-    const dx=
-        x-grabState.x;
+      emptyState.classList.add('hidden');
+      content.classList.remove('hidden');
 
-    const dy=
-        y-grabState.y;
+      const shapeType = selectedObject.userData.shapeType;
+      const def = SHAPE_DEFINITIONS[shapeType];
 
-    if(currentTool==="select"){
+      document.getElementById('inspShapeBadge').textContent = def ? def.label : 'Merged Mesh';
+      document.getElementById('inspNameInput').value = selectedObject.name;
+      document.getElementById('inspColorPicker').value = selectedObject.userData.color || '#06b6d4';
 
+      container.innerHTML = '';
+
+      if (!def || !def.controls || shapeType === 'merged') {
+        paramSection.classList.add('hidden');
         return;
+      }
+
+      paramSection.classList.remove('hidden');
+      const params = selectedObject.userData.params;
+
+      def.controls.forEach(ctrl => {
+        const val = params[ctrl.key] !== undefined ? params[ctrl.key] : def.defaultParams[ctrl.key];
+        const row = document.createElement('div');
+        row.className = 'space-y-1';
+        row.innerHTML = `
+          <div class="flex items-center justify-between text-[11px]">
+            <label class="text-slate-300 font-medium">${ctrl.label}</label>
+            <input type="number" step="${ctrl.step}" min="${ctrl.min}" max="${ctrl.max}" value="${val}"
+              data-param-num="${ctrl.key}"
+              oninput="onParametricChange('${ctrl.key}', this.value, 'num')"
+              class="w-16 bg-slate-900 font-mono text-[11px] text-cyan-300 text-right px-1.5 py-0.5 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none" />
+          </div>
+          <input type="range" step="${ctrl.step}" min="${ctrl.min}" max="${ctrl.max}" value="${val}"
+            data-param-slider="${ctrl.key}"
+            oninput="onParametricChange('${ctrl.key}', this.value, 'slider')"
+            class="cad-slider w-full" />
+        `;
+        container.appendChild(row);
+      });
     }
 
-    if(currentTool==="move"){
+    /**
+     * Live-regenerates the selected mesh's geometry when a parametric slider or input changes
+     */
+    function onParametricChange(key, rawValue, source) {
+      if (!selectedObject) return;
+      const numVal = parseFloat(rawValue);
+      if (isNaN(numVal)) return;
 
-        const right=
-            new THREE.Vector3()
-            .setFromMatrixColumn(
-                camera.matrixWorld,
-                0
-            );
-        right.y = 0;
-        right.normalize();
+      // Sync slider and number box
+      if (source === 'slider') {
+        const numInput = document.querySelector(`[data-param-num="${key}"]`);
+        if (numInput) numInput.value = numVal;
+      } else {
+        const sliderInput = document.querySelector(`[data-param-slider="${key}"]`);
+        if (sliderInput) sliderInput.value = numVal;
+      }
 
-        const forward = new THREE.Vector3();
-        camera.getWorldDirection(forward);
-        forward.y = 0;
-        forward.normalize();
+      selectedObject.userData.params[key] = numVal;
 
-        selected.position.copy(
-            grabState.position
-        );
+      // Keep bottom of object anchored at its previous world minZ if sitting on bed
+      const prevBox = new THREE.Box3().setFromObject(selectedObject);
+      const wasOnBed = Math.abs(prevBox.min.z) < 0.15;
 
-        selected.position.addScaledVector(
-            right,
-            dx*5
-        );
+      const newGeom = buildParametricGeometry(selectedObject.userData.shapeType, selectedObject.userData.params);
+      selectedObject.geometry.dispose();
+      selectedObject.geometry = newGeom;
+      updateMeshEdgeOverlay(selectedObject);
 
-        selected.position.addScaledVector(
-            forward,
-            dy*5
-        );
-        selected.position.y = grabState.position.y;
+      if (wasOnBed) {
+        selectedObject.updateMatrixWorld(true);
+        const newBox = new THREE.Box3().setFromObject(selectedObject);
+        selectedObject.position.z -= newBox.min.z;
+      }
+
+      syncInspectorToSelected();
+      updatePrintStats();
     }
 
-    if(currentTool==="rotate"){
+    /**
+     * Updates Inspector numerical inputs (Position, Rotation, Exact Bounding Box Size) from selectedObject
+     */
+    function syncInspectorToSelected() {
+      if (!selectedObject) return;
 
-        selected.rotation.x=
-            grabState.rotation.x+
-            dy*4;
+      selectedObject.updateMatrixWorld(true);
+      const bbox = new THREE.Box3().setFromObject(selectedObject);
+      const size = new THREE.Vector3();
+      bbox.getSize(size);
 
-        selected.rotation.y=
-            grabState.rotation.y+
-            dx*4;
+      document.getElementById('dimInputX').value = size.x.toFixed(2);
+      document.getElementById('dimInputY').value = size.y.toFixed(2);
+      document.getElementById('dimInputZ').value = size.z.toFixed(2);
+
+      document.getElementById('posInputX').value = selectedObject.position.x.toFixed(2);
+      document.getElementById('posInputY').value = selectedObject.position.y.toFixed(2);
+      document.getElementById('posInputZ').value = selectedObject.position.z.toFixed(2);
+
+      document.getElementById('rotInputX').value = Math.round(THREE.MathUtils.radToDeg(selectedObject.rotation.x));
+      document.getElementById('rotInputY').value = Math.round(THREE.MathUtils.radToDeg(selectedObject.rotation.y));
+      document.getElementById('rotInputZ').value = Math.round(THREE.MathUtils.radToDeg(selectedObject.rotation.z));
     }
 
-    if(currentTool==="scale"){
+    /**
+     * Applies numerical Position & Rotation inputs to the selected object
+     */
+    function applyTransformFromInputs() {
+      if (!selectedObject) return;
+      const px = parseFloat(document.getElementById('posInputX').value) || 0;
+      const py = parseFloat(document.getElementById('posInputY').value) || 0;
+      const pz = parseFloat(document.getElementById('posInputZ').value) || 0;
 
-        const pinchDistance = currentHand
-            ? distance3D(currentHand[4], currentHand[8])
-            : grabState.pinchDistance;
+      const rx = parseFloat(document.getElementById('rotInputX').value) || 0;
+      const ry = parseFloat(document.getElementById('rotInputY').value) || 0;
+      const rz = parseFloat(document.getElementById('rotInputZ').value) || 0;
 
-        const initialPinchDistance = Math.max(
-            grabState.pinchDistance || 0.075,
-            0.001
-        );
+      selectedObject.position.set(px, py, pz);
+      selectedObject.rotation.set(
+        THREE.MathUtils.degToRad(rx),
+        THREE.MathUtils.degToRad(ry),
+        THREE.MathUtils.degToRad(rz)
+      );
 
-        const factor = THREE.MathUtils.clamp(
-            pinchDistance / initialPinchDistance,
-            0.35,
-            3
-        );
-
-        selected.scale.copy(
-            grabState.scale
-        );
-
-        selected.scale.multiplyScalar(
-            factor
-        );
+      syncInspectorToSelected();
+      updatePrintStats();
     }
 
-    updateUI();
-}
+    /**
+     * Scales the selected object so its world bounding box along axis ('x', 'y', or 'z') matches targetMm
+     */
+    function applyExactDimension(axis, targetMm) {
+      if (!selectedObject) return;
+      const target = parseFloat(targetMm);
+      if (isNaN(target) || target <= 0.1) return;
 
-let currentHand=null;
+      selectedObject.updateMatrixWorld(true);
+      const bbox = new THREE.Box3().setFromObject(selectedObject);
+      const currentSize = new THREE.Vector3();
+      bbox.getSize(currentSize);
 
-function handFromLastResult(){
+      if (currentSize[axis] > 0.001) {
+        const factor = target / currentSize[axis];
+        selectedObject.scale[axis] *= factor;
+      }
 
-    return currentHand||
-        [
-            {x:0,y:0,z:0},
-            {x:0,y:0,z:0},
-            {x:0,y:0,z:0},
-            {x:0,y:0,z:0},
-            {x:0,y:0,z:0}
-        ];
-}
+      // If Z height was changed, keep it flush on the build plate if it was on the bed
+      if (axis === 'z' && Math.abs(bbox.min.z) < 0.2) {
+        dropSelectedToBed();
+      } else {
+        syncInspectorToSelected();
+        updatePrintStats();
+      }
+    }
 
-function getPalm(hand){
+    function updateSelectedColor(hex) {
+      if (!selectedObject) return;
+      selectedObject.userData.color = hex;
+      if (selectedObject.userData.baseMaterial) {
+        selectedObject.userData.baseMaterial.color.set(hex);
+      }
+      if (selectedObject.material && selectedObject.material.color) {
+        selectedObject.material.color.set(hex);
+      }
+      renderOutliner();
+    }
 
-    return {
-        x:(hand[0].x+
-           hand[5].x+
-           hand[17].x)/3,
+    function updateSelectedName(newName) {
+      if (!selectedObject || !newName.trim()) return;
+      selectedObject.name = newName.trim();
+      renderOutliner();
+    }
 
-        y:(hand[0].y+
-           hand[5].y+
-           hand[17].y)/3,
+    /*************************************************************************
+     * 5. 3D PRINTING UTILITIES: DROP TO BED, CENTER, MIRROR, ARRAY, MERGE
+     *************************************************************************/
+    function dropObjectToBed(mesh) {
+      if (!mesh) return;
+      mesh.updateMatrixWorld(true);
+      const bbox = new THREE.Box3().setFromObject(mesh);
+      if (!bbox.isEmpty()) {
+        mesh.position.z -= bbox.min.z;
+        mesh.updateMatrixWorld(true);
+      }
+    }
 
-        z:(hand[0].z+
-           hand[5].z+
-           hand[17].z)/3
+    function dropSelectedToBed() {
+      if (!selectedObject) {
+        // Drop all visible objects to bed if none selected
+        cadObjects.forEach(obj => { if (obj.visible) dropObjectToBed(obj); });
+        updatePrintStats();
+        showToast('Dropped all visible parts flush to build plate (Z = 0mm)');
+        return;
+      }
+      dropObjectToBed(selectedObject);
+      syncInspectorToSelected();
+      updatePrintStats();
+      showToast(`Dropped "${selectedObject.name}" flush to Z = 0.0mm`);
+    }
+
+    function centerSelectedOnBed() {
+      if (!selectedObject) return;
+      selectedObject.updateMatrixWorld(true);
+      const bbox = new THREE.Box3().setFromObject(selectedObject);
+      const center = new THREE.Vector3();
+      bbox.getCenter(center);
+      selectedObject.position.x -= center.x;
+      selectedObject.position.y -= center.y;
+      syncInspectorToSelected();
+      updatePrintStats();
+      showToast(`Centered "${selectedObject.name}" at (0, 0)`);
+    }
+
+    function rotateSelectedBy(degX, degY, degZ) {
+      if (!selectedObject) return;
+      selectedObject.rotation.x += THREE.MathUtils.degToRad(degX);
+      selectedObject.rotation.y += THREE.MathUtils.degToRad(degY);
+      selectedObject.rotation.z += THREE.MathUtils.degToRad(degZ);
+      dropObjectToBed(selectedObject);
+      syncInspectorToSelected();
+      updatePrintStats();
+    }
+
+    function resetSelectedRotationAndScale() {
+      if (!selectedObject) return;
+      selectedObject.rotation.set(0, 0, 0);
+      selectedObject.scale.set(1, 1, 1);
+      dropObjectToBed(selectedObject);
+      syncInspectorToSelected();
+      updatePrintStats();
+    }
+
+    /**
+     * Mirrors the selected object's geometry along X, Y, or Z and flips triangle winding
+     * so normals stay pointing outward for valid 3D printing STL export.
+     */
+    function mirrorSelected(axis) {
+      if (!selectedObject) return;
+      const sx = axis === 'x' ? -1 : 1;
+      const sy = axis === 'y' ? -1 : 1;
+      const sz = axis === 'z' ? -1 : 1;
+
+      const mat4 = new THREE.Matrix4().makeScale(sx, sy, sz);
+      const nonIndexed = selectedObject.geometry.index
+        ? selectedObject.geometry.toNonIndexed()
+        : selectedObject.geometry.clone();
+
+      nonIndexed.applyMatrix4(mat4);
+
+      // Reverse triangle vertex winding order (swap v1 and v2 of every triangle)
+      const posAttr = nonIndexed.attributes.position;
+      const arr = posAttr.array;
+      for (let i = 0; i < arr.length; i += 9) {
+        const x1 = arr[i + 3], y1 = arr[i + 4], z1 = arr[i + 5];
+        arr[i + 3] = arr[i + 6];
+        arr[i + 4] = arr[i + 7];
+        arr[i + 5] = arr[i + 8];
+        arr[i + 6] = x1;
+        arr[i + 7] = y1;
+        arr[i + 8] = z1;
+      }
+      posAttr.needsUpdate = true;
+      nonIndexed.computeVertexNormals();
+      nonIndexed.computeBoundingBox();
+
+      selectedObject.geometry.dispose();
+      selectedObject.geometry = nonIndexed;
+      updateMeshEdgeOverlay(selectedObject);
+      showToast(`Mirrored "${selectedObject.name}" along ${axis.toUpperCase()} axis`);
+    }
+
+    function duplicateSelected() {
+      if (!selectedObject) return;
+      const src = selectedObject;
+      const cloneMesh = addShape(src.userData.shapeType, {
+        name: src.name + ' Copy',
+        color: src.userData.color,
+        params: src.userData.params,
+        position: [src.position.x + 15, src.position.y + 15, src.position.z],
+        rotation: [
+          THREE.MathUtils.radToDeg(src.rotation.x),
+          THREE.MathUtils.radToDeg(src.rotation.y),
+          THREE.MathUtils.radToDeg(src.rotation.z)
+        ],
+        scale: [src.scale.x, src.scale.y, src.scale.z]
+      });
+
+      // If it was a merged mesh, clone its exact geometry
+      if (src.userData.shapeType === 'merged') {
+        cloneMesh.geometry.dispose();
+        cloneMesh.geometry = src.geometry.clone();
+        updateMeshEdgeOverlay(cloneMesh);
+      }
+
+      showToast(`Duplicated "${src.name}"`);
+    }
+
+    function deleteSelected() {
+      if (!selectedObject) return;
+      const deletedName = selectedObject.name;
+      transformControls.detach();
+      scene.remove(selectedObject);
+      selectedObject.geometry.dispose();
+      cadObjects = cadObjects.filter(o => o !== selectedObject);
+      selectedObject = cadObjects.length > 0 ? cadObjects[cadObjects.length - 1] : null;
+      selectObject(selectedObject);
+      renderOutliner();
+      updatePrintStats();
+      showToast(`Deleted "${deletedName}"`);
+    }
+
+    /**
+     * Combines all currently visible CAD objects into a single unified mesh
+     */
+    function mergeVisibleMeshes() {
+      const visibleObjs = cadObjects.filter(o => o.visible);
+      if (visibleObjs.length < 2) {
+        showToast('Need at least 2 visible parts to merge');
+        return;
+      }
+
+      const bakedGeoms = [];
+      visibleObjs.forEach(obj => {
+        obj.updateMatrixWorld(true);
+        const g = obj.geometry.index ? obj.geometry.toNonIndexed() : obj.geometry.clone();
+        g.applyMatrix4(obj.matrixWorld);
+        bakedGeoms.push(g);
+      });
+
+      const combinedGeom = mergeGeometriesToSingle(bakedGeoms);
+      combinedGeom.computeBoundingBox();
+      const center = new THREE.Vector3();
+      combinedGeom.boundingBox.getCenter(center);
+      combinedGeom.translate(-center.x, -center.y, -center.z);
+
+      const primaryColor = visibleObjs[0].userData.color || '#06b6d4';
+
+      // Remove original meshes
+      transformControls.detach();
+      visibleObjs.forEach(obj => {
+        scene.remove(obj);
+        obj.geometry.dispose();
+      });
+      cadObjects = cadObjects.filter(o => !o.visible);
+
+      const mat = createCadMaterial(primaryColor);
+      const mergedMesh = new THREE.Mesh(combinedGeom, mat);
+      mergedMesh.name = 'Merged Assembly ' + objectIdCounter;
+      mergedMesh.position.copy(center);
+      mergedMesh.userData = {
+        id: 'part_' + (objectIdCounter++),
+        shapeType: 'merged',
+        params: {},
+        color: primaryColor,
+        locked: false
+      };
+
+      updateMeshEdgeOverlay(mergedMesh);
+      applyActiveViewModeToMesh(mergedMesh);
+      scene.add(mergedMesh);
+      cadObjects.push(mergedMesh);
+
+      selectObject(mergedMesh);
+      renderOutliner();
+      updatePrintStats();
+      showToast(`Combined ${visibleObjs.length} parts into "${mergedMesh.name}"`);
+    }
+
+    function toggleArrayModal() {
+      if (!selectedObject && document.getElementById('arrayModal').classList.contains('hidden')) {
+        showToast('Select a part first to create a pattern array');
+        return;
+      }
+      document.getElementById('arrayModal').classList.toggle('hidden');
+    }
+
+    function executeLinearArray() {
+      if (!selectedObject) return;
+      const countX = Math.min(10, Math.max(1, parseInt(document.getElementById('arrayCountX').value) || 2));
+      const countY = Math.min(10, Math.max(1, parseInt(document.getElementById('arrayCountY').value) || 2));
+      const spaceX = parseFloat(document.getElementById('arraySpacingX').value) || 35;
+      const spaceY = parseFloat(document.getElementById('arraySpacingY').value) || 35;
+
+      const src = selectedObject;
+      let created = 0;
+
+      for (let ix = 0; ix < countX; ix++) {
+        for (let iy = 0; iy < countY; iy++) {
+          if (ix === 0 && iy === 0) continue;
+          const clone = addShape(src.userData.shapeType, {
+            name: `${src.name} [${ix + 1},${iy + 1}]`,
+            color: src.userData.color,
+            params: src.userData.params,
+            position: [src.position.x + ix * spaceX, src.position.y + iy * spaceY, src.position.z],
+            rotation: [
+              THREE.MathUtils.radToDeg(src.rotation.x),
+              THREE.MathUtils.radToDeg(src.rotation.y),
+              THREE.MathUtils.radToDeg(src.rotation.z)
+            ],
+            scale: [src.scale.x, src.scale.y, src.scale.z]
+          });
+          if (src.userData.shapeType === 'merged') {
+            clone.geometry.dispose();
+            clone.geometry = src.geometry.clone();
+            updateMeshEdgeOverlay(clone);
+          }
+          created++;
+        }
+      }
+
+      toggleArrayModal();
+      showToast(`Created ${created} array instances on the build plate`);
+    }
+
+    /*************************************************************************
+     * 6. SCENE OUTLINER UI
+     *************************************************************************/
+    function renderOutliner() {
+      const list = document.getElementById('outlinerList');
+      document.getElementById('objectCountBadge').textContent = cadObjects.length;
+      list.innerHTML = '';
+
+      if (cadObjects.length === 0) {
+        list.innerHTML = `<div class="text-xs text-slate-500 text-center py-6">Build plate is empty</div>`;
+        return;
+      }
+
+      cadObjects.forEach((obj) => {
+        const isSel = obj === selectedObject;
+        const item = document.createElement('div');
+        item.className = `flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${
+          isSel
+            ? 'bg-cyan-500/15 border-cyan-500/60 text-white font-medium'
+            : 'bg-slate-800/40 hover:bg-slate-800/80 border-slate-800 text-slate-300'
+        }`;
+
+        item.onclick = () => selectObject(obj);
+
+        const left = document.createElement('div');
+        left.className = 'flex items-center gap-2 overflow-hidden';
+        left.innerHTML = `
+          <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${obj.userData.color || '#06b6d4'}"></span>
+          <span class="truncate ${!obj.visible ? 'line-through text-slate-500' : ''}">${obj.name}</span>
+        `;
+
+        const right = document.createElement('div');
+        right.className = 'flex items-center gap-1 shrink-0';
+
+        // Visibility Toggle
+        const visBtn = document.createElement('button');
+        visBtn.className = `p-1 rounded hover:bg-slate-700 ${obj.visible ? 'text-slate-400' : 'text-amber-400'}`;
+        visBtn.title = obj.visible ? 'Hide Object' : 'Show Object';
+        visBtn.innerHTML = `<i class="fa-regular ${obj.visible ? 'fa-eye' : 'fa-eye-slash'} text-[11px]"></i>`;
+        visBtn.onclick = (e) => {
+          e.stopPropagation();
+          obj.visible = !obj.visible;
+          if (!obj.visible && selectedObject === obj) transformControls.detach();
+          else if (obj.visible && selectedObject === obj && !obj.userData.locked) transformControls.attach(obj);
+          renderOutliner();
+          updatePrintStats();
+        };
+
+        // Lock Toggle
+        const lockBtn = document.createElement('button');
+        lockBtn.className = `p-1 rounded hover:bg-slate-700 ${obj.userData.locked ? 'text-rose-400' : 'text-slate-500'}`;
+        lockBtn.title = obj.userData.locked ? 'Unlock Transform' : 'Lock Transform';
+        lockBtn.innerHTML = `<i class="fa-solid ${obj.userData.locked ? 'fa-lock' : 'fa-lock-open'} text-[10px]"></i>`;
+        lockBtn.onclick = (e) => {
+          e.stopPropagation();
+          obj.userData.locked = !obj.userData.locked;
+          if (selectedObject === obj) {
+            if (obj.userData.locked) transformControls.detach();
+            else transformControls.attach(obj);
+          }
+          renderOutliner();
+        };
+
+        right.appendChild(visBtn);
+        right.appendChild(lockBtn);
+        item.appendChild(left);
+        item.appendChild(right);
+        list.appendChild(item);
+      });
+    }
+
+    /*************************************************************************
+     * 7. VIEW MODES, LAYER SLICER & PRINTABILITY DIAGNOSTICS
+     *************************************************************************/
+    function setViewMode(mode) {
+      currentViewMode = mode;
+      ['Solid', 'Wireframe', 'Xray', 'Overhang'].forEach(m => {
+        const btn = document.getElementById('view' + m);
+        if (btn) btn.classList.toggle('active', m.toLowerCase() === mode);
+      });
+
+      document.getElementById('overhangLegend').classList.toggle('hidden', mode !== 'overhang');
+
+      cadObjects.forEach(mesh => applyActiveViewModeToMesh(mesh));
+    }
+
+    function applyActiveViewModeToMesh(mesh) {
+      if (!mesh.userData.baseMaterial) {
+        mesh.userData.baseMaterial = mesh.material;
+      }
+      const baseMat = mesh.userData.baseMaterial;
+      baseMat.clippingPlanes = slicerActive ? [sliceClippingPlane] : [];
+
+      if (currentViewMode === 'solid') {
+        baseMat.wireframe = false;
+        baseMat.transparent = false;
+        baseMat.opacity = 1.0;
+        baseMat.depthWrite = true;
+        mesh.material = baseMat;
+      } else if (currentViewMode === 'wireframe') {
+        baseMat.wireframe = true;
+        baseMat.transparent = false;
+        baseMat.opacity = 1.0;
+        baseMat.depthWrite = true;
+        mesh.material = baseMat;
+      } else if (currentViewMode === 'xray') {
+        baseMat.wireframe = false;
+        baseMat.transparent = true;
+        baseMat.opacity = 0.42;
+        baseMat.depthWrite = false;
+        mesh.material = baseMat;
+      } else if (currentViewMode === 'overhang') {
+        overhangShaderMaterial.clippingPlanes = slicerActive ? [sliceClippingPlane] : [];
+        mesh.material = overhangShaderMaterial;
+      }
+
+      const edgeChild = mesh.children.find(c => c.userData.isEdgeOverlay);
+      if (edgeChild) {
+        edgeChild.visible = showCadEdges && currentViewMode === 'solid';
+        edgeChild.material.clippingPlanes = slicerActive ? [sliceClippingPlane] : [];
+      }
+    }
+
+    function toggleCadEdges() {
+      showCadEdges = !showCadEdges;
+      document.getElementById('btnToggleEdges').classList.toggle('active', showCadEdges);
+      cadObjects.forEach(mesh => applyActiveViewModeToMesh(mesh));
+    }
+
+    function toggleLayerSlicer() {
+      slicerActive = !slicerActive;
+      document.getElementById('btnSliceToggle').classList.toggle('active', slicerActive);
+      sliceHelperMesh.visible = slicerActive;
+      const val = parseFloat(document.getElementById('sliceSlider').value);
+      updateLayerSlicer(val);
+      if (slicerActive) {
+        showToast('Layer Slicer Active — Drag vertical slider to inspect cross-sections');
+      }
+    }
+
+    function updateLayerSlicer(zHeightMm) {
+      const z = parseFloat(zHeightMm);
+      if (!slicerActive && z < BED_SIZE_Z) {
+        slicerActive = true;
+        document.getElementById('btnSliceToggle').classList.add('active');
+      }
+      sliceClippingPlane.constant = z;
+      sliceHelperMesh.position.z = z;
+      sliceHelperMesh.visible = slicerActive && z < BED_SIZE_Z;
+
+      document.getElementById('sliceHeightLabel').textContent = z.toFixed(1) + 'mm';
+      document.getElementById('sliceLayerBadge').textContent = 'L:' + Math.round(z / 0.2);
+
+      cadObjects.forEach(mesh => applyActiveViewModeToMesh(mesh));
+    }
+
+    /**
+     * Computes exact signed tetrahedron mesh volume (cm³), triangle count,
+     * bounding box, PLA filament weight (g), and out-of-bounds warnings!
+     */
+    function updatePrintStats() {
+      let totalTriangles = 0;
+      let totalVolumeMm3 = 0;
+      const totalBox = new THREE.Box3();
+      let outOfBounds = false;
+      let belowBed = false;
+
+      const vA = new THREE.Vector3();
+      const vB = new THREE.Vector3();
+      const vC = new THREE.Vector3();
+      const cross = new THREE.Vector3();
+
+      cadObjects.forEach(mesh => {
+        if (!mesh.visible) return;
+        mesh.updateMatrixWorld(true);
+
+        const meshBox = new THREE.Box3().setFromObject(mesh);
+        totalBox.union(meshBox);
+
+        if (
+          meshBox.min.x < -BED_SIZE_X / 2 - 0.1 ||
+          meshBox.max.x > BED_SIZE_X / 2 + 0.1 ||
+          meshBox.min.y < -BED_SIZE_Y / 2 - 0.1 ||
+          meshBox.max.y > BED_SIZE_Y / 2 + 0.1 ||
+          meshBox.max.z > BED_SIZE_Z + 0.1
+        ) {
+          outOfBounds = true;
+        }
+        if (meshBox.min.z < -0.08) {
+          belowBed = true;
+        }
+
+        const geom = mesh.geometry;
+        const pos = geom.attributes.position;
+        const index = geom.index;
+        const matWorld = mesh.matrixWorld;
+        let meshSignedVol = 0;
+
+        if (index) {
+          const count = index.count;
+          totalTriangles += count / 3;
+          for (let i = 0; i < count; i += 3) {
+            vA.fromBufferAttribute(pos, index.getX(i)).applyMatrix4(matWorld);
+            vB.fromBufferAttribute(pos, index.getX(i + 1)).applyMatrix4(matWorld);
+            vC.fromBufferAttribute(pos, index.getX(i + 2)).applyMatrix4(matWorld);
+            meshSignedVol += vA.dot(cross.crossVectors(vB, vC)) / 6.0;
+          }
+        } else {
+          const count = pos.count;
+          totalTriangles += count / 3;
+          for (let i = 0; i < count; i += 3) {
+            vA.fromBufferAttribute(pos, i).applyMatrix4(matWorld);
+            vB.fromBufferAttribute(pos, i + 1).applyMatrix4(matWorld);
+            vC.fromBufferAttribute(pos, i + 2).applyMatrix4(matWorld);
+            meshSignedVol += vA.dot(cross.crossVectors(vB, vC)) / 6.0;
+          }
+        }
+        totalVolumeMm3 += Math.abs(meshSignedVol);
+      });
+
+      const size = new THREE.Vector3();
+      if (!totalBox.isEmpty()) totalBox.getSize(size);
+
+      const solidCm3 = totalVolumeMm3 / 1000.0;
+      const infillPct = parseFloat(document.getElementById('infillSlider').value) || 20;
+      document.getElementById('infillPctLabel').textContent = `${infillPct}%`;
+
+      // Realistic slicer shell + infill estimation:
+      // Outer walls/top/bottom account for ~32% of solid volume, remaining 68% is scaled by infill %
+      const effectiveVolumeCm3 = solidCm3 * (0.32 + 0.68 * (infillPct / 100.0));
+      const plaGrams = effectiveVolumeCm3 * 1.24; // PLA density 1.24 g/cm³
+      // 1.75mm filament has cross-section area ~ 2.405 mm² => 2.405 cm³ per meter
+      const filamentMeters = effectiveVolumeCm3 / 2.405;
+      // Approximate print speed ~ 12 grams per hour on standard FDM printer
+      const estMinutes = Math.max(solidCm3 > 0 ? 1 : 0, Math.round((plaGrams / 14) * 60));
+      const hours = Math.floor(estMinutes / 60);
+      const mins = estMinutes % 60;
+      const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+      const layerCount = Math.ceil(size.z / 0.2);
+
+      // Update Bottom Bar & Estimator Cards
+      document.getElementById('statBBox').textContent = `${size.x.toFixed(1)} × ${size.y.toFixed(1)} × ${size.z.toFixed(1)} mm`;
+      document.getElementById('statTriangles').textContent = Math.round(totalTriangles).toLocaleString();
+      document.getElementById('statVolume').textContent = `${solidCm3.toFixed(2)} cm³`;
+      document.getElementById('statWeight').textContent = `${plaGrams.toFixed(1)} g`;
+
+      document.getElementById('cardFilamentWeight').textContent = `${plaGrams.toFixed(1)} g`;
+      document.getElementById('cardFilamentMeters').textContent = `${filamentMeters.toFixed(2)} m (1.75mm)`;
+      document.getElementById('cardPrintTime').textContent = timeStr;
+      document.getElementById('cardLayerCount').textContent = `${layerCount} layers @ 0.2mm`;
+
+      // Update Build Volume Bounds Warning Banner
+      const banner = document.getElementById('boundsWarningBanner');
+      const bannerText = document.getElementById('boundsWarningText');
+      if (belowBed || outOfBounds) {
+        banner.classList.remove('hidden');
+        if (belowBed) {
+          bannerText.textContent = 'Part extends below the build plate (Z < 0mm)! Click "Fix Z=0" or press F.';
+        } else {
+          bannerText.textContent = 'Part exceeds the 220×220×250mm printer build volume!';
+        }
+        if (buildVolumeBoxHelper) buildVolumeBoxHelper.material.color.setHex(0xef4444);
+      } else {
+        banner.classList.add('hidden');
+        if (buildVolumeBoxHelper) buildVolumeBoxHelper.material.color.setHex(0x1e293b);
+      }
+    }
+
+    /*************************************************************************
+     * 8. DIRECT 3D PRINTER EXPORT (.STL BINARY, .STL ASCII, .OBJ & JSON)
+     *************************************************************************/
+    function getExportTargetMeshes(selectedOnly = false) {
+      if (selectedOnly && selectedObject) return [selectedObject];
+      return cadObjects.filter(o => o.visible);
+    }
+
+    /**
+     * Generates a valid IEEE 754 Binary .STL file of all visible (or selected) meshes
+     * in exact millimeter units and Z-Up orientation for Cura / PrusaSlicer / OrcaSlicer.
+     */
+    function exportBinarySTL(selectedOnly = false) {
+      const targets = getExportTargetMeshes(selectedOnly);
+      if (targets.length === 0) {
+        showToast('No visible 3D parts to export!');
+        return;
+      }
+
+      // Collect world-transformed non-indexed triangles
+      const bakedGeometries = [];
+      let totalTriangles = 0;
+
+      targets.forEach(mesh => {
+        mesh.updateMatrixWorld(true);
+        const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+        g.applyMatrix4(mesh.matrixWorld);
+        bakedGeometries.push(g);
+        totalTriangles += g.attributes.position.count / 3;
+      });
+
+      // Binary STL format: 80-byte header + 4-byte uint32 triangle count + (50 bytes * totalTriangles)
+      const bufferLength = 84 + totalTriangles * 50;
+      const arrayBuffer = new ArrayBuffer(bufferLength);
+      const dataView = new DataView(arrayBuffer);
+
+      // Write 80-byte ASCII header
+      const headerStr = 'PrintForge 3D CAD Studio - Binary STL (Units: mm, Z-Up)';
+      for (let i = 0; i < 80; i++) {
+        dataView.setUint8(i, i < headerStr.length ? headerStr.charCodeAt(i) : 32);
+      }
+
+      // Write triangle count (little-endian uint32)
+      dataView.setUint32(80, totalTriangles, true);
+
+      let offset = 84;
+      const vA = new THREE.Vector3();
+      const vB = new THREE.Vector3();
+      const vC = new THREE.Vector3();
+      const cb = new THREE.Vector3();
+      const ab = new THREE.Vector3();
+
+      bakedGeometries.forEach(g => {
+        const pos = g.attributes.position;
+        for (let i = 0; i < pos.count; i += 3) {
+          vA.fromBufferAttribute(pos, i);
+          vB.fromBufferAttribute(pos, i + 1);
+          vC.fromBufferAttribute(pos, i + 2);
+
+          // Compute outward facet normal
+          cb.subVectors(vC, vB);
+          ab.subVectors(vA, vB);
+          cb.cross(ab).normalize();
+
+          // Normal (3 floats)
+          dataView.setFloat32(offset, cb.x, true); offset += 4;
+          dataView.setFloat32(offset, cb.y, true); offset += 4;
+          dataView.setFloat32(offset, cb.z, true); offset += 4;
+
+          // Vertex 1
+          dataView.setFloat32(offset, vA.x, true); offset += 4;
+          dataView.setFloat32(offset, vA.y, true); offset += 4;
+          dataView.setFloat32(offset, vA.z, true); offset += 4;
+
+          // Vertex 2
+          dataView.setFloat32(offset, vB.x, true); offset += 4;
+          dataView.setFloat32(offset, vB.y, true); offset += 4;
+          dataView.setFloat32(offset, vB.z, true); offset += 4;
+
+          // Vertex 3
+          dataView.setFloat32(offset, vC.x, true); offset += 4;
+          dataView.setFloat32(offset, vC.y, true); offset += 4;
+          dataView.setFloat32(offset, vC.z, true); offset += 4;
+
+          // 2-byte attribute byte count
+          dataView.setUint16(offset, 0, true); offset += 2;
+        }
+        g.dispose();
+      });
+
+      const fileName = selectedOnly && selectedObject
+        ? `${selectedObject.name.replace(/\s+/g, '_').toLowerCase()}.stl`
+        : `printforge_model_${totalTriangles}tris.stl`;
+
+      triggerBlobDownload(new Blob([arrayBuffer], { type: 'application/octet-stream' }), fileName);
+      showToast(`Exported Binary STL (${totalTriangles.toLocaleString()} triangles)`);
+    }
+
+    /**
+     * Exports ASCII .STL format
+     */
+    function exportASCIISTL() {
+      const targets = getExportTargetMeshes(false);
+      if (targets.length === 0) return;
+
+      let out = 'solid PrintForge_Model\n';
+      const vA = new THREE.Vector3();
+      const vB = new THREE.Vector3();
+      const vC = new THREE.Vector3();
+      const cb = new THREE.Vector3();
+      const ab = new THREE.Vector3();
+
+      targets.forEach(mesh => {
+        mesh.updateMatrixWorld(true);
+        const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+        g.applyMatrix4(mesh.matrixWorld);
+        const pos = g.attributes.position;
+
+        for (let i = 0; i < pos.count; i += 3) {
+          vA.fromBufferAttribute(pos, i);
+          vB.fromBufferAttribute(pos, i + 1);
+          vC.fromBufferAttribute(pos, i + 2);
+          cb.subVectors(vC, vB);
+          ab.subVectors(vA, vB);
+          cb.cross(ab).normalize();
+
+          out += `  facet normal ${cb.x.toExponential(5)} ${cb.y.toExponential(5)} ${cb.z.toExponential(5)}\n`;
+          out += `    outer loop\n`;
+          out += `      vertex ${vA.x.toFixed(4)} ${vA.y.toFixed(4)} ${vA.z.toFixed(4)}\n`;
+          out += `      vertex ${vB.x.toFixed(4)} ${vB.y.toFixed(4)} ${vB.z.toFixed(4)}\n`;
+          out += `      vertex ${vC.x.toFixed(4)} ${vC.y.toFixed(4)} ${vC.z.toFixed(4)}\n`;
+          out += `    endloop\n`;
+          out += `  endfacet\n`;
+        }
+        g.dispose();
+      });
+      out += 'endsolid PrintForge_Model\n';
+
+      triggerBlobDownload(new Blob([out], { type: 'text/plain' }), 'printforge_ascii.stl');
+      showToast('Exported ASCII .STL file');
+    }
+
+    /**
+     * Exports Wavefront .OBJ format
+     */
+    function exportWavefrontOBJ() {
+      const targets = getExportTargetMeshes(false);
+      if (targets.length === 0) return;
+
+      let out = '# PrintForge 3D CAD Studio Wavefront OBJ (mm)\n';
+      let vertexOffset = 1;
+      const v = new THREE.Vector3();
+
+      targets.forEach(mesh => {
+        mesh.updateMatrixWorld(true);
+        out += `o ${mesh.name.replace(/\s+/g, '_')}\n`;
+        const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+        g.applyMatrix4(mesh.matrixWorld);
+        const pos = g.attributes.position;
+
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i);
+          out += `v ${v.x.toFixed(4)} ${v.y.toFixed(4)} ${v.z.toFixed(4)}\n`;
+        }
+        for (let i = 0; i < pos.count; i += 3) {
+          out += `f ${vertexOffset + i} ${vertexOffset + i + 1} ${vertexOffset + i + 2}\n`;
+        }
+        vertexOffset += pos.count;
+        g.dispose();
+      });
+
+      triggerBlobDownload(new Blob([out], { type: 'text/plain' }), 'printforge_model.obj');
+      showToast('Exported Wavefront .OBJ file');
+    }
+
+    function saveProjectJSON() {
+      const data = {
+        version: '1.0',
+        units: 'mm',
+        objects: cadObjects.map(obj => ({
+          name: obj.name,
+          shapeType: obj.userData.shapeType === 'merged' ? 'box' : obj.userData.shapeType,
+          params: obj.userData.params,
+          color: obj.userData.color,
+          visible: obj.visible,
+          locked: obj.userData.locked,
+          position: [obj.position.x, obj.position.y, obj.position.z],
+          rotation: [
+            THREE.MathUtils.radToDeg(obj.rotation.x),
+            THREE.MathUtils.radToDeg(obj.rotation.y),
+            THREE.MathUtils.radToDeg(obj.rotation.z)
+          ],
+          scale: [obj.scale.x, obj.scale.y, obj.scale.z]
+        }))
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      triggerBlobDownload(blob, 'printforge_project.json');
+      showToast('Saved parametric project (.json)');
+    }
+
+    function loadProjectJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (Array.isArray(data.objects)) {
+            clearSceneObjects();
+            data.objects.forEach(item => {
+              const mesh = addShape(item.shapeType || 'box', item);
+              mesh.visible = item.visible !== false;
+              mesh.userData.locked = !!item.locked;
+            });
+            renderOutliner();
+            updatePrintStats();
+            showToast(`Loaded project with ${data.objects.length} parts`);
+          }
+        } catch (err) {
+          showToast('Invalid project JSON file');
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function triggerBlobDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    function toggleExportModal() {
+      document.getElementById('exportModal').classList.toggle('hidden');
+    }
+
+    /*************************************************************************
+     * 9. QUICK-START 3D PRINT SAMPLE TEMPLATES
+     *************************************************************************/
+    function clearSceneObjects() {
+      transformControls.detach();
+      cadObjects.forEach(obj => {
+        scene.remove(obj);
+        obj.geometry.dispose();
+      });
+      cadObjects = [];
+      selectedObject = null;
+      renderOutliner();
+      renderParametricControls();
+      updatePrintStats();
+    }
+
+    function loadQuickTemplate(templateName) {
+      if (!templateName) return;
+      clearSceneObjects();
+
+      if (templateName === 'clear') {
+        showToast('Cleared build plate');
+        return;
+      }
+
+      if (templateName === 'calibration') {
+        addShape('enclosure', {
+          name: '20mm Calibration Shell',
+          color: '#06b6d4',
+          params: { width: 20, depth: 20, height: 20, wallThickness: 3, cornerRadius: 1.5 },
+          position: [0, 0, 10]
+        });
+        addShape('cylinder', {
+          name: 'Calibration Center Pin',
+          color: '#f59e0b',
+          params: { radiusTop: 5, radiusBottom: 5, height: 25, segments: 48 },
+          position: [0, 0, 12.5]
+        });
+        showToast('Loaded 20mm Calibration Block');
+      } else if (templateName === 'motormount') {
+        // Base Plate
+        addShape('box', {
+          name: 'Motor Base Plate',
+          color: '#06b6d4',
+          params: { width: 64, depth: 64, height: 5, chamfer: 8 },
+          position: [0, 0, 2.5]
+        });
+        // Central Bearing Housing Tube
+        addShape('tube', {
+          name: 'Center Bearing Boss',
+          color: '#f59e0b',
+          params: { outerRadius: 16, innerRadius: 9, height: 22, segments: 64 },
+          position: [0, 0, 11]
+        });
+        // 4 Corner Standoff Spacers
+        const offsets = [[-22, -22], [22, -22], [22, 22], [-22, 22]];
+        offsets.forEach(([ox, oy], idx) => {
+          addShape('tube', {
+            name: `Standoff Pillar ${idx + 1}`,
+            color: '#10b981',
+            params: { outerRadius: 5.5, innerRadius: 2.5, height: 16, segments: 36 },
+            position: [ox, oy, 8]
+          });
+        });
+        showToast('Loaded Drone Motor Mount Assembly');
+      } else if (templateName === 'gearset') {
+        // Base Carrier Plate
+        addShape('box', {
+          name: 'Gearbox Baseplate',
+          color: '#334155',
+          params: { width: 92, depth: 52, height: 5, chamfer: 6 },
+          position: [0, 0, 2.5]
+        });
+        // Drive Gear (24 teeth, module 2 => pitchR = 24)
+        addShape('gear', {
+          name: 'Drive Spur Gear (24T)',
+          color: '#f59e0b',
+          params: { teeth: 24, module: 2.0, thickness: 10, boreDiameter: 10 },
+          position: [-14, 0, 10]
+        });
+        // Pinion Gear (14 teeth, module 2 => pitchR = 14; center distance = 38mm)
+        addShape('gear', {
+          name: 'Pinion Gear (14T)',
+          color: '#06b6d4',
+          params: { teeth: 14, module: 2.0, thickness: 10, boreDiameter: 8 },
+          position: [24.5, 0, 10],
+          rotation: [0, 0, 12]
+        });
+        // Retaining Hex Nuts
+        addShape('hexprism', {
+          name: 'Drive Shaft Hex Nut',
+          color: '#10b981',
+          params: { radius: 8, height: 5, boreDiameter: 5 },
+          position: [-14, 0, 17.5]
+        });
+        showToast('Loaded Meshing Spur Gear Set');
+      } else if (templateName === 'enclosure') {
+        addShape('enclosure', {
+          name: 'Main Electronics Box',
+          color: '#0ea5e9',
+          params: { width: 80, depth: 55, height: 32, wallThickness: 2.8, cornerRadius: 5 },
+          position: [0, 0, 16]
+        });
+        addShape('lbracket', {
+          name: 'Left Mounting Flange',
+          color: '#10b981',
+          params: { armX: 28, armZ: 26, width: 24, thickness: 4, holeDiameter: 5 },
+          position: [-50, 0, 13],
+          rotation: [0, 0, 180]
+        });
+        addShape('lbracket', {
+          name: 'Right Mounting Flange',
+          color: '#10b981',
+          params: { armX: 28, armZ: 26, width: 24, thickness: 4, holeDiameter: 5 },
+          position: [50, 0, 13]
+        });
+        showToast('Loaded Electronics Enclosure & Mounting Brackets');
+      }
+
+      frameSelectedOrAll();
+    }
+
+    /*************************************************************************
+     * 10. VIEWPORT INTERACTION, CAMERA PRESETS & KEYBOARD SHORTCUTS
+     *************************************************************************/
+    function setTransformMode(mode) {
+      currentTransformMode = mode;
+      transformControls.setMode(mode);
+      document.getElementById('btnModeTranslate').classList.toggle('active', mode === 'translate');
+      document.getElementById('btnModeRotate').classList.toggle('active', mode === 'rotate');
+      document.getElementById('btnModeScale').classList.toggle('active', mode === 'scale');
+    }
+
+    function toggleGridSnap() {
+      snapEnabled = !snapEnabled;
+      document.getElementById('btnSnapToggle').classList.toggle('active', snapEnabled);
+      transformControls.setTranslationSnap(snapEnabled ? snapTranslationStep : null);
+      transformControls.setRotationSnap(snapEnabled ? snapRotationStep : null);
+      showToast(snapEnabled ? `Grid Snap On (${snapTranslationStep}mm / 15°)` : 'Grid Snap Off');
+    }
+
+    function updateSnapStep(val) {
+      snapTranslationStep = parseFloat(val) || 1.0;
+      if (snapEnabled) {
+        transformControls.setTranslationSnap(snapTranslationStep);
+      }
+    }
+
+    function setCameraPreset(preset) {
+      const target = selectedObject ? selectedObject.position.clone() : new THREE.Vector3(0, 0, 20);
+      const dist = 290;
+      orbitControls.target.copy(target);
+
+      if (preset === 'iso') {
+        camera.position.set(target.x + 210, target.y - 230, target.z + 185);
+      } else if (preset === 'front') {
+        camera.position.set(target.x, target.y - dist, target.z + 10);
+      } else if (preset === 'right') {
+        camera.position.set(target.x + dist, target.y, target.z + 10);
+      } else if (preset === 'top') {
+        camera.position.set(target.x, target.y - 0.5, target.z + dist + 40);
+      }
+      orbitControls.update();
+    }
+
+    function frameSelectedOrAll() {
+      const box = new THREE.Box3();
+      if (selectedObject && selectedObject.visible) {
+        box.setFromObject(selectedObject);
+      } else {
+        cadObjects.forEach(o => { if (o.visible) box.expandByObject(o); });
+      }
+      if (box.isEmpty()) {
+        setCameraPreset('iso');
+        return;
+      }
+      const center = new THREE.Vector3();
+      const size = new THREE.Vector3();
+      box.getCenter(center);
+      box.getSize(size);
+      const maxDim = Math.max(size.x, size.y, size.z, 40);
+      orbitControls.target.copy(center);
+      camera.position.set(center.x + maxDim * 1.6, center.y - maxDim * 1.9, center.z + maxDim * 1.4);
+      orbitControls.update();
+    }
+
+    function onViewportPointerDown(event) {
+      if (event.button !== 0) return;
+      pointerDownPos.set(event.clientX, event.clientY);
+    }
+
+    function onViewportPointerUp(event) {
+      if (event.button !== 0 || isDraggingGizmo) return;
+      const moveDist = pointerDownPos.distanceTo(new THREE.Vector2(event.clientX, event.clientY));
+      if (moveDist > 5) return; // Ignore orbit drags
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const visibleMeshes = cadObjects.filter(o => o.visible);
+      const intersects = raycaster.intersectObjects(visibleMeshes, false);
+
+      if (intersects.length > 0) {
+        selectObject(intersects[0].object);
+      } else {
+        selectObject(null);
+      }
+    }
+
+    function onKeyDown(event) {
+      // Ignore shortcuts when typing inside inputs
+      const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+
+      const key = event.key.toLowerCase();
+      if (key === 'w') setTransformMode('translate');
+      else if (key === 'e') setTransformMode('rotate');
+      else if (key === 'r') setTransformMode('scale');
+      else if (key === 'f') {
+        event.preventDefault();
+        dropSelectedToBed();
+      } else if (key === 'c') {
+        event.preventDefault();
+        centerSelectedOnBed();
+      } else if (key === 'd') {
+        event.preventDefault();
+        duplicateSelected();
+      } else if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        deleteSelected();
+      }
+    }
+
+    function onWindowResize() {
+      const container = document.getElementById('viewportContainer');
+      if (!container || !renderer) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+
+    let toastTimeout = null;
+    function showToast(msg) {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastMessage').textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-2');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-2');
+      }, 2800);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      orbitControls.update();
+      renderer.render(scene, camera);
+    }
+
+    window.onload = function () {
+      initStudio();
     };
-}
-
-function distance3D(a,b){
-
-    return Math.sqrt(
-        Math.pow(a.x-b.x,2)+
-        Math.pow(a.y-b.y,2)+
-        Math.pow(a.z-b.z,2)
-    );
-}
-
-function pickAtHand(x,y){
-
-    pointer.set(
-        x*2-1,
-        -y*2+1
-    );
-
-    raycaster.setFromCamera(
-        pointer,
-        camera
-    );
-
-    const hits=
-        raycaster.intersectObjects(
-            objects,
-            false
-        );
-
-    if(hits.length){
-        return hits[0].object;
-    }
-
-    return null;
-}
-
-function moveCursor(x,y){
-
-    const rect=
-        viewport.getBoundingClientRect();
-
-    cursor.style.left=
-        x*rect.width+"px";
-
-    cursor.style.top=
-        y*rect.height+"px";
-
-    cursor.style.display=
-        "block";
-}
-
-function drawHands(result){
-
-    const ctx=
-        webcamCanvas.getContext(
-            "2d"
-        );
-
-    ctx.clearRect(
-        0,
-        0,
-        webcamCanvas.width,
-        webcamCanvas.height
-    );
-
-    if(
-        !result||
-        !result.landmarks
-    ){
-        return;
-    }
-
-    const links=[
-        [0,1],[1,2],[2,3],[3,4],
-        [0,5],[5,6],[6,7],[7,8],
-        [5,9],[9,10],[10,11],[11,12],
-        [9,13],[13,14],[14,15],[15,16],
-        [13,17],[17,18],[18,19],[19,20],
-        [0,17]
-    ];
-
-    ctx.lineWidth=2;
-    ctx.strokeStyle="#ff8a24";
-    ctx.fillStyle="#ffffff";
-
-    result.landmarks.forEach(
-        hand=>{
-
-            currentHand=hand;
-
-            links.forEach(
-                link=>{
-
-                    const a=
-                        hand[link[0]];
-
-                    const b=
-                        hand[link[1]];
-
-                    ctx.beginPath();
-
-                    ctx.moveTo(
-                        a.x*640,
-                        a.y*400
-                    );
-
-                    ctx.lineTo(
-                        b.x*640,
-                        b.y*400
-                    );
-
-                    ctx.stroke();
-                }
-            );
-
-            hand.forEach(
-                point=>{
-
-                    ctx.beginPath();
-
-                    ctx.arc(
-                        point.x*640,
-                        point.y*400,
-                        3,
-                        0,
-                        Math.PI*2
-                    );
-
-                    ctx.fill();
-                }
-            );
-        }
-    );
-}
-
-function render(){
-
-    controls.update();
-
-    renderer.render(
-        scene,
-        camera
-    );
-
-    requestAnimationFrame(
-        render
-    );
-}
-
-updateUI();
-
-render();
-
-</script>
-
+  </script>
 </body>
 </html>
